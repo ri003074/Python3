@@ -1,0 +1,12 @@
+version: "3.2"
+
+services:
+  python3:
+    image: python3
+    build: ./
+    container_name: "python3"
+    stdin_open: true
+    tty: true
+    working_dir: "/tmp/src"
+    volumes:
+      - ./src:/tmp/src
