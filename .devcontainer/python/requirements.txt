@@ -1,0 +1,8 @@
+numpy == 1.19.0
+matplotlib == 3.2.2
+pyautogui
+flake8
+autopep8
+black
+Pillow
+openpyxl
