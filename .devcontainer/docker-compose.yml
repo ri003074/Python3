@@ -7,6 +7,6 @@ services:
     container_name: "python3"
     stdin_open: true
     tty: true
-    working_dir: "/tmp/src"
+    working_dir: "/tmp/py"
     volumes:
-      - ../:/tmp/src
+      - ../:/tmp/py

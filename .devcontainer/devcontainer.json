@@ -2,7 +2,7 @@
     "name": "Python Basic Project3",
     "dockerComposeFile": "docker-compose.yml",
     "service": "python3",
-    "workspaceFolder": "/tmp/src",
+    "workspaceFolder": "/tmp/py",
     "extensions": [
         "ms-python.python",
         "pkief.material-icon-theme"
