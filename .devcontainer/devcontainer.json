@@ -1,0 +1,18 @@
+{
+    "name": "Python Basic Project3",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "python3",
+    "workspaceFolder": "/tmp/src",
+    "extensions": [
+        "ms-python.python",
+    ],
+    "settings": {
+        "editor.tabSize": 4,
+        "python.linting.enabled": true,
+        "python.linting.pylintEnable": false,
+        "python.linting.flake8Enabled": true,
+        "python.linting.lintOnSave": true,
+        "python.formatting.provider": "black",
+        "editor.format.onSave": true,
+    },
+}
