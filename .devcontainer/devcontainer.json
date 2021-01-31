@@ -5,6 +5,7 @@
     "workspaceFolder": "/tmp/src",
     "extensions": [
         "ms-python.python",
+        "pkief.material-icon-theme"
     ],
     "settings": {
         "editor.tabSize": 4,
