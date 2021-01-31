@@ -7,3 +7,4 @@ black
 Pillow
 openpyxl
 pylint
+pytest
