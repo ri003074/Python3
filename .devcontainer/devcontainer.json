@@ -5,7 +5,8 @@
     "workspaceFolder": "/tmp/py",
     "extensions": [
         "ms-python.python",
-        "pkief.material-icon-theme"
+        "pkief.material-icon-theme",
+        "vscodevim.vim"
     ],
     "settings": {
         "editor.tabSize": 4,

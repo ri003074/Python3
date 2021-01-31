@@ -6,3 +6,4 @@ autopep8
 black
 Pillow
 openpyxl
+pylint
