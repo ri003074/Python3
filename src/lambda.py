@@ -1,3 +1,18 @@
+"""
+lambda 引数: 戻り値
+
+def func(引数):
+    return  返り値
+"""
+
+
+def double(n):
+    return n * 2
+
+
+lambda n: n * 2
+
+
 lst = ["Mon", "tue", "Wed", "Thu"]
 
 
