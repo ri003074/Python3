@@ -9,14 +9,13 @@ Usage:
 
 from setuptools import setup
 
-APP = ['calculator.py']
+APP = ["calculator.py"]
 DATA_FILES = []
 OPTIONS = {}
 
 setup(
     app=APP,
     data_files=DATA_FILES,
-    options={'py2app': OPTIONS},
-    setup_requires=['py2app'],
+    options={"py2app": OPTIONS},
+    setup_requires=["py2app"],
 )
-
