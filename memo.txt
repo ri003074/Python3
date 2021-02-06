@@ -1,0 +1,1 @@
+command + shift + p -> open command palette -> New FIle
