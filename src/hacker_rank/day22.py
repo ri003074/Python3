@@ -28,5 +28,7 @@ root = None
 for i in range(T):
     data = int(input())
     root = myTree.insert(root, data)
+    print(data)
+    print(root)
 height = myTree.getHeight(root)
 print(height)
