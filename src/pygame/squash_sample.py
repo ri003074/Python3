@@ -1,5 +1,5 @@
 import pygame
-from pygame.locals import Rect, QUIT, MOUSEBUTTONDOWN
+from pygame.locals import MOUSEBUTTONDOWN, Rect, QUIT
 import sys
 import math
 
@@ -25,11 +25,11 @@ class Ball:
     def __init__(self, pad):
         self.image = pygame.Surface((20, 20))
         pygame.draw.circle(self.image, (255, 255, 255), (10, 10), 10)
-        self.pad = pad
         self.rect = self.image.get_rect()
-        self.rect.bottom = self.pad.rect.top
+        self.pad = pad
         self.rect.centerx = self.pad.rect.centerx
-        self.dx, self.dy = 5, -6
+        self.rect.bottom = self.pad.rect.top
+        self.dx, self.dy = 3, -4
         self.status = "INIT"
 
     def start(self):
@@ -40,32 +40,30 @@ class Ball:
             self.rect.centerx = self.pad.rect.centerx
             self.rect.bottom = self.pad.rect.top
             return
-
         old_rect = self.rect.copy()
         self.rect.move_ip(self.dx, self.dy)
-
-        if self.rect.colliderect(self.pad.rect):  # 衝突判定
-            # pad.rect -> pad, old_rect -> ball
-            if self.pad.rect.left >= old_rect.right:  # padの左側の座標よりballの右側の座標が小さい時
+        if self.rect.colliderect(self.pad.rect):
+            if self.pad.rect.left >= old_rect.right:
                 self.rect.right = self.pad.rect.left
                 self.dx = -self.dx
-            elif self.pad.rect.right <= old_rect.left:  # padの右側の座標よりballの左側の座標が大きい時
+            elif self.pad.rect.right <= old_rect.left:
                 self.rect.left = self.pad.rect.right
                 self.dx = -self.dx
-            elif self.pad.rect.top >= old_rect.bottom:  # 上から判定
+            elif self.pad.rect.top >= old_rect.bottom:
                 self.rect.bottom = self.pad.rect.top
                 x = self.rect.centerx - self.pad.rect.left
                 y = -100 * x / self.pad.rect.width + 145
                 self.dx = 5 * math.cos(math.radians(y))
                 self.dy = -5 * math.sin(math.radians(y))
-
+            else:
+                self.rect.top = self.pad.rect.bottom
+                self.dy = -self.dy
         if self.rect.left < SCREEN.left or self.rect.right > SCREEN.right:
             self.dx = -self.dx
         if self.rect.top < SCREEN.top:
             self.dy = -self.dy
         if self.rect.bottom > SCREEN.bottom:
             self.status = "INIT"
-
         self.rect.clamp_ip(SCREEN)
 
     def draw(self, screen):
@@ -73,37 +71,35 @@ class Ball:
 
 
 def main():
-    """ init """
+
+    """初期設定"""
     pygame.init()
     screen = pygame.display.set_mode(SCREEN.size)
     pygame.display.set_caption("SQUASH GAME")
 
     clock = pygame.time.Clock()
 
+    """登場する人/物/背景の作成"""
     pad = Paddle()
     ball = Ball(pad)
 
-    """ create person/content/background """
-
     while True:
-        """ clean up screen """
+
+        """画面(screen)をクリア"""
         screen.fill((0, 0, 0))
 
-        """ person/content/background update """
+        """ゲームに登場する人/物/背景の位置Update"""
         pad.update()
         ball.update()
 
-        """ person/content/background draw """
+        """画面(screen)上に登場する人/物/背景を描画"""
         pad.draw(screen)
         ball.draw(screen)
 
-        # pad_rect.clamp_ip(SCREEN)
-        # ball_rect.centerx = pad_rect.centerx
-        """ screen display """
+        """画面(screen)の実表示"""
         pygame.display.update()
 
-        ball.draw(screen)
-
+        """イベント処理"""
         for event in pygame.event.get():
             if event.type == QUIT:
                 pygame.quit()
@@ -111,7 +107,7 @@ def main():
             if event.type == MOUSEBUTTONDOWN:
                 ball.start()
 
-        """ draw speed (FPS) """
+        """描画スピードの調整（FPS)"""
         clock.tick(200)
 
 
