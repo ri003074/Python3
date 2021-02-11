@@ -4,20 +4,28 @@ from openpyxl.chart import LineChart, Reference
 
 
 class DcLog:
-    chart_title = "Dc Test Result"
-    chart_height = 10
-    chart_width = 20
-    y_axis_title = "mv"
-    y_axix_min_value = 0
-    y_axix_max_value = 10
-    input_file_path = ""
-    output_file_path = ""
-    data = []
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "dc test"
-
-    def __init__(self):
+    def __init__(
+        self,
+        chart_title="Dc Test Result",
+        chart_height=10,
+        chart_width=20,
+        y_axis_title="mV",
+        y_axis_min_value=0,
+        y_axis_max_value=10,
+        work_sheet_title="dc test",
+    ):
+        self.input_file_path = ""
+        self.output_file_path = ""
+        self.chart_title = chart_title
+        self.chart_height = chart_height
+        self.chart_width = chart_width
+        self.y_axis_title = y_axis_title
+        self.y_axis_min_value = y_axis_min_value
+        self.y_axis_max_value = y_axis_max_value
+        self.wb = Workbook()
+        self.ws = self.wb.active
+        self.ws.title = work_sheet_title
+        self.data = []
         self.open_dialog()
         self.read_file()
         self.make_excel()
@@ -57,8 +65,8 @@ class DcLog:
         chart = LineChart()
         chart.legend.position = "b"
         chart.y_axis.title = self.y_axis_title
-        chart.y_axis.scaling.max = self.y_axix_max_value
-        chart.y_axis.scaling.min = self.y_axix_min_value
+        chart.y_axis.scaling.max = self.y_axis_max_value
+        chart.y_axis.scaling.min = self.y_axis_min_value
         chart.title = self.chart_title
         chart.height = self.chart_height
         chart.width = self.chart_width
