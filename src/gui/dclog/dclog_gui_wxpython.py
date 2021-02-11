@@ -23,11 +23,9 @@ class MainFrame(wx.Frame):
         self.input_file_path = dialog.GetPath()
 
     def read_file(self):
-        print(self.input_file_path)
         with open(self.input_file_path, "r") as f:
             for line in f.read().splitlines():
                 self.data.append(line.split(","))
-                print(line.split(","))
 
     def make_excel(self):
         for row_index in range(len(self.data)):
