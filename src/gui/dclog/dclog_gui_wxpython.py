@@ -15,6 +15,7 @@ class MainFrame(wx.Frame):
     data = []
     wb = Workbook()
     ws = wb.active
+    ws.title = "dc test"
 
     def __init__(self, *args, **kw):
         super(MainFrame, self).__init__(*args, **kw)
@@ -54,6 +55,7 @@ class MainFrame(wx.Frame):
     def make_graph(self):
         values = Reference(self.ws, min_col=2, min_row=1, max_col=3, max_row=4)
         categories = Reference(self.ws, min_col=1, min_row=2, max_col=1, max_row=4)
+
         chart = LineChart()
         chart.legend.position = "b"
         chart.y_axis.title = self.y_axis_title
@@ -67,7 +69,6 @@ class MainFrame(wx.Frame):
 
         self.ws.add_chart(chart, "B4")
         self.wb.save(self.output_file_path)
-        print(self.input_file_path)
 
 
 if __name__ == "__main__":
