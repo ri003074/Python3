@@ -1,7 +1,6 @@
 import wx
 from openpyxl import Workbook
-
-# from openpyxl.chart import LineChart, Reference
+from openpyxl.chart import LineChart, Reference
 
 
 class MainFrame(wx.Frame):
@@ -15,6 +14,7 @@ class MainFrame(wx.Frame):
         self.read_file()
         self.show_data()
         self.make_excel()
+        self.make_graph()
 
     def open_dialog(self):
         filter = "*.csv;*.txt"
@@ -30,9 +30,26 @@ class MainFrame(wx.Frame):
     def make_excel(self):
         for row_index in range(len(self.data)):
             for column_index in range(len(self.data[row_index])):
-                self.ws.cell(
-                    row=row_index + 1, column=column_index + 1
-                ).value = self.data[row_index][column_index]
+                try:
+                    self.ws.cell(
+                        row=row_index + 1, column=column_index + 1
+                    ).value = float(self.data[row_index][column_index])
+
+                except ValueError:
+                    self.ws.cell(
+                        row=row_index + 1, column=column_index + 1
+                    ).value = self.data[row_index][column_index]
+
+    def make_graph(self):
+        values = Reference(self.ws, min_col=2, min_row=1, max_col=3, max_row=4)
+        categories = Reference(self.ws, min_col=1, min_row=2, max_col=1, max_row=4)
+        chart = LineChart()
+        # chart.legend = True
+        chart.title = "DC TEST RESULT"
+        chart.add_data(values, titles_from_data=True)
+        chart.set_categories(categories)
+
+        self.ws.add_chart(chart, "B4")
         self.wb.save("sample.xlsx")
 
     def show_data(self):
