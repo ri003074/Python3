@@ -26,7 +26,9 @@ class MainFrame(wx.Frame):
         dialog = wx.FileDialog(None, "select file", style=wx.FD_OPEN, wildcard=filter)
         dialog.ShowModal()
         self.input_file_path = dialog.GetPath()
-        self.output_file_path = self.input_file_path.replace("txt", "xlsx")
+        self.output_file_path = self.input_file_path.replace("txt", "xlsx").replace(
+            "csv", "xlsx"
+        )
 
     def read_file(self):
         with open(self.input_file_path, "r") as f:
