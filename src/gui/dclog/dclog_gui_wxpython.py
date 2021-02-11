@@ -7,6 +7,9 @@ class MainFrame(wx.Frame):
     chart_title = "Dc Test Result"
     chart_height = 10
     chart_width = 20
+    y_axis_title = "mv"
+    y_axix_min_value = 0
+    y_axix_max_value = 10
     input_file_path = ""
     output_file_path = ""
     data = []
@@ -52,6 +55,10 @@ class MainFrame(wx.Frame):
         values = Reference(self.ws, min_col=2, min_row=1, max_col=3, max_row=4)
         categories = Reference(self.ws, min_col=1, min_row=2, max_col=1, max_row=4)
         chart = LineChart()
+        chart.legend.position = "b"
+        chart.y_axis.title = self.y_axis_title
+        chart.y_axis.scaling.max = self.y_axix_max_value
+        chart.y_axis.scaling.min = self.y_axix_min_value
         chart.title = self.chart_title
         chart.height = self.chart_height
         chart.width = self.chart_width
