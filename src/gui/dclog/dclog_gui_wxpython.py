@@ -3,7 +3,7 @@ from openpyxl import Workbook
 from openpyxl.chart import LineChart, Reference
 
 
-class MainFrame(wx.Frame):
+class DcLog:
     chart_title = "Dc Test Result"
     chart_height = 10
     chart_width = 20
@@ -17,9 +17,7 @@ class MainFrame(wx.Frame):
     ws = wb.active
     ws.title = "dc test"
 
-    def __init__(self, *args, **kw):
-        super(MainFrame, self).__init__(*args, **kw)
-
+    def __init__(self):
         self.open_dialog()
         self.read_file()
         self.make_excel()
@@ -73,7 +71,4 @@ class MainFrame(wx.Frame):
 
 if __name__ == "__main__":
     app = wx.App()
-    frame = MainFrame(None)
-    # frame.Show()
-    # app.MainLoop()
-    app.Destroy()
+    dc_log = DcLog()
