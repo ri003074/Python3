@@ -1,2 +1,4 @@
 *.pyc
-src/excel/output.xlsx
+output.xlsx
+sample.xlsx
+.DS_Store

@@ -1,4 +1,10 @@
 import wx
+from openpyxl import Workbook
+
+# from openpyxl.chart import LineChart, Reference
+
+wb = Workbook()
+ws = wb.active
 
 
 class MainFrame(wx.Frame):
@@ -9,6 +15,7 @@ class MainFrame(wx.Frame):
         self.open_dialog()
         self.read_file()
         self.show_data()
+        self.make_excel()
 
     def open_dialog(self):
         filter = "*.csv;*.txt"
@@ -22,6 +29,14 @@ class MainFrame(wx.Frame):
             for line in f.read().splitlines():
                 self.data.append(line.split(","))
                 print(line.split(","))
+
+    def make_excel(self):
+        for row_index in range(len(self.data)):
+            for column_index in range(len(self.data[row_index])):
+                ws.cell(row=row_index + 1, column=column_index + 1).value = self.data[
+                    row_index
+                ][column_index]
+        wb.save("sample.xlsx")
 
     def show_data(self):
         print(self.data)
