@@ -3,14 +3,13 @@ from openpyxl import Workbook
 
 # from openpyxl.chart import LineChart, Reference
 
-wb = Workbook()
-ws = wb.active
-
 
 class MainFrame(wx.Frame):
     def __init__(self, *args, **kw):
         super(MainFrame, self).__init__(*args, **kw)
 
+        self.wb = Workbook()
+        self.ws = self.wb.active
         self.data = []
         self.open_dialog()
         self.read_file()
@@ -33,10 +32,10 @@ class MainFrame(wx.Frame):
     def make_excel(self):
         for row_index in range(len(self.data)):
             for column_index in range(len(self.data[row_index])):
-                ws.cell(row=row_index + 1, column=column_index + 1).value = self.data[
-                    row_index
-                ][column_index]
-        wb.save("sample.xlsx")
+                self.ws.cell(
+                    row=row_index + 1, column=column_index + 1
+                ).value = self.data[row_index][column_index]
+        self.wb.save("sample.xlsx")
 
     def show_data(self):
         print(self.data)
