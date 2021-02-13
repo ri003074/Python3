@@ -5,6 +5,7 @@ wb = Workbook()
 ws = wb.active
 
 data = [
+    ["fruits", "count"],
     ["Apple", 1],
     ["Banana", 2],
     ["Grap", 3],
@@ -26,14 +27,14 @@ for row_index in range(len(data)):
 
 # wb.save("output_tmp.xlsx")
 
-values = Reference(ws, min_col=2, min_row=1, max_col=2, max_row=3)
-categories = Reference(ws, min_col=1, min_row=1, max_col=1, max_row=3)
+values = Reference(ws, min_col=2, min_row=1, max_col=2, max_row=4)
+categories = Reference(ws, min_col=1, min_row=2, max_col=1, max_row=4)
 
 chart = LineChart()
 chart.legend = None
 chart.title = "Fruits"
 
-chart.add_data(values)
+chart.add_data(values, titles_from_data=True)
 chart.set_categories(categories)
 
 ws.add_chart(chart, "B4")
