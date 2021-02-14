@@ -1,15 +1,22 @@
+import time
+
+
 def prime_checker(number):
-    print(number, end=":")
-    if number == 1 or number == 2:
-        print("prime number")
+    counter = 0
+    for i in range(1, int(number / 2) + 1):
+        if number % i == 0:
+            counter += 1
 
-    if number >= 3:
-        if number % 2 == 0:
-            print("not prime number")
-        else:
-            print("prime number")
+    if counter == 2:
+        print(f"{number} is prime number")
+    else:
+        print(f"{number} is not prime number")
 
 
-prime_checker(10)
-for i in range(1, 100):
+start = time.time()
+for i in range(1, 10000):
     prime_checker(i)
+
+elapsed_time = time.time()
+
+print(elapsed_time - start)
