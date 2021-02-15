@@ -7,8 +7,8 @@ result = {}
 
 should_input = True
 while should_input:
-    username = input("name? : ")
-    bid = int(input("$ : "))
+    username = input("name?: ")
+    bid = int(input("$: "))
     result[username] = bid
 
     should_continue = input("next? yes or no : ")
@@ -18,10 +18,14 @@ while should_input:
         should_input = False
 
 
-winner = username
+def find_highest_bidder(record):
+    highest_bid = 0
+    winner = ""
+    for name in record:
+        if record[name] > highest_bid:
+            winner = name
+            highest_bid = record[name]
+    print(winner)
 
-for name in result:
-    if result[name] > result[winner]:
-        winner = name
 
-print(winner)
+find_highest_bidder(result)
