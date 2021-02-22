@@ -1,5 +1,6 @@
 import pyautogui
-import pygetwindow
+
+# import pygetwindow
 
 # im1 = pyautogui.screenshot("a.png")
 
