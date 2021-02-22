@@ -2,6 +2,8 @@ import pygetwindow
 import pyautogui
 import datetime
 import os
+import sys
+
 # from pynput import mouse
 
 now = datetime.datetime.now()
@@ -15,7 +17,14 @@ shmoo_tool_name = "テキストエディット sample"
 # shmoo_tool_x, shmoo_tool_y, shmoo_tool_w, shmoo_tool_h = pygetwindow.getWindowGeometry(
 #     shmoo_tool_name
 # )
-shmoo_tool_geometry = pygetwindow.getWindowGeometry(shmoo_tool_name)
+display_list = pygetwindow.getAllTitles()
+print(display_list)
+
+text_edit_list = [s for s in display_list if "テキストエディット" in s]
+print(text_edit_list)
+
+shmoo_tool_geometry = pygetwindow.getWindowGeometry(text_edit_list[0])
+
 shmoo_tool_x_button = (
     shmoo_tool_geometry[0] + shmoo_tool_geometry[2],
     shmoo_tool_geometry[1],
@@ -26,6 +35,7 @@ shmoo_tool_center = (
 )
 print(shmoo_tool_x_button)
 pyautogui.moveTo(shmoo_tool_x_button)
+sys.exit()
 
 
 shmoo_list = []
@@ -52,12 +62,9 @@ def get_screenshot(shmoo_list, area):
 def write_text(phrase, position):
     pyautogui.moveTo(position, duration=1)
     pyautogui.click()
-    pyautogui.hotkey('command', 'a')
-    pyautogui.hotkey('delete')
+    pyautogui.hotkey("command", "a")
+    pyautogui.hotkey("delete")
     pyautogui.write(phrase)
-
-
-# print(pygetwindow.getAllTitles())
 
 
 shmoo_list = make_shmoo_list()
