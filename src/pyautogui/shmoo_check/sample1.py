@@ -3,7 +3,7 @@ import pyautogui
 import time
 
 
-class ShmooCheck:
+class ShmooCapture:
     def __init__(self):
         self.display_size = "maximize"
         self.display_name = ""
@@ -15,8 +15,8 @@ class ShmooCheck:
         self.geometry = 0
         self.maxmize_button = 0
         self.top_bar = 0
-        self.get_display_name()
-        self.get_geometry()
+        self.set_display_name()
+        self.set_geometry()
         self.set_top_bar()
         self.set_maximize_button()
 
@@ -27,7 +27,7 @@ class ShmooCheck:
             pyautogui.moveTo(self.top_bar)
             pyautogui.click()
             pyautogui.hotkey("ctrl", "option", "enter")
-            self.get_geometry()
+            self.set_geometry()
             pyautogui.click()
             self.get_screenshot_w_dut_pin()
             # self.write_dut_num()
@@ -41,13 +41,12 @@ class ShmooCheck:
         elif self.display_size == "keep":
             self.get_screenshot_w_dut_pin()
 
-    def get_display_name(self):
+    def set_display_name(self):
         display_list = pygetwindow.getAllTitles()
         shmoo_tool_list = [s for s in display_list if "テキストエディット" in s]
         self.display_name = shmoo_tool_list[0]
-        self.text_edit_geometry = pygetwindow.getWindowGeometry(shmoo_tool_list[0])
 
-    def get_geometry(self):
+    def set_geometry(self):
         self.geometry = pygetwindow.getWindowGeometry(self.display_name)
 
     def set_top_bar(self):
@@ -91,6 +90,6 @@ class ShmooCheck:
                 self.get_screenshot()
 
 
-shmoo = ShmooCheck()
-shmoo.display_size = "keep"
+shmoo = ShmooCapture()
+# shmoo.display_size = "keep"
 shmoo.start_capture()
