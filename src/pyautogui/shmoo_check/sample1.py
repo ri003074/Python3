@@ -29,7 +29,6 @@ class ShmooCheck:
             pyautogui.hotkey("ctrl", "option", "enter")
             self.get_geometry()
             pyautogui.click()
-
             self.get_screenshot_w_dut_pin()
             # self.write_dut_num()
             # time.sleep(1)
@@ -39,8 +38,8 @@ class ShmooCheck:
             # self.get_screenshot()
             pyautogui.hotkey("ctrl", "option", "d")
             # pyautogui.keyDown("esc")
-        else:
-            pass
+        elif self.display_size == "keep":
+            self.get_screenshot_w_dut_pin()
 
     def get_display_name(self):
         display_list = pygetwindow.getAllTitles()
@@ -91,8 +90,7 @@ class ShmooCheck:
                 )
                 self.get_screenshot()
 
-        pyautogui.click()
-
 
 shmoo = ShmooCheck()
+shmoo.display_size = "keep"
 shmoo.start_capture()
