@@ -23,6 +23,10 @@ print(display_list)
 text_edit_list = [s for s in display_list if "テキストエディット" in s]
 print(text_edit_list)
 
+if len(text_edit_list) > 1:
+    print("exit other shmoo tools!!")
+    sys.exit()
+
 shmoo_tool_geometry = pygetwindow.getWindowGeometry(text_edit_list[0])
 
 shmoo_tool_x_button = (
