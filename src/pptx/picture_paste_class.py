@@ -3,19 +3,23 @@ from pptx.util import Inches
 from PIL import Image
 import math
 
+file_list = [
+    "b.png",
+    "e.jpg",
+    "e.jpg",
+    "b.png",
+    "e.jpg",
+    "b.png",
+    "e.jpg",
+]
+
+file_path = "./pictures/"
+
 
 class PowerPoint:
-    def __init__(self, pic_per_page, image_height, pic_top_offset=0):
-        self.file_path = "./pictures/"
-        self.file_names = [
-            "b.png",
-            "e.jpg",
-            "e.jpg",
-            "b.png",
-            "e.jpg",
-            "b.png",
-            "e.jpg",
-        ]
+    def __init__(self, files, file_path, pic_per_page, image_height, pic_top_offset=0):
+        self.file_path = file_path
+        self.files = files
         self.slide_template = "sample_slide.pptx"
         self.output_filename = "class_output.pptx"
         self.image_display_height = image_height
@@ -31,15 +35,17 @@ class PowerPoint:
         # self.pic_top_offset = -1000000
 
     def calc_aspect_ratio(self, file_name):
-        # 画像サイズを取得してアスペクト比を得る
+        """ get image size and calculate aspect ratio"""
         im = Image.open(self.file_path + file_name)
         im_width, im_height = im.size
         self.aspect_ratio = im_width / im_height
 
     def calc_image_display_width(self):
+        """ calculate image width """
         self.image_display_width = self.aspect_ratio * self.image_display_height
 
     def add_picture(self, slide, file_name, left, top):
+        """ add picture to slide """
         slide.shapes.add_picture(
             self.file_path + file_name,
             left,
@@ -48,12 +54,13 @@ class PowerPoint:
         )
 
     def add_title(self, slide, file_name):
+        """ add title to slide """
         title = slide.placeholders[0]
         title.text = file_name
         title.text = file_name.replace(".png", "").replace(".jpg", "")
 
     def make_pptx(self):
-
+        """ make powerpoint file """
         if self.pic_per_page == 1:
             self.make_pptx_one_pic_per_slide()
         elif (
@@ -67,12 +74,11 @@ class PowerPoint:
             print("Error")
 
     def make_pptx_one_pic_per_slide(self):
-        self.num_of_slides = len(self.file_names)
+        self.num_of_slides = len(self.files)
         for i in range(0, self.num_of_slides, self.pic_per_page):
             slide = self.presentaition.slides.add_slide(self.slide_layout)
 
-            # 貼り付ける画像ファイル名を取得
-            file_name = self.file_names[i]
+            file_name = self.files[i]
 
             self.calc_aspect_ratio(file_name)
             self.calc_image_display_width()
@@ -82,21 +88,18 @@ class PowerPoint:
             top = (self.slide_height - self.image_display_height) / 2
 
             self.add_picture(slide, file_name, left, top)
-
-            # title
             self.add_title(slide, file_name)
 
         self.presentaition.save(self.output_filename)
 
     def make_pptx_two_or_more_pic_per_slide(self):
-        self.num_of_slides = int(math.ceil(len(self.file_names) / self.pic_per_page))
+        self.num_of_slides = int(math.ceil(len(self.files) / self.pic_per_page))
         for i in range(0, self.num_of_slides * 2 + 3, self.pic_per_page):
             slide = self.presentaition.slides.add_slide(self.slide_layout)
 
             for j in range(0, self.pic_per_page):
-                # 貼り付ける画像ファイル名を取得
                 try:
-                    file_name = self.file_names[i + j]
+                    file_name = self.files[i + j]
                 except IndexError:
                     break
 
@@ -104,14 +107,14 @@ class PowerPoint:
                 self.calc_image_display_width()
 
                 if self.pic_per_page == 2 and j == 0:
-                    # 1スライドに２枚貼り付ける場合の１枚目
+                    # first image when paste two images to one slide
                     left = (self.slide_width / 2 - self.image_display_width) / 2
                     top = (
                         self.slide_height - self.image_display_height
                     ) / 2 - self.pic_top_offset
 
                 if self.pic_per_page == 2 and j == 1:
-                    # 1スライドに２枚貼り付ける場合の2枚目
+                    # second image when paste two images to one slide
                     left = (
                         (self.slide_width / 2 - self.image_display_width) / 2
                     ) + self.slide_width / 2
@@ -120,14 +123,14 @@ class PowerPoint:
                     ) / 2 - self.pic_top_offset
 
                 if self.pic_per_page == 3 and j == 0:
-                    # 1スライドに3枚貼り付ける場合の１枚目
+                    # first image when paste three images to one slide
                     left = (self.slide_width / 3 - self.image_display_width) / 2
                     top = (
                         self.slide_height - self.image_display_height
                     ) / 2 - self.pic_top_offset
 
                 if self.pic_per_page == 3 and j == 1:
-                    # 1スライドに3枚貼り付ける場合の2枚目
+                    # second image when paste three images to one slide
                     left = (
                         (self.slide_width / 3 - self.image_display_width) / 2
                     ) + self.slide_width / 3
@@ -136,7 +139,7 @@ class PowerPoint:
                     ) / 2 - self.pic_top_offset
 
                 if self.pic_per_page == 3 and j == 2:
-                    # 1スライドに3枚貼り付ける場合の3枚目
+                    # third image when paste three images to one slide
                     left = (
                         (self.slide_width / 3 - self.image_display_width) / 2
                     ) + self.slide_width * 2 / 3
@@ -145,14 +148,14 @@ class PowerPoint:
                     ) / 2 - self.pic_top_offset
 
                 if self.pic_per_page == 4 and j == 0:
-                    # 1スライドに4枚貼り付ける場合の１枚目
+                    # first image when paste four images to one slide
                     left = (self.slide_width / 2 - self.image_display_width) / 2
                     top = (
                         self.slide_height - self.image_display_height
                     ) / 4 - self.pic_top_offset
 
                 if self.pic_per_page == 4 and j == 1:
-                    # 1スライドに4枚貼り付ける場合の2枚目
+                    # second image when paste four images to one slide
                     left = (
                         (self.slide_width / 2 - self.image_display_width) / 2
                     ) + self.slide_width / 2
@@ -161,14 +164,14 @@ class PowerPoint:
                     ) / 4 - self.pic_top_offset
 
                 if self.pic_per_page == 4 and j == 2:
-                    # 1スライドに4枚貼り付ける場合の3枚目
+                    # thrid image when paste four images to one slide
                     left = (self.slide_width / 2 - self.image_display_width) / 2
                     top = (
                         self.slide_height - self.image_display_height
                     ) * 3 / 4 - self.pic_top_offset
 
                 if self.pic_per_page == 4 and j == 3:
-                    # 1スライドに4枚貼り付ける場合の4枚目
+                    # fourth image when paste four images to one slide
                     left = (
                         (self.slide_width / 2 - self.image_display_width) / 2
                     ) + self.slide_width / 2
@@ -177,14 +180,14 @@ class PowerPoint:
                     ) * 3 / 4 - self.pic_top_offset
 
                 if self.pic_per_page == 6 and j == 0:
-                    # 1スライドに6枚貼り付ける場合の１枚目
+                    # first image when paste six images to one slide
                     left = (self.slide_width / 3 - self.image_display_width) / 2
                     top = (
                         self.slide_height - self.image_display_height
                     ) / 4 - self.pic_top_offset
 
                 if self.pic_per_page == 6 and j == 1:
-                    # 1スライドに6枚貼り付ける場合の2枚目
+                    # second image when paste six images to one slide
                     left = (
                         (self.slide_width / 3 - self.image_display_width) / 2
                     ) + self.slide_width / 3
@@ -193,7 +196,7 @@ class PowerPoint:
                     ) / 4 - self.pic_top_offset
 
                 if self.pic_per_page == 6 and j == 2:
-                    # 1スライドに6枚貼り付ける場合の3枚目
+                    # third image when paste six images to one slide
                     left = (
                         (self.slide_width / 3 - self.image_display_width) / 2
                     ) + self.slide_width * 2 / 3
@@ -202,14 +205,14 @@ class PowerPoint:
                     ) / 4 - self.pic_top_offset
 
                 if self.pic_per_page == 6 and j == 3:
-                    # 1スライドに6枚貼り付ける場合の4枚目
+                    # fourth image when paste six images to one slide
                     left = (self.slide_width / 3 - self.image_display_width) / 2
                     top = (
                         self.slide_height - self.image_display_height
                     ) * 3 / 4 - self.pic_top_offset
 
                 if self.pic_per_page == 6 and j == 4:
-                    # 1スライドに6枚貼り付ける場合の5枚目
+                    # fifth image when paste six images to one slide
                     left = (
                         (self.slide_width / 3 - self.image_display_width) / 2
                     ) + self.slide_width / 3
@@ -218,7 +221,7 @@ class PowerPoint:
                     ) * 3 / 4 - self.pic_top_offset
 
                 if self.pic_per_page == 6 and j == 5:
-                    # 1スライドに6枚貼り付ける場合の6枚目
+                    # sixth image when paste six images to one slide
                     left = (
                         (self.slide_width / 3 - self.image_display_width) / 2
                     ) + self.slide_width * 2 / 3
@@ -228,10 +231,8 @@ class PowerPoint:
 
                 self.add_picture(slide, file_name, left, top)
 
-                # テキストを追加
+                # add text
                 width = height = Inches(1)
-                print(top)
-                print(top * 0.8)
                 txBox = slide.shapes.add_textbox(left, top - 400000, width, height)
                 tf = txBox.text_frame
                 tf.text = file_name.replace(".png", "").replace(".jpg", "")
@@ -239,5 +240,12 @@ class PowerPoint:
         self.presentaition.save(self.output_filename)
 
 
-pptx = PowerPoint(pic_per_page=6, image_height=Inches(2.0), pic_top_offset=-1000000)
+pptx = PowerPoint(
+    files=file_list,
+    file_path=file_path,
+    pic_per_page=2,
+    image_height=Inches(3.0),
+    # pic_top_offset=-1000000,
+    pic_top_offset=0,
+)
 pptx.make_pptx()
