@@ -5,7 +5,7 @@ import math
 
 
 class PowerPoint:
-    def __init__(self, pic_per_page):
+    def __init__(self, pic_per_page, image_height, pic_top_offset=0):
         self.file_path = "./pictures/"
         self.file_names = [
             "b.png",
@@ -16,18 +16,18 @@ class PowerPoint:
             "b.png",
             "e.jpg",
         ]
-        self.slide_templace = "sample_slide.pptx"
+        self.slide_template = "sample_slide.pptx"
         self.output_filename = "class_output.pptx"
-        self.image_display_height = Inches(2.0)
+        self.image_display_height = image_height
         self.image_display_width = 0
         self.aspect_ratio = 0
         self.num_of_slides = 0
         self.pic_per_page = pic_per_page
-        self.presentaition = Presentation(self.slide_templace)
+        self.presentaition = Presentation(self.slide_template)
         self.slide_width = self.presentaition.slide_width
         self.slide_height = self.presentaition.slide_height
         self.slide_layout = self.presentaition.slide_layouts[5]
-        self.pic_top_offset = 0
+        self.pic_top_offset = pic_top_offset
         # self.pic_top_offset = -1000000
 
     def calc_aspect_ratio(self, file_name):
@@ -239,5 +239,5 @@ class PowerPoint:
         self.presentaition.save(self.output_filename)
 
 
-pptx = PowerPoint(pic_per_page=3)
+pptx = PowerPoint(pic_per_page=6, image_height=Inches(2.0), pic_top_offset=-1000000)
 pptx.make_pptx()
