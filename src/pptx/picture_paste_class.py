@@ -78,7 +78,7 @@ class PowerPoint:
         ):
             self.make_pptx_two_or_more_pic_per_slide()
         else:
-            print("Error")
+            print("Doesn't support the specified pic_per_page")
 
     def make_pptx_one_pic_per_slide(self):
         num_of_slides = len(self.files)
@@ -251,7 +251,7 @@ pptx = PowerPoint(
     files=file_list,
     file_path=file_path,
     output_filename=file_path + output_filename,
-    pic_per_page=3,
+    pic_per_page=4,
     image_height=util.Inches(2.0),
     pic_top_offset=0,
     # pic_top_offset=-1000000,  # for 4 or 6 images for 1 slide
