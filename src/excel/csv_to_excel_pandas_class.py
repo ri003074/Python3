@@ -7,13 +7,6 @@ file_list = ["csv_sample1.csv", "csv_sample2.csv"]
 
 
 class Excel:
-    """expected csv format is following
-    pin, test1, test2,,,
-    p1, 1, 2,,
-    p2, 3, 4,,
-    p3, 5, 6,,
-    """
-
     def __init__(self, input_file, output_file):
         self.input_file = input_file
         self.output_file = output_file
@@ -43,6 +36,12 @@ class Excel:
         marker_symbol=None,
         line_no_fill=False,
     ):
+        """expected csv format is following
+        pin, test1, test2,,,
+        p1, 1, 2,,
+        p2, 3, 4,,
+        p3, 5, 6,,
+        """
         wb = load_workbook(self.output_file)
         ws = wb.active
 
