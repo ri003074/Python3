@@ -1,8 +1,8 @@
 *.pyc
-output.xlsx
-sample.xlsx
+*.xlsx
 .DS_Store
 *.png
 *.rtf
 *.pptx
 *.jpg
+*.csv

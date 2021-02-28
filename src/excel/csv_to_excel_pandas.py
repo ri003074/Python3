@@ -7,12 +7,14 @@ output_file = "output.xlsx"
 df = pd.read_csv(input_file)
 df = df.loc[:, ~df.columns.str.match("Unnamed")]
 df.to_excel(output_file, index=False)
+max_col = len(df.columns)
+max_row = len(df.index) + 1
 
 wb = load_workbook(output_file)
 ws = wb.active
 
-values = Reference(ws, min_col=2, min_row=1, max_col=3, max_row=4)
-categories = Reference(ws, min_col=1, min_row=2, max_col=1, max_row=4)
+values = Reference(ws, min_col=2, min_row=1, max_col=max_col, max_row=max_row + 1)
+categories = Reference(ws, min_col=1, min_row=2, max_col=1, max_row=max_row + 1)
 chart = LineChart()
 chart.legend = None
 chart.title = "Fruits"
