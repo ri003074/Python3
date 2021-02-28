@@ -11,7 +11,7 @@ class Excel:
     pin, test1, test2,,,
     p1, 1, 2,,
     p2, 3, 4,,
-    p3, 5, 6
+    p3, 5, 6,,
     """
 
     def __init__(self, input_file, output_file):
@@ -40,6 +40,8 @@ class Excel:
         width=20,
         legend=False,
         legend_position="b",
+        marker_symbol=None,
+        line_no_fill=False,
     ):
         wb = load_workbook(self.output_file)
         ws = wb.active
@@ -69,8 +71,10 @@ class Excel:
 
         for i in range(len(chart.series)):
             series = chart.series[i]
-            series.marker.symbol = "circle"
-            series.graphicalProperties.line.noFill = True
+            if marker_symbol:
+                series.marker.symbol = marker_symbol
+
+            series.graphicalProperties.line.noFill = line_no_fill
 
         ws.add_chart(chart, "B4")
         wb.save(self.output_file)
@@ -89,9 +93,5 @@ excel1.make_graph(
 excel2 = Excel("csv_sample2.csv", "csv_sample2.xlsx")
 excel2.make_excel_file()
 excel2.make_graph(
-    graph_title="sample2",
-    x_axis_title="abc",
-    legend=True,
-    y_axis_min=0,
-    y_axis_max=10,
+    y_axis_min=0, y_axis_max=10, marker_symbol="circle", line_no_fill=True
 )
