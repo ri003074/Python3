@@ -81,18 +81,20 @@ class Excel:
         wb.save(self.output_file)
 
 
-excel1 = Excel(data_path + "csv_type1_1.csv", data_path + "csv_type1_1.xlsx")
-excel1.make_excel_file()
-excel1.make_graph(
-    graph_title="sample1",
-    x_axis_title="abc",
-    legend=True,
-    y_axis_min=0,
-    y_axis_max=10,
-)
+if __name__ == "__main__":
 
-excel2 = Excel(data_path + "csv_type1_2.csv", data_path + "csv_type1_2.xlsx")
-excel2.make_excel_file()
-excel2.make_graph(
-    y_axis_min=0, y_axis_max=10, marker_symbol="circle", line_no_fill=True
-)
+    excel1 = Excel(data_path + "csv_type1_1.csv", data_path + "csv_type1_1.xlsx")
+    excel1.make_excel_file()
+    excel1.make_graph(
+        graph_title="sample1",
+        x_axis_title="abc",
+        legend=True,
+        y_axis_min=0,
+        y_axis_max=10,
+    )
+
+    excel2 = Excel(data_path + "csv_type1_2.csv", data_path + "csv_type1_2.xlsx")
+    excel2.make_excel_file()
+    excel2.make_graph(
+        y_axis_min=0, y_axis_max=10, marker_symbol="circle", line_no_fill=True
+    )

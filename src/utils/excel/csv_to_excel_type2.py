@@ -4,6 +4,7 @@ from openpyxl.chart import LineChart, Reference
 
 input_file = "csv_type2_1.csv"
 output_file = "csv_type2_1.xlsx"
+data_path = "./data/"
 
 
 class Excel:
@@ -67,6 +68,7 @@ class Excel:
         wb.save(self.output_file)
 
 
-excel = Excel(input_file, output_file)
-excel.make_excel_file()
-excel.make_graph()
+if __name__ == "__main__":
+    excel = Excel(data_path + input_file, data_path + output_file)
+    excel.make_excel_file()
+    excel.make_graph()

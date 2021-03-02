@@ -14,7 +14,7 @@ file_list = [
 ]
 
 file_path = "./pictures/"
-output_filename = "cc.pptx"
+output_filename = "dd.pptx"
 
 
 class PowerPoint:
@@ -247,13 +247,14 @@ class PowerPoint:
         self.presentaition.save(self.output_filename)
 
 
-pptx = PowerPoint(
-    files=file_list,
-    file_path=file_path,
-    output_filename=file_path + output_filename,
-    pic_per_page=4,
-    image_height=util.Inches(2.0),
-    pic_top_offset=0,
-    # pic_top_offset=-1000000,  # for 4 or 6 images for 1 slide
-)
-pptx.make_pptx()
+if __name__ == "__main__":
+    pptx = PowerPoint(
+        files=file_list,
+        file_path=file_path,
+        output_filename=file_path + output_filename,
+        pic_per_page=4,
+        image_height=util.Inches(2.0),
+        pic_top_offset=0,
+        # pic_top_offset=-1000000,  # for 4 or 6 images for 1 slide
+    )
+    pptx.make_pptx()
