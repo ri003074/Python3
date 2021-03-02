@@ -3,10 +3,15 @@ from openpyxl import load_workbook
 from openpyxl.chart import LineChart
 from openpyxl.chart import Reference
 
-file_list = ["csv_sample1.csv", "csv_sample2.csv"]
-
 
 class Excel:
+    """expected csv format is following
+    pin, test1, test2,,,
+    p1, 1, 2,,
+    p2, 3, 4,,
+    p3, 5, 6,,
+    """
+
     def __init__(self, input_file, output_file):
         self.input_file = input_file
         self.output_file = output_file
@@ -36,12 +41,6 @@ class Excel:
         marker_symbol=None,
         line_no_fill=False,
     ):
-        """expected csv format is following
-        pin, test1, test2,,,
-        p1, 1, 2,,
-        p2, 3, 4,,
-        p3, 5, 6,,
-        """
         wb = load_workbook(self.output_file)
         ws = wb.active
 
@@ -79,7 +78,7 @@ class Excel:
         wb.save(self.output_file)
 
 
-excel1 = Excel("csv_sample1.csv", "csv_sample1.xlsx")
+excel1 = Excel("csv_type1_1.csv", "csv_type1_1.xlsx")
 excel1.make_excel_file()
 excel1.make_graph(
     graph_title="sample1",
@@ -89,7 +88,7 @@ excel1.make_graph(
     y_axis_max=10,
 )
 
-excel2 = Excel("csv_sample2.csv", "csv_sample2.xlsx")
+excel2 = Excel("csv_type1_2.csv", "csv_type1_2.xlsx")
 excel2.make_excel_file()
 excel2.make_graph(
     y_axis_min=0, y_axis_max=10, marker_symbol="circle", line_no_fill=True
