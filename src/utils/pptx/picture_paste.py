@@ -2,6 +2,7 @@ from pptx import Presentation
 from pptx import util
 from PIL import Image
 import math
+from pptx.util import Pt
 
 file_list = [
     "b.png",
@@ -241,8 +242,10 @@ class PowerPoint:
                 # add text
                 width = height = util.Inches(1)
                 txBox = slide.shapes.add_textbox(left, top - 400000, width, height)
-                tf = txBox.text_frame
+                tf = txBox.text_frame.add_paragraph()
                 tf.text = file_name.replace(".png", "").replace(".jpg", "")
+                tf.font.size = Pt(10)
+                tf.font.bold = True
 
         self.presentaition.save(self.output_filename)
 
