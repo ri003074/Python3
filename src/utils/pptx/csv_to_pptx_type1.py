@@ -20,42 +20,41 @@ class PowerPoint:
 
     def __init__(
         self,
-        input_file,
         output_file,
+    ):
+        self.output_file = output_file
+        self.data = defaultdict(list)
+        self.categories = []
+        self.slide_template = "sample_slide.pptx"
+        self.presentation = Presentation(self.slide_template)
+
+    def make_data(self, input_file):
+        tmp_data = []
+        self.categories = []
+        self.data = defaultdict(list)
+        with open(input_file, "r") as f:
+            reader = csv.reader(f)
+            for line in reader:
+                self.categories.append(line[0])
+                tmp_data.append(line[1:])
+
+        self.categories.pop(0)
+
+        for i in range(0, len(tmp_data[0])):
+            for j in range(1, len(tmp_data)):
+                self.data[tmp_data[0][i]].append(tmp_data[j][i])
+
+    def make_graph(
+        self,
         axis_min,
         axis_max,
         axis_unit,
         graph_title="",
         axis_title="",
     ):
-        self.input_file = input_file
-        self.output_file = output_file
-        self.data = defaultdict(list)
-        self.categories = []
-        self.graph_title = graph_title
-        self.axis_min = axis_min
-        self.axis_max = axis_max
-        self.axis_unit = axis_unit
-        self.axis_title = axis_title
-        self.slide_template = "sample_slide.pptx"
-
-    def make_data(self):
-        tmp_data = []
-        with open(self.input_file, "r") as f:
-            reader = csv.reader(f)
-            for line in reader:
-                self.categories.append(line[0])
-                tmp_data.append(line[1:])
-
-        for i in range(0, len(tmp_data[0])):
-            for j in range(1, len(tmp_data)):
-                self.data[tmp_data[0][i]].append(tmp_data[j][i])
-
-    def make_graph(self):
-        prs = Presentation(self.slide_template)
-        slide = prs.slides.add_slide(prs.slide_layouts[5])
-        slide_width = prs.slide_width
-        slide_height = prs.slide_height
+        slide = self.presentation.slides.add_slide(self.presentation.slide_layouts[5])
+        slide_width = self.presentation.slide_width
+        slide_height = self.presentation.slide_height
 
         # define chart data ---------------------
         chart_data = ChartData()
@@ -83,41 +82,51 @@ class PowerPoint:
         chart.legend.position = XL_LEGEND_POSITION.BOTTOM
 
         # グラフタイトル
-        if self.graph_title:
+        if graph_title:
             chart.has_title = True
             chart.chart_title.has_text_frame = True
-            chart.chart_title.text_frame.text = self.graph_title
+            chart.chart_title.text_frame.text = graph_title
             chart.chart_title.text_frame.paragraphs[0].font.size = Pt(12)
 
         # グラフ X軸
         value_axis = chart.value_axis
-        value_axis.minimum_scale = self.axis_min
-        value_axis.maximum_scale = self.axis_max
-        value_axis.major_unit = self.axis_unit
+        value_axis.minimum_scale = axis_min
+        value_axis.maximum_scale = axis_max
+        value_axis.major_unit = axis_unit
 
         # グラフ X軸 タイトル
-        if self.axis_title:
+        if axis_title:
             value_axis.has_title = True
             value_axis.axis_title.has_text_frame = True
-            value_axis.axis_title.text_frame.text = self.axis_title
+            value_axis.axis_title.text_frame.text = axis_title
             value_axis.axis_title.text_frame.paragraphs[0].font.size = Pt(10)
             # tick_labels = value_axis.tick_labels
             # tick_labels.font.bold = True
             # tick_labels.font.size = Pt(14)
             # tick_labels.number_format = "mV"
 
-        prs.save(self.output_file)
+        self.presentation.save(self.output_file)
 
 
 if __name__ == "__main__":
     pptx = PowerPoint(
-        input_file=data_path + "csv_type1_1.csv",
         output_file=data_path + "csv_type1_1.pptx",
+        # graph_title="sample graph",
+    )
+    pptx.make_data(
+        input_file=data_path + "csv_type1_1.csv",
+    )
+    pptx.make_graph(
         axis_min=0,
         axis_max=50,
         axis_unit=5,
-        axis_title="mV"
-        # graph_title="sample graph",
+        axis_title="mV",
     )
-    pptx.make_data()
-    pptx.make_graph()
+    pptx.make_data(
+        input_file=data_path + "csv_type1_2.csv",
+    )
+    pptx.make_graph(
+        axis_min=0,
+        axis_max=30,
+        axis_unit=10,
+    )
