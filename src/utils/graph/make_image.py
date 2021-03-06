@@ -19,7 +19,6 @@ class Image:
         ylabel="",
     ):
         df = pandas.read_csv(input_file, index_col=[0])
-        print(len(df.index))
         ax = df.plot(
             kind="line",
             figsize=(16, 9),
@@ -28,8 +27,8 @@ class Image:
             ylim=[yaxis_min, yaxis_max],
             yticks=ytics,
             xticks=range(0, len(df.index)),
-            marker="o",
-            fontsize=20,
+            fontsize=10,
+            # marker="o",
         )
         ax.grid(axis="y")
 
@@ -37,11 +36,11 @@ class Image:
 
         for i, line in enumerate(ax.get_lines()):
             line.set_marker(self.markers[i])
-            ax.legend(ax.get_lines(), df.columns, loc="best")
+            ax.legend(ax.get_lines(), df.columns, loc="best", fontsize=20)
 
         ax.set_ylabel(ylabel, fontsize=20)
-        ax.legend(fontsize=20, loc="best")
         ax.set_xlabel(xlabel)
+        print(ax)
         fig = ax.get_figure()
         fig.savefig(output_file)
 
