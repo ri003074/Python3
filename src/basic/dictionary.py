@@ -65,6 +65,19 @@ print(d)
 
 for key1, val1 in d.items():
     print(key1)
-    for key2, val2 in val1.items():
-        print(key2)
-        print(val2
+    # for key2, val2 in val1.items():
+    #     print(key2)
+    #     print(val2)
+
+
+# 二次元配列から辞書
+data = [["a", "b"], ["c", "d"]]
+dic = dict(data)
+print(data)
+print(dic)
+
+
+d = {"x": [1, 2], "y": [3, 4]}
+for key, value in d.items():
+    print(key)
+    print(value)
