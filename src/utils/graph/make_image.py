@@ -85,7 +85,7 @@ if __name__ == "__main__":
         input_file=data_path + "csv_type1_1.csv",
         output_file="csv_type1_1.png",
         ylabel="mV",
-        yticks=range(0, 20, 5),
+        yticks=range(0, 20, 2),
         # yaxis_min=0,
         # yaxis_max=8,
     )
