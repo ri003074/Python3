@@ -41,6 +41,7 @@ turtle.forward(-150)
 turtle.setheading(90)
 turtle.forward(-150)
 turtle.setheading(0)
+turtle.hideturtle()
 
 print(random.randint(0, len(colors)))
 
