@@ -3,48 +3,21 @@ aaaaa
 aaaaa
 aaaaa
 aaaaa
-<yscancond>
-    <step>10</step>
-    <displayvalue>
-        <unit>voh1</unit>
-        <start>0.0mV</start>
-        <index>2mV</index>
-        <stop>10mV</stop>
-    </displayvalue>
-    <scandata>
-        <datanum>0</datanum>
-        <unit>voh1</unit>
-        <func>voh1</func>
-        <start>0.0mV</start>
-        <index>2mV</index>
-        <stop>10mV</stop>
-        <chkbtn>TRUE</chkbtn>
-    </scandata>
-    <scandata>
-        <datanum>1</datanum>
-        <unit>vol1</unit>
-        <func>vol1</func>
-        <start>0.0mV</start>
-        <index>2mV</index>
-        <stop>10mV</stop>
-        <chkbtn>TRUE</chkbtn>
-    </scandata>
-</yscancond>
 <xscancond>
-    <step>10</step>
     <displayvalue>
         <unit>vih2</unit>
         <start>0.0mV</start>
         <index>2mV</index>
-        <stop>10mV</stop>
+        <stop>20mV</stop>
     </displayvalue>
+    <step>10</step>
     <scandata>
         <datanum>0</datanum>
         <unit>vih2</unit>
         <func>vih2</func>
         <start>0.0mV</start>
         <index>2mV</index>
-        <stop>10mV</stop>
+        <stop>20mV</stop>
         <chkbtn>TRUE</chkbtn>
     </scandata>
     <scandata>
@@ -53,7 +26,7 @@ aaaaa
         <func>vil2</func>
         <start>0.0mV</start>
         <index>2mV</index>
-        <stop>10mV</stop>
+        <stop>20mV</stop>
         <chkbtn>TRUE</chkbtn>
     </scandata>
     <scandata>
@@ -62,10 +35,37 @@ aaaaa
         <func>vtt</func>
         <start>1.0mV</start>
         <index>3mV</index>
-        <stop>12mV</stop>
+        <stop>29mV</stop>
         <chkbtn>TRUE</chkbtn>
     </scandata>
 </xscancond>
+<yscancond>
+    <displayvalue>
+        <unit>voh1</unit>
+        <start>0.0mV</start>
+        <index>2mV</index>
+        <stop>20.0mV</stop>
+    </displayvalue>
+    <step>10</step>
+    <scandata>
+        <datanum>0</datanum>
+        <unit>voh1</unit>
+        <func>voh1</func>
+        <start>0.0mV</start>
+        <index>2mV</index>
+        <stop>20mV</stop>
+        <chkbtn>TRUE</chkbtn>
+    </scandata>
+    <scandata>
+        <datanum>1</datanum>
+        <unit>vol1</unit>
+        <func>vol1</func>
+        <start>0.0mV</start>
+        <index>2mV</index>
+        <stop>20.0mV</stop>
+        <chkbtn>TRUE</chkbtn>
+    </scandata>
+</yscancond>
 
 bbbb
 bbbb
