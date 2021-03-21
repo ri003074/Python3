@@ -1,12 +1,12 @@
 import re
 import sys
-from shm_condition_data import default_data_before_scanconditioon
-from shm_condition_data import default_data_after_scanconditioon
+from shm_condition_data import default_data_before_scancondition
+from shm_condition_data import default_data_after_scancondition
 from shm_condition_data import shmoo_conditions
 
 for shmoo_condition in shmoo_conditions:
     f = open(shmoo_condition + ".txt", "w")
-    f.write(default_data_before_scanconditioon)
+    f.write(default_data_before_scancondition)
     for axis in shmoo_conditions[shmoo_condition]:
         if axis == "yscancond" or axis == "xscancond":
             f.write("<{0}>\n".format(axis))
@@ -73,15 +73,9 @@ for shmoo_condition in shmoo_conditions:
                     f.write("{0}<chkbtn>{1}</chkbtn>\n".format(" " * 8, "TRUE"))
                     f.write("{0}</{1}>\n".format(" " * 4, param))
 
-                start_num = re.sub(
-                    "[a-zA-Z]", "", data[2]
-                )
-                index_num = re.sub(
-                    "[a-zA-Z]", "", data[3]
-                )
-                stop_num = re.sub(
-                    "[a-zA-Z]", "", data[4]
-                )
+                start_num = re.sub("[a-zA-Z]", "", data[2])
+                index_num = re.sub("[a-zA-Z]", "", data[3])
+                stop_num = re.sub("[a-zA-Z]", "", data[4])
                 if (float(start_num) + float(stop_num)) / float(index_num) != step:
                     print "{0} {1} step error!!!".format(shmoo_condition, axis)
                     sys.exit()
@@ -89,5 +83,5 @@ for shmoo_condition in shmoo_conditions:
         if axis == "yscancond" or axis == "xscancond":
             f.write("</{0}>\n".format(axis))
 
-    f.write(default_data_after_scanconditioon)
+    f.write(default_data_after_scancondition)
     f.close()

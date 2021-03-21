@@ -1,11 +1,11 @@
-default_data_before_scanconditioon = """
+default_data_before_scancondition = """
 aaaaa
 aaaaa
 aaaaa
 aaaaa
 """
 
-default_data_after_scanconditioon = """
+default_data_after_scancondition = """
 bbbb
 bbbb
 bbbb
