@@ -1,7 +1,7 @@
 from turtle import Turtle
 
-UP = 10
-DOWN = 20
+UP = 40
+DOWN = 40
 
 
 class Puddle(Turtle):
