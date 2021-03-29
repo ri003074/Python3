@@ -1,3 +1,9 @@
+"""
+list comprehension is used for when create a new list
+
+new_list = [new_item for item in original_list]
+"""
+
 t = (1, 2, 3, 4, 5)
 t2 = (5, 6, 7, 8, 9, 10)
 
