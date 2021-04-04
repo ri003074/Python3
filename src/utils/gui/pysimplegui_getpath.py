@@ -1,46 +1,35 @@
 import PySimpleGUI as sg
 
 
-# class GetPath:
-#     def __init__(self):
-#         sg.theme("Dark Blue 3")
+class GetPath:
+    def __init__(self):
+        self.dir_path = ""
+        sg.theme("Dark Blue 3")
 
-#         layout = [[sg.Text("Python GUI")], [sg.Text("Select Dir:"), sg.FolderBrowse()]]
+        layout = [
+            [sg.Text("Python GUI")],
+            [
+                sg.Text("Choose a folder: "),
+                sg.Input(key="-IN2-", change_submits=True, size=(65, 5)),
+                sg.FolderBrowse(key="-IN-", button_text="browse", size=(6, 1)),
+                sg.Button("exec", size=(6, 1)),
+            ],
+        ]
 
-#         window = sg.Window("Get Path GUI", layout, size=(300, 200))
+        window = sg.Window("Get Path GUI", layout, size=(650, 80))
 
-#         while True:
-#             event, values = window.read()
+        while True:
+            event, values = window.read()
 
-#             if event is None:
-#                 break
+            if event is None:
+                break
 
-#         window.close()
+            if event == "exec":
+                self.dir_path = values["-IN-"]
+                break
+
+        window.close()
 
 
-# aaa = GetPath()
-
-
-sg.theme("DarkTeal2")
-layout = [
-    [sg.T("")],
-    # [sg.T("folder: "), sg.Text(size=(15, 1), key="-IN2-", enable_events=True)],
-    [
-        sg.Text("Choose a folder: "),
-        sg.Input(key="-IN2-", change_submits=True),
-        sg.FolderBrowse(key="-IN-", button_text="browse"),
-    ],
-    [sg.Button("Submit")],
-]
-
-###Building Window
-window = sg.Window("My File Browser", layout, size=(600, 150))
-
-while True:
-    event, values = window.read()
-    print(event)
-    if event == sg.WIN_CLOSED or event == "Exit":
-        break
-    elif event == "Submit":
-        print(values["-IN-"])
-        window["-IN2-"].update(values["-IN-"])
+get_dir_path = GetPath()
+print(get_dir_path.dir_path)
