@@ -2,7 +2,7 @@ from tkinter import Tk
 from tkinter import Label
 from tkinter import Canvas
 from tkinter import Button
-from PIL import ImageTk
+from PIL import ImageTk, Image
 import math
 
 
@@ -12,11 +12,12 @@ RED = "#e7305b"
 GREEN = "#9bdeac"
 YELLOW = "#f7f5dd"
 FONT_NAME = "Courier"
-WORK_MIN = 0.2
-SHORT_BREAK_MIN = 0.1
-LONG_BREAK_MIN = 0.3
+WORK_MIN = 25
+SHORT_BREAK_MIN = 5
+LONG_BREAK_MIN = 20
 reps = 0
 timer = None
+
 
 # ---------------------------- TIMER RESET ------------------------------- #
 
@@ -84,7 +85,7 @@ timer_label = Label(text="Timer", font=(FONT_NAME, 48, "bold"), fg=GREEN, bg=YEL
 timer_label.grid(row=1, column=2)
 
 canvas = Canvas(width=200, height=224, bg=YELLOW, highlightthickness=0)
-tomato_img = ImageTk.PhotoImage(file="tomato.png")
+tomato_img = ImageTk.PhotoImage(Image.open("tomato.png").convert("RGB"))
 canvas.create_image(100, 112, image=tomato_img)
 timer_text = canvas.create_text(
     100, 130, text="00:00", fill="green", font=(FONT_NAME, 35, "bold")
@@ -102,5 +103,6 @@ stop_button.grid(row=3, column=3)
 
 check_label = Label(font=(FONT_NAME, 48, "bold"), fg=GREEN, bg=YELLOW)
 check_label.grid(row=4, column=2)
+
 
 window.mainloop()
