@@ -1,9 +1,7 @@
 *.pyc
-*.xlsx
 .DS_Store
 *.png
 *.rtf
 *.pptx
 *.jpg
-*.csv
 *checkpoint.ipynb
