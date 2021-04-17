@@ -32,3 +32,10 @@ print(r)
 
 r = [i * j for i in t for j in t2]
 print(r)
+
+
+r = [1]
+print(r)
+
+r += [i for i in range(5)]
+print(r)

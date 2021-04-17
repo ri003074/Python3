@@ -29,3 +29,30 @@ try:
     check()
 except UppercaseError as exc:
     print(f"this is my fault {exc}")
+
+
+try:
+    file = open("a.txt")
+    dic = {"key": "value"}
+    # key = dic["sfds"]
+
+except FileNotFoundError:
+    file = open("a.txt", "w")
+    file.write("something")
+
+except KeyError as error:
+    print(f"{error} doesn't exsist")
+
+else:
+    content = file.read()
+    print(content)
+
+finally:
+    file.close()
+
+
+height = 40
+widht = 30
+
+if height > 3:
+    raise ValueError("human height should not be over 3 meters")
