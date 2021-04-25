@@ -58,7 +58,7 @@ handlers = {
 
 def handle_status_change2(status):
     if status not in handlers:
-        raise Exception(f'No handler found fot status: {status}')
+        raise Exception(f"No handler found fot status: {status}")
     handler = handlers[status]
     handler()
 
