@@ -33,13 +33,13 @@ def insert_images_to_pptx(slide_titles, *argv):
         ):
             active_presentation.Slides.Add(i, 11)
             # title
-            image_name = argv[0][image_counter]
-            image_name = image_name.replace("imgs\\", "").replace(".PNG", "")
             active_presentation.Slides(i).Shapes.Placeholders.Item(
                 1
             ).TextFrame.TextRange.Text = slide_titles[i - CURRENT_SLIDE_COUNT - 1]
 
             # first image and file name
+            image_name = argv[0][image_counter]
+            image_name = image_name.replace("imgs\\", "").replace(".PNG", "")
             inserted_imgs = active_presentation.Slides(i).Shapes.AddPicture(
                 FileName=os.getcwd() + "/" + images[image_counter],
                 LinkToFile=-1,
@@ -48,6 +48,7 @@ def insert_images_to_pptx(slide_titles, *argv):
                 Top=IMAGE_TOP_POSITION,
             )
             inserted_imgs.Width = IMAGE_WIDTH
+
             image_counter += 1
 
     elif images_per_slide == 2:
@@ -56,8 +57,12 @@ def insert_images_to_pptx(slide_titles, *argv):
         ):
             active_presentation.Slides.Add(i, 11)
             # title
-            image_name = argv[0][image_counter]
+            active_presentation.Slides(i).Shapes.Placeholders.Item(
+                1
+            ).TextFrame.TextRange.Text = slide_titles[i - CURRENT_SLIDE_COUNT - 1]
+
             # first image and file name
+            image_name = argv[0][image_counter]
             inserted_imgs = active_presentation.Slides(i).Shapes.AddPicture(
                 FileName=os.getcwd() + "/" + image_name,
                 LinkToFile=-1,
@@ -68,9 +73,6 @@ def insert_images_to_pptx(slide_titles, *argv):
             inserted_imgs.Width = IMAGE_WIDTH
 
             image_name = image_name.replace("imgs\\", "").replace(".PNG", "")
-            active_presentation.Slides(i).Shapes.Placeholders.Item(
-                1
-            ).TextFrame.TextRange.Text = slide_titles[i - CURRENT_SLIDE_COUNT - 1]
             inserted_txtbox = active_presentation.Slides(i).Shapes.AddTextbox(
                 1,
                 PPTX_WIDTH * 1 / 4 + -TEXTBOX_WIDTH / 2,
@@ -81,9 +83,8 @@ def insert_images_to_pptx(slide_titles, *argv):
             inserted_txtbox.TextFrame.TextRange.Text = image_name
             inserted_txtbox.TextFrame.TextRange.ParagraphFormat.Alignment = 2  # 中央ぞろえ
 
-            # title
-            image_name = argv[1][image_counter]
             # second image and file name
+            image_name = argv[1][image_counter]
             inserted_imgs = active_presentation.Slides(i).Shapes.AddPicture(
                 FileName=os.getcwd() + "/" + image_name,
                 LinkToFile=-1,
@@ -92,6 +93,7 @@ def insert_images_to_pptx(slide_titles, *argv):
                 Top=IMAGE_TOP_POSITION,
             )
             inserted_imgs.Width = IMAGE_WIDTH
+
             image_name = image_name.replace("imgs2\\", "").replace(".PNG", "")
             inserted_txtbox = active_presentation.Slides(i).Shapes.AddTextbox(
                 1,
