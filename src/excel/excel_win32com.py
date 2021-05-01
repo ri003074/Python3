@@ -57,10 +57,12 @@ x_axes.AxisTitle.Text = "mV"
 x_axes.MajorUnit = 4
 # x_axes.MinorUnit = 2 #?
 
-ws.ChartObjects().Top = ws.Range("B10").Top
-ws.ChartObjects().Left = ws.Range("B10").Left
-ws.ChartObjects().Height = 200
-ws.ChartObjects().Width = 400
+
+rng = ws.Range("B10:H20")
+ws.ChartObjects().Top = rng.Top
+ws.ChartObjects().Left = rng.Left
+ws.ChartObjects().Height = rng.Height
+ws.ChartObjects().Width = rng.Width
 
 for i in range(ws.Shapes.Count):
     ws.Shapes(i + 1).Chart.Export(Filename=os.getcwd() + "/" + title[0] + ".png")
