@@ -51,9 +51,11 @@ for i in range(chart.FullSeriesCollection().Count):
 
 x_axes = chart.Axes(2)
 x_axes.MinimumScale = 0
-x_axes.MaximumScale = 10
+x_axes.MaximumScale = 20
 x_axes.HasTitle = True
 x_axes.AxisTitle.Text = "mV"
+x_axes.MajorUnit = 4
+# x_axes.MinorUnit = 2 #?
 
 ws.ChartObjects().Top = ws.Range("B10").Top
 ws.ChartObjects().Left = ws.Range("B10").Left
