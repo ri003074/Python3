@@ -7,8 +7,8 @@ msoTrue = -1
 msoFalse = 0
 
 title = ["dc_test_result"]
-tests = ["test1", "test2", "test3"]
-pins = ["p1", "p2", "p3", "p4"]
+tests = ["test1", "test2", "test3", "test4"]
+pins = ["p1", "p2", "p3", "p4", "p5"]
 data = [[i * j for i in range(len(tests))] for j in range(len(pins))]
 
 
@@ -27,9 +27,9 @@ def get_last_column():
 
 ws.Cells.Clear()  # initialize
 ws.Application.Range(
-    ws.Cells(2, 1), ws.Cells(5, 1)
+    ws.Cells(2, 1), ws.Cells(len(pins) + 1, 1)
 ).value = xl.Application.WorksheetFunction.Transpose(pins)
-ws.Application.Range(ws.Cells(1, 2), ws.Cells(1, 4)).value = tests
+ws.Application.Range(ws.Cells(1, 2), ws.Cells(1, len(tests) + 1)).value = tests
 ws.Application.Range(ws.Cells(1, 1), ws.Cells(1, 1)).value = title[0]
 ws.Range(ws.Cells(2, 2), ws.Cells(get_last_row(), get_last_column())).Value = data
 
