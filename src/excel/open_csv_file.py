@@ -36,5 +36,5 @@ for file in files:
     chart.Legend.Position = xlLegendPositionBottom
 
     title = ws.Cells(1, 1)
-    ws.Shapes(1).Chart.Export(Filename=os.getcwd() + "/" + str(title) + ".png")
+    ws.Shapes(1).Chart.Export(Filename=os.getcwd() + "/datas/" + str(title) + ".png")
     wb.Close()
