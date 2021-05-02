@@ -24,7 +24,7 @@ for file in files:
 
     ws = wb.ActiveSheet
 
-    chart = ws.Shapes.AddChart2().chart
+    chart = ws.Shapes.AddChart2().Chart
     chart.ChartType = xlLineMarkers
     chart.SetSourceData(
         ws.Application.Range(

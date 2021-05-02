@@ -14,7 +14,7 @@ data = [[i * j for i in range(len(tests))] for j in range(len(pins))]
 
 xl = win32com.client.GetObject(Class="Excel.Application")
 wb = xl.Workbooks("for_job.xlsm")
-ws = wb.sheets("for_job")
+ws = wb.Sheets("for_job")
 
 
 def get_last_row():
@@ -28,9 +28,9 @@ def get_last_column():
 ws.Cells.Clear()  # initialize
 ws.Application.Range(
     ws.Cells(2, 1), ws.Cells(len(pins) + 1, 1)
-).value = xl.Application.WorksheetFunction.Transpose(pins)
-ws.Application.Range(ws.Cells(1, 2), ws.Cells(1, len(tests) + 1)).value = tests
-ws.Application.Range(ws.Cells(1, 1), ws.Cells(1, 1)).value = title[0]
+).Value = xl.Application.WorksheetFunction.Transpose(pins)
+ws.Application.Range(ws.Cells(1, 2), ws.Cells(1, len(tests) + 1)).Value = tests
+ws.Application.Range(ws.Cells(1, 1), ws.Cells(1, 1)).Value = title[0]
 ws.Range(ws.Cells(2, 2), ws.Cells(get_last_row(), get_last_column())).Value = data
 
 
