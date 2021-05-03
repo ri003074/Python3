@@ -7,5 +7,6 @@ data = [
 ]
 
 df = pd.DataFrame(data, columns=["pin", "test1", "test2", "test3"])
-df.to_csv("data.csv", encoding="shift-jis", index=False)
-df.to_excel("data.xlsx", encoding="shift-jis", index=False)
+# df.to_csv("data.csv", encoding="shift-jis", index=False)
+# df.to_excel("data.xlsx", encoding="shift-jis", index=False)
+
