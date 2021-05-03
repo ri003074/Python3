@@ -41,15 +41,31 @@
 #     print(active_presentation.Slides(1).Shapes(1).Type)
 
 
+# import win32com.client
+
+# pptx = win32com.client.Dispatch("PowerPoint.Application")
+# pptx.Visible = True
+# active_presentation = pptx.Presentations.Add()
+# print(active_presentation.PageSetup.SlideWidth)
+# active_presentation.Slides.Add(1, 12)
+# textbox = active_presentation.Slides(1).Shapes.AddTextbox(
+#     1, 0, 0, active_presentation.PageSetup.SlideWidth, 100
+# )
+# textbox.TextFrame.TextRange.Text = "text box"
+# textbox.TextFrame.TextRange.ParagraphFormat.Alignment = 2
+
 import win32com.client
+import os
 
 pptx = win32com.client.Dispatch("PowerPoint.Application")
 pptx.Visible = True
 active_presentation = pptx.Presentations.Add()
-print(active_presentation.PageSetup.SlideWidth)
 active_presentation.Slides.Add(1, 12)
-textbox = active_presentation.Slides(1).Shapes.AddTextbox(
-    1, 0, 0, active_presentation.PageSetup.SlideWidth, 100
+image = active_presentation.Slides(1).Shapes.AddPicture(
+    FileName=os.getcwd() + "/imgs/sample1.PNG",
+    LinkToFile=-1,
+    SaveWithDocument=-1,
+    Left=0,
+    Top=0,
 )
-textbox.TextFrame.TextRange.Text = "text box"
-textbox.TextFrame.TextRange.ParagraphFormat.Alignment = 2
+image.Width = 500
