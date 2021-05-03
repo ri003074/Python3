@@ -54,18 +54,26 @@
 # textbox.TextFrame.TextRange.Text = "text box"
 # textbox.TextFrame.TextRange.ParagraphFormat.Alignment = 2
 
+# import win32com.client
+# import os
+
+# pptx = win32com.client.Dispatch("PowerPoint.Application")
+# pptx.Visible = True
+# active_presentation = pptx.Presentations.Add()
+# active_presentation.Slides.Add(1, 12)
+# image = active_presentation.Slides(1).Shapes.AddPicture(
+#     FileName=os.getcwd() + "/imgs/sample1.PNG",
+#     LinkToFile=-1,
+#     SaveWithDocument=-1,
+#     Left=0,
+#     Top=0,
+# )
+# image.Width = 500
+
 import win32com.client
-import os
 
 pptx = win32com.client.Dispatch("PowerPoint.Application")
 pptx.Visible = True
 active_presentation = pptx.Presentations.Add()
-active_presentation.Slides.Add(1, 12)
-image = active_presentation.Slides(1).Shapes.AddPicture(
-    FileName=os.getcwd() + "/imgs/sample1.PNG",
-    LinkToFile=-1,
-    SaveWithDocument=-1,
-    Left=0,
-    Top=0,
-)
-image.Width = 500
+slide_width = active_presentation.PageSetup.SlideWidth
+slide_width = active_presentation.PageSetup.SlideHeight
