@@ -1,8 +1,9 @@
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.chart import LineChart, Reference
+import os
 
-input_file = "csv_sample3.csv"
+input_file = os.getcwd() + "\csv_sample3.csv"
 output_file = "output.xlsx"
 df = pd.read_csv(input_file)
 df = df.loc[:, ~df.columns.str.match("Unnamed")]
@@ -31,7 +32,7 @@ for test_info in test_infos:
     ws = wb[sheet_name]
     values = Reference(
         ws,
-        min_col=2,
+        min_col=3,
         min_row=1,
         max_col=test_info["max_col"],
         max_row=test_info["max_row"],
