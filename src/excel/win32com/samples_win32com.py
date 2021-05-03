@@ -32,6 +32,7 @@
 
 import win32com.client
 import os
+xlCSV = 6
 
 xl = win32com.client.Dispatch("Excel.Application")
 xl.Visible = True
@@ -46,6 +47,6 @@ data = [
 
 ws.Range(ws.Cells(1, 1), ws.Cells(len(data), len(data[0]))).Value = data
 xl.DisplayAlerts = False
-wb.SaveAs(Filename=os.getcwd() + "/saved.csv", FileFormat=6)  # csv
-# wb.SaveAs(Filename=os.getcwd() + "/saved.xlsx")
+# wb.SaveAs(Filename=os.getcwd() + "/saved.csv", FileFormat=xlCSV)  # csv
+wb.SaveAs(Filename=os.getcwd() + "/saved.xlsx")
 wb.Close()
