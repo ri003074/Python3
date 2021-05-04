@@ -15,3 +15,5 @@ df3 = pd.read_csv("data.csv")
 df4 = pd.read_excel("data.xlsx")
 print(df3)
 print(df4)
+
+df3.to_excel("df3.xlsx", index=False)
