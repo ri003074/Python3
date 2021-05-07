@@ -5,3 +5,5 @@
 *.pptx
 *.jpg
 *checkpoint.ipynb
+*.csv
+*.xlsx
