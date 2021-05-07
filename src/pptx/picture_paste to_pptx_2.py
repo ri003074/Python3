@@ -4,8 +4,8 @@ from pptx.enum.text import PP_ALIGN
 from PIL import Image
 from glob import glob
 
-FILE_NAMES_LEFT = glob("./imgs/*.png")
-FILE_NAMES_RIGHT = glob("./imgs2/*.png")
+FILE_NAMES_LEFT = glob("./imgs/*.PNG")
+FILE_NAMES_RIGHT = glob("./imgs2/*.PNG")
 SLIDE_TITLES = ["aaa", "bbb"]
 PIC_PER_PAGE = 2
 IMG_DISPLAY_HEIGHT = Inches(2.0)
@@ -16,10 +16,10 @@ prs = Presentation()
 SLIDE_WIDTH = prs.slide_width
 SLIDE_HEIGHT = prs.slide_height
 OUTPUT_FILE_NAME = "output.pptx"
+SLIDE_LAYOUT = prs.slide_layouts[5]
 
 for i in range(0, SLIDE_COUNT):
-    blank_slide_layout = prs.slide_layouts[5]
-    slide = prs.slides.add_slide(blank_slide_layout)
+    slide = prs.slides.add_slide(SLIDE_LAYOUT)
     title_placeholder = slide.shapes.title
     title_placeholder.text = SLIDE_TITLES[i]
 
