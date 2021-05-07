@@ -1,5 +1,6 @@
 from pptx import Presentation
 from pptx.util import Inches
+from pptx.enum.text import PP_ALIGN
 from PIL import Image
 from glob import glob
 
@@ -52,10 +53,14 @@ for i in range(0, SLIDE_COUNT):
         slide.shapes.add_picture(file_name, left, top, height=IMG_DISPLAY_HEIGHT)
 
         # テキストを追加
-        width = height = Inches(1)
+        height = Inches(1)
+        width = img_display_width
         txBox = slide.shapes.add_textbox(left, top * 0.7, width, height)
         tf = txBox.text_frame
-
-        tf.text = file_name.replace(".png", "").replace(".PNG", "")
+        pg = tf.paragraphs[0]
+        pg.text = file_name.replace(".png", "").replace(".PNG", "")
+        pg.alignment = PP_ALIGN.CENTER
+        # tf.paragraphs[0].alignment = PP_ALIGN.CENTER
+        # tf.text = file_name.replace(".png", "").replace(".PNG", "")
 
 prs.save(OUTPUT_FILE_NAME)
