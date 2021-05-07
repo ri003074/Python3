@@ -3,33 +3,32 @@ from pptx.util import Inches
 from PIL import Image
 from glob import glob
 
-file_names_left = glob("./imgs/*.png")
-file_names_right = glob("./imgs2/*.png")
-slide_titles = ["aaa", "bbb"]
-
-IMG_DISPLAY_HEIGHT = Inches(2.0)
+FILE_NAMES_LEFT = glob("./imgs/*.png")
+FILE_NAMES_RIGHT = glob("./imgs2/*.png")
+SLIDE_TITLES = ["aaa", "bbb"]
 PIC_PER_PAGE = 2
-SLIDE_COUNT = len(file_names_left)
-OUTPUT_FILE_NAME = "output.pptx"
+IMG_DISPLAY_HEIGHT = Inches(2.0)
+SLIDE_COUNT = len(SLIDE_TITLES)
 
 # prs = Presentation("sample_slide.pptx")
 prs = Presentation()
 SLIDE_WIDTH = prs.slide_width
 SLIDE_HEIGHT = prs.slide_height
+OUTPUT_FILE_NAME = "output.pptx"
 
 for i in range(0, SLIDE_COUNT):
     blank_slide_layout = prs.slide_layouts[5]
     slide = prs.slides.add_slide(blank_slide_layout)
     title_placeholder = slide.shapes.title
-    title_placeholder.text = slide_titles[i]
+    title_placeholder.text = SLIDE_TITLES[i]
 
     for j in range(0, PIC_PER_PAGE):
         if j == 0:
             # 貼り付ける画像ファイル名を取得
-            file_name = file_names_left[i]
+            file_name = FILE_NAMES_LEFT[i]
         if j == 1:
             # 貼り付ける画像ファイル名を取得
-            file_name = file_names_right[i]
+            file_name = FILE_NAMES_RIGHT[i]
 
         # 画像サイズを取得してアスペクト比を得る
         im = Image.open(file_name)
