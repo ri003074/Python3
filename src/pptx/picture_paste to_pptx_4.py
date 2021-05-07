@@ -5,10 +5,12 @@ from pptx.enum.text import MSO_ANCHOR
 from PIL import Image
 from glob import glob
 
-FILE_NAMES_LEFT = glob("./imgs/*.PNG")
-FILE_NAMES_RIGHT = glob("./imgs2/*.PNG")
+FILE_NAMES_LEFT_TOP = glob("./imgs/*.PNG")
+FILE_NAMES_RIGHT_TOP = glob("./imgs2/*.PNG")
+FILE_NAMES_LEFT_BOTTOM = glob("./imgs/*.PNG")
+FILE_NAMES_RIGHT_BOTTOM = glob("./imgs2/*.PNG")
 SLIDE_TITLES = ["aaa", "bbb"]
-PIC_PER_PAGE = 2
+PIC_PER_PAGE = 4
 IMG_DISPLAY_HEIGHT_CM = 5
 IMG_DISPLAY_HEIGHT = Inches(IMG_DISPLAY_HEIGHT_CM / 2.54)
 SLIDE_COUNT = len(SLIDE_TITLES)
@@ -20,6 +22,9 @@ SLIDE_HEIGHT = prs.slide_height
 OUTPUT_FILE_NAME = "output.pptx"
 SLIDE_LAYOUT = prs.slide_layouts[5]
 
+TOP_OFFSET_CM = 2
+TOP_OFFSET = Inches(TOP_OFFSET_CM / 2.54)
+
 for i in range(0, SLIDE_COUNT):
     slide = prs.slides.add_slide(SLIDE_LAYOUT)
     title_placeholder = slide.shapes.title
@@ -28,10 +33,16 @@ for i in range(0, SLIDE_COUNT):
     for j in range(0, PIC_PER_PAGE):
         if j == 0:
             # 貼り付ける画像ファイル名を取得
-            file_name = FILE_NAMES_LEFT[i]
+            file_name = FILE_NAMES_LEFT_TOP[i]
         if j == 1:
             # 貼り付ける画像ファイル名を取得
-            file_name = FILE_NAMES_RIGHT[i]
+            file_name = FILE_NAMES_RIGHT_TOP[i]
+        if j == 2:
+            # 貼り付ける画像ファイル名を取得
+            file_name = FILE_NAMES_LEFT_BOTTOM[i]
+        if j == 3:
+            # 貼り付ける画像ファイル名を取得
+            file_name = FILE_NAMES_RIGHT_BOTTOM[i]
 
         # 画像サイズを取得してアスペクト比を得る
         im = Image.open(file_name)
@@ -43,14 +54,24 @@ for i in range(0, SLIDE_COUNT):
         img_display_width = aspect_ratio * img_display_height
 
         if j == 0:
-            # 1スライドに２枚貼り付ける場合の１枚目
+            # 1スライドに4枚貼り付ける場合の1枚目
             left = (SLIDE_WIDTH / 2 - img_display_width) / 2
-            top = (SLIDE_HEIGHT - img_display_height) / 2
+            top = (SLIDE_HEIGHT - img_display_height) / 4 + TOP_OFFSET
 
         if j == 1:
-            # 1スライドに２枚貼り付ける場合の2枚目
+            # 1スライドに4枚貼り付ける場合の2枚目
             left = ((SLIDE_WIDTH / 2 - img_display_width) / 2) + SLIDE_WIDTH / 2
-            top = (SLIDE_HEIGHT - img_display_height) / 2
+            top = (SLIDE_HEIGHT - img_display_height) / 4 + TOP_OFFSET
+
+        if j == 2:
+            # 1スライドに4枚貼り付ける場合の3枚目
+            left = (SLIDE_WIDTH / 2 - img_display_width) / 2
+            top = (SLIDE_HEIGHT - img_display_height) * 3 / 4 + TOP_OFFSET
+
+        if j == 3:
+            # 1スライドに4枚貼り付ける場合の4枚目
+            left = ((SLIDE_WIDTH / 2 - img_display_width) / 2) + SLIDE_WIDTH / 2
+            top = (SLIDE_HEIGHT - img_display_height) * 3 / 4 + TOP_OFFSET
 
         slide.shapes.add_picture(file_name, left, top, height=IMG_DISPLAY_HEIGHT)
 
@@ -64,7 +85,6 @@ for i in range(0, SLIDE_COUNT):
         pg.text = file_name.replace(".png", "").replace(".PNG", "")
         pg.alignment = PP_ALIGN.CENTER
         tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-        # tf.paragraphs[0].alignment = PP_ALIGN.CENTER
-        # tf.text = file_name.replace(".png", "").replace(".PNG", "")
+
 
 prs.save(OUTPUT_FILE_NAME)

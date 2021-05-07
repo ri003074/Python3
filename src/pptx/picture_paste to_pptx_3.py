@@ -6,11 +6,11 @@ from PIL import Image
 from glob import glob
 
 FILE_NAMES_LEFT = glob("./imgs/*.PNG")
-FILE_NAMES_RIGHT = glob("./imgs2/*.PNG")
+FILE_NAMES_CENTER = glob("./imgs2/*.PNG")
+FILE_NAMES_RIGHT = glob("./imgs/*.PNG")
 SLIDE_TITLES = ["aaa", "bbb"]
-PIC_PER_PAGE = 2
-IMG_DISPLAY_HEIGHT_CM = 5
-IMG_DISPLAY_HEIGHT = Inches(IMG_DISPLAY_HEIGHT_CM / 2.54)
+PIC_PER_PAGE = 3
+IMG_DISPLAY_HEIGHT = 5  # cm
 SLIDE_COUNT = len(SLIDE_TITLES)
 
 # prs = Presentation("sample_slide.pptx")
@@ -27,10 +27,10 @@ for i in range(0, SLIDE_COUNT):
 
     for j in range(0, PIC_PER_PAGE):
         if j == 0:
-            # 貼り付ける画像ファイル名を取得
             file_name = FILE_NAMES_LEFT[i]
         if j == 1:
-            # 貼り付ける画像ファイル名を取得
+            file_name = FILE_NAMES_CENTER[i]
+        if j == 2:
             file_name = FILE_NAMES_RIGHT[i]
 
         # 画像サイズを取得してアスペクト比を得る
@@ -39,20 +39,27 @@ for i in range(0, SLIDE_COUNT):
         aspect_ratio = im_width / im_height
 
         # 表示された画像のサイズを計算
-        img_display_height = IMG_DISPLAY_HEIGHT
+        img_display_height = Inches(IMG_DISPLAY_HEIGHT / 2.54)
         img_display_width = aspect_ratio * img_display_height
 
         if j == 0:
-            # 1スライドに２枚貼り付ける場合の１枚目
-            left = (SLIDE_WIDTH / 2 - img_display_width) / 2
+            # 1スライドに3枚貼り付ける場合の１枚目
+            left = (SLIDE_WIDTH / 3 - img_display_width) / 2
             top = (SLIDE_HEIGHT - img_display_height) / 2
 
         if j == 1:
-            # 1スライドに２枚貼り付ける場合の2枚目
-            left = ((SLIDE_WIDTH / 2 - img_display_width) / 2) + SLIDE_WIDTH / 2
+            # 1スライドに3枚貼り付ける場合の2枚目
+            left = ((SLIDE_WIDTH / 3 - img_display_width) / 2) + SLIDE_WIDTH / 3
             top = (SLIDE_HEIGHT - img_display_height) / 2
 
-        slide.shapes.add_picture(file_name, left, top, height=IMG_DISPLAY_HEIGHT)
+        if j == 2:
+            # 1スライドに3枚貼り付ける場合の3枚目
+            left = ((SLIDE_WIDTH / 3 - img_display_width) / 2) + SLIDE_WIDTH * 2 / 3
+            top = (SLIDE_HEIGHT - img_display_height) / 2
+
+        slide.shapes.add_picture(
+            file_name, left, top, height=Inches(IMG_DISPLAY_HEIGHT / 2.54)
+        )
 
         # テキストを追加
         height_cm = 1
@@ -64,7 +71,5 @@ for i in range(0, SLIDE_COUNT):
         pg.text = file_name.replace(".png", "").replace(".PNG", "")
         pg.alignment = PP_ALIGN.CENTER
         tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-        # tf.paragraphs[0].alignment = PP_ALIGN.CENTER
-        # tf.text = file_name.replace(".png", "").replace(".PNG", "")
 
 prs.save(OUTPUT_FILE_NAME)

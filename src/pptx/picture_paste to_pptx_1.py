@@ -6,7 +6,8 @@ import glob
 
 file_names = glob.glob("./imgs/*.PNG")
 
-IMG_DISPLAY_HEIGHT = Inches(4)
+IMG_DISPLAY_HEIGHT_CM = 10
+IMG_DISPLAY_HEIGHT = Inches(IMG_DISPLAY_HEIGHT_CM / 2.54)
 OUTPUT_FILE_NAME = "output.pptx"
 
 prs = Presentation()
