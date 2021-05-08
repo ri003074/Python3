@@ -1,13 +1,22 @@
+from select_dir import SelectDir
 from pptx import Presentation
 from pptx.util import Inches
 from pptx.enum.text import PP_ALIGN
 from pptx.enum.text import MSO_ANCHOR
 from PIL import Image
 from glob import glob
+import wx
 
-FILE_NAMES_LEFT = glob("./imgs/*.PNG")
-FILE_NAMES_CENTER = glob("./imgs2/*.PNG")
-FILE_NAMES_RIGHT = glob("./imgs/*.PNG")
+app = wx.App()
+select_dir = SelectDir(None, title="select dir")
+app.MainLoop()
+
+# FILE_NAMES_LEFT = glob("./imgs/*.PNG")
+# FILE_NAMES_CENTER = glob("./imgs2/*.PNG")
+# FILE_NAMES_RIGHT = glob("./imgs/*.PNG")
+FILE_NAMES_LEFT = glob(select_dir.folder1 + "/*.PNG")
+FILE_NAMES_CENTER = glob(select_dir.folder2 + "/*.PNG")
+FILE_NAMES_RIGHT = glob(select_dir.folder3 + "/*.PNG")
 SLIDE_TITLES = ["aaa", "bbb"]
 PIC_PER_PAGE = 3
 IMG_DISPLAY_HEIGHT = 5  # cm
@@ -68,7 +77,13 @@ for i in range(0, SLIDE_COUNT):
         txBox = slide.shapes.add_textbox(left, top - height, width, height)
         tf = txBox.text_frame
         pg = tf.paragraphs[0]
-        pg.text = file_name.replace(".png", "").replace(".PNG", "")
+        pg.text = (
+            file_name.replace(".png", "")
+            .replace(".PNG", "")
+            .replace(select_dir.folder1 + "/", "")
+            .replace(select_dir.folder2 + "/", "")
+            .replace(select_dir.folder3 + "/", "")
+        )
         pg.alignment = PP_ALIGN.CENTER
         tf.vertical_anchor = MSO_ANCHOR.MIDDLE
 
