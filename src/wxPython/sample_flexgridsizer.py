@@ -1,9 +1,9 @@
 import wx
 
 
-class Example(wx.Frame):
+class SelectDir(wx.Frame):
     def __init__(self, parent, title):
-        super(Example, self).__init__(parent, title=title, size=(500, 170))
+        super(SelectDir, self).__init__(parent, title=title, size=(500, 170))
 
         self.folder1 = ""
         self.folder2 = ""
@@ -92,5 +92,5 @@ class Example(wx.Frame):
 
 
 app = wx.App()
-obj = Example(None, title="select dir")
+dir = SelectDir(None, title="select dir")
 app.MainLoop()
