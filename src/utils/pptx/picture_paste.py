@@ -235,7 +235,11 @@ class PowerPoint:
                 txBox = slide.shapes.add_textbox(left, top - height, width, height)
                 tf = txBox.text_frame
                 pg = tf.paragraphs[0]
-                pg.text = file_name.replace(".png", "").replace(".PNG", "")
+                pg.text = (
+                    file_name.replace(".png", "")
+                    .replace(".PNG", "")
+                    .replace(".jpg", "")
+                )
                 pg.alignment = PP_ALIGN.CENTER
                 tf.vertical_anchor = MSO_ANCHOR.MIDDLE
                 pg.font.size = Pt(20)
@@ -262,7 +266,7 @@ if __name__ == "__main__":
         file_path=file_path,
         output_filename=file_path + output_filename,
         pic_per_page=2,
-        image_height=5,  # cm
+        image_height=9,  # cm
         pic_top_offset=0,
         # pic_top_offset=-2,  # for 4 or 6 images for 1 slide
     )
