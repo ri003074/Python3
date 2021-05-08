@@ -8,15 +8,15 @@ from glob import glob
 import wx
 
 app = wx.App()
-select_dir = SelectDir(None, title="select dir")
+select_dir = SelectDir(None, title="select dir", folder_count=3)
 app.MainLoop()
 
 # FILE_NAMES_LEFT = glob("./imgs/*.PNG")
 # FILE_NAMES_CENTER = glob("./imgs2/*.PNG")
 # FILE_NAMES_RIGHT = glob("./imgs/*.PNG")
-FILE_NAMES_LEFT = glob(select_dir.folder1 + "/*.PNG")
-FILE_NAMES_CENTER = glob(select_dir.folder2 + "/*.PNG")
-FILE_NAMES_RIGHT = glob(select_dir.folder3 + "/*.PNG")
+FILE_NAMES_LEFT = glob(select_dir.folder[0] + "/*.PNG")
+FILE_NAMES_CENTER = glob(select_dir.folder[1] + "/*.PNG")
+FILE_NAMES_RIGHT = glob(select_dir.folder[2] + "/*.PNG")
 SLIDE_TITLES = ["aaa", "bbb"]
 PIC_PER_PAGE = 3
 IMG_DISPLAY_HEIGHT = 5  # cm
@@ -80,9 +80,7 @@ for i in range(0, SLIDE_COUNT):
         pg.text = (
             file_name.replace(".png", "")
             .replace(".PNG", "")
-            .replace(select_dir.folder1 + "/", "")
-            .replace(select_dir.folder2 + "/", "")
-            .replace(select_dir.folder3 + "/", "")
+            .replace(select_dir.folder[i] + "/", "")
         )
         pg.alignment = PP_ALIGN.CENTER
         tf.vertical_anchor = MSO_ANCHOR.MIDDLE
