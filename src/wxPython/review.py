@@ -25,7 +25,6 @@ class Example(wx.Frame):
     def InitUI(self):
 
         panel = wx.Panel(self)
-        panel.SetBackgroundColour("green")
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         hbox.SetMinSize(10, 10)
@@ -40,14 +39,7 @@ class Example(wx.Frame):
         tc1 = wx.TextCtrl(panel)
         tc2 = wx.TextCtrl(panel)
 
-        fgs.AddMany(
-            [
-                (title),
-                (tc1, 1, wx.EXPAND),
-                (author),
-                (tc2, 1, wx.EXPAND),
-            ]
-        )
+        fgs.AddMany([(title), (tc1, 1, wx.EXPAND), (author), (tc2, 1, wx.EXPAND)])
 
         fgs.AddGrowableRow(1)
         fgs.AddGrowableCol(1)
@@ -55,9 +47,9 @@ class Example(wx.Frame):
 
         hbox.Add(fgs, proportion=1, flag=wx.ALL, border=15)
         # hbox.FitInside(panel)
-        hbox.SetSizeHints(self)
         # panel.SetSizeHints(self)
         panel.SetSizer(hbox)
+        hbox.SetSizeHints(self)
         # panel.FitInside()
 
 

@@ -3,8 +3,7 @@ import wx
 
 class SelectDir(wx.Frame):
     def __init__(self, parent, title, folder_count):
-        height = 50 * folder_count
-        super(SelectDir, self).__init__(parent, title=title, size=(500, height))
+        super(SelectDir, self).__init__(parent, title=title)
 
         self.folder = [""] * folder_count
         self.tc = [""] * folder_count
@@ -28,7 +27,7 @@ class SelectDir(wx.Frame):
         st = []
         arr = []
         for i in range(self.folder_count):
-            self.tc[i] = wx.TextCtrl(panel)
+            self.tc[i] = wx.TextCtrl(panel, size=(400, -1))
             st.append(wx.StaticText(panel, label="folder" + str(i)))
             btn.append(wx.Button(panel, label="browse"))
             btn[i].Bind(wx.EVT_BUTTON, self.file_browse)
@@ -45,8 +44,9 @@ class SelectDir(wx.Frame):
         arr.append(btn4)
         fgs.AddMany(arr)
         fgs.AddGrowableCol(1, 1)
-        hbox.Add(fgs, proportion=2, flag=wx.ALL | wx.EXPAND, border=15)
+        hbox.Add(fgs, proportion=2, flag=wx.ALL | wx.EXPAND, border=10)
         panel.SetSizer(hbox)
+        hbox.SetSizeHints(self)
 
     def file_browse(self, event):
         btn = event.GetEventObject()
@@ -64,7 +64,7 @@ class SelectDir(wx.Frame):
 
 if __name__ == "__main__":
     app = wx.App()
-    select_dir = SelectDir(None, title="select dir", folder_count=5)
+    select_dir = SelectDir(None, title="select dir", folder_count=4)
     app.MainLoop()
     print(select_dir.folder[0])
     print(select_dir.folder[1])
