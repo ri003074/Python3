@@ -85,6 +85,9 @@ class PicturePaste:
         self.prs.save(self.output_file_name)
 
 
-pp = PicturePaste(
-    file_names=FILE_NAMES, image_display_height_cm=10, output_file_name="output3.pptx"
-)
+if __name__ == "__main__":
+    pp = PicturePaste(
+        file_names=FILE_NAMES,
+        image_display_height_cm=10,
+        output_file_name="output3.pptx",
+    )
