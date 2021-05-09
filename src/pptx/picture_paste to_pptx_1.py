@@ -72,10 +72,10 @@ class PicturePaste:
             aspect_ratio = im_width / im_height
 
             # 表示された画像のサイズを計算
-            img_display_width = aspect_ratio * self.image_display_height
+            image_display_width = aspect_ratio * self.image_display_height
 
             # センタリングする場合の画像の左上座標を計算
-            left = (self.slide_width - img_display_width) / 2
+            left = (self.slide_width - image_display_width) / 2
             top = (self.slide_height - self.image_display_height) / 2
 
             slide.shapes.add_picture(
