@@ -50,7 +50,7 @@ class SelectDir(wx.Frame):
                 wx.StaticText(self, label=eval(f"self.label{self.folder_count}[i]"))
             )
             self.btn.append(wx.Button(self, label="browse"))
-            self.btn[i].Bind(wx.EVT_BUTTON, self.file_browse)
+            self.btn[i].Bind(wx.EVT_BUTTON, self.folder_browse)
             self.btn[i].index = i
             self.arr.append(self.st[i])
             self.arr.append([self.tc[i], 1, wx.EXPAND])
@@ -79,7 +79,7 @@ class SelectDir(wx.Frame):
         self.SetSizer(hbox)
         self.Fit()
 
-    def file_browse(self, event):
+    def folder_browse(self, event):
         self.btn = event.GetEventObject()
         index = self.btn.index
         folder = wx.DirDialog(self, style=wx.DD_CHANGE_DIR)
