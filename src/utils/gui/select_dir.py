@@ -7,11 +7,11 @@ class SelectDir(wx.Frame):
         MAX_FOLDER_COUNT = 4
         self.folder = [""] * MAX_FOLDER_COUNT
         self.folder_count = folder_count
-        self.tc = []
+        self.text_ctrl = []
         self.arr = []
         self.btn = []
-        self.st = []
-        self.rbox = []
+        self.static_text = []
+        self.radio_box = []
         self.btn_exe = []
         self.label1 = ["center"]
         self.label2 = ["left", "right"]
@@ -31,29 +31,29 @@ class SelectDir(wx.Frame):
         blank1 = wx.StaticText(self, label="")
         # blank2 = wx.StaticText(self, label="")
 
-        for tc in self.tc:
-            tc.Destroy()
+        for text_ctrl in self.text_ctrl:
+            text_ctrl.Destroy()
 
         for btn in self.btn:
             btn.Destroy()
 
-        for st in self.st:
-            st.Destroy()
+        for static_text in self.static_text:
+            static_text.Destroy()
 
         self.btn = []
-        self.st = []
+        self.static_text = []
         self.arr = []
-        self.tc = []
+        self.text_ctrl = []
         for i in range(self.folder_count):
-            self.tc.append(wx.TextCtrl(self, size=(400, -1)))
-            self.st.append(
+            self.text_ctrl.append(wx.TextCtrl(self, size=(400, -1)))
+            self.static_text.append(
                 wx.StaticText(self, label=eval(f"self.label{self.folder_count}[i]"))
             )
             self.btn.append(wx.Button(self, label="browse"))
             self.btn[i].Bind(wx.EVT_BUTTON, self.folder_browse)
             self.btn[i].index = i
-            self.arr.append(self.st[i])
-            self.arr.append([self.tc[i], 1, wx.EXPAND])
+            self.arr.append(self.static_text[i])
+            self.arr.append([self.text_ctrl[i], 1, wx.EXPAND])
             self.arr.append(self.btn[i])
 
         if self.btn_exe:
@@ -62,15 +62,15 @@ class SelectDir(wx.Frame):
         self.btn_exe = wx.Button(self, label="execute")
         self.btn_exe.Bind(wx.EVT_BUTTON, self.close)
 
-        if self.rbox:
-            self.rbox.Destroy()
+        if self.radio_box:
+            self.radio_box.Destroy()
 
-        self.rbox = wx.RadioBox(self, -1, choices=["1", "2", "3", "4"])
-        self.rbox.Bind(wx.EVT_RADIOBOX, self.check)
-        self.rbox.EnableItem(self.folder_count - 1, False)
-        self.rbox.SetSelection(self.folder_count - 1)
+        self.radio_box = wx.RadioBox(self, -1, choices=["1", "2", "3", "4"])
+        self.radio_box.Bind(wx.EVT_RADIOBOX, self.check)
+        self.radio_box.EnableItem(self.folder_count - 1, False)
+        self.radio_box.SetSelection(self.folder_count - 1)
 
-        self.arr.append(self.rbox)
+        self.arr.append(self.radio_box)
         self.arr.append(blank1)
         self.arr.append(self.btn_exe)
         fgs.AddMany(self.arr)
@@ -85,7 +85,7 @@ class SelectDir(wx.Frame):
         folder = wx.DirDialog(self, style=wx.DD_CHANGE_DIR)
         if folder.ShowModal() == wx.ID_OK:
             folder_path = folder.GetPath()
-            self.tc[index].SetLabel(folder_path)
+            self.text_ctrl[index].SetLabel(folder_path)
             self.folder[index] = folder_path
 
         # folder.Destroy()
@@ -94,7 +94,7 @@ class SelectDir(wx.Frame):
         self.Close()
 
     def check(self, event):
-        num = self.rbox.GetSelection()
+        num = self.radio_box.GetSelection()
         self.folder_count = num + 1
         self.InitUI()
 
