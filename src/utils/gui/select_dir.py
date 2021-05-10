@@ -25,9 +25,7 @@ class SelectDir(wx.Frame):
     def InitUI(self):
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
-        hbox = wx.BoxSizer(wx.HORIZONTAL)
 
-        fgs = wx.FlexGridSizer(self.folder_count + 1, 3, 10, 10)
         fgs = wx.FlexGridSizer(self.folder_count + 1, 3, 10, 10)
 
         blank1 = wx.StaticText(self, label="")
@@ -78,8 +76,6 @@ class SelectDir(wx.Frame):
         fgs.AddMany(self.arr)
         fgs.AddGrowableCol(1, 1)
         hbox.Add(fgs, proportion=2, flag=wx.ALL | wx.EXPAND, border=10)
-        self.SetSizer(hbox)
-        self.Fit()
         self.SetSizer(hbox)
         self.Fit()
 
