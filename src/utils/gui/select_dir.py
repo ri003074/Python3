@@ -4,8 +4,8 @@ import wx
 class SelectDir(wx.Frame):
     def __init__(self, parent, title, folder_count):
         super(SelectDir, self).__init__(parent, title=title)
-
-        self.folder = [""] * folder_count
+        MAX_FOLDER_COUNT = 4
+        self.folder = [""] * MAX_FOLDER_COUNT
         self.folder_count = folder_count
         self.tc = []
         self.arr = []
@@ -35,7 +35,6 @@ class SelectDir(wx.Frame):
 
         for tc in self.tc:
             tc.Destroy()
-            pass
 
         for btn in self.btn:
             btn.Destroy()
@@ -105,7 +104,7 @@ class SelectDir(wx.Frame):
 
 if __name__ == "__main__":
     app = wx.App()
-    select_dir = SelectDir(None, title="select dir", folder_count=4)
+    select_dir = SelectDir(None, title="select dir", folder_count=1)
     app.MainLoop()
     print(select_dir.folder[0])
     print(select_dir.folder[1])
