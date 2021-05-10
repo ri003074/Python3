@@ -80,14 +80,15 @@ class SelectDir(wx.Frame):
         self.Fit()
 
     def folder_browse(self, event):
-        self.btn = event.GetEventObject()
-        index = self.btn.index
+        btn = event.GetEventObject()
+        index = btn.index
         folder = wx.DirDialog(self, style=wx.DD_CHANGE_DIR)
         if folder.ShowModal() == wx.ID_OK:
             folder_path = folder.GetPath()
             self.tc[index].SetLabel(folder_path)
             self.folder[index] = folder_path
-        folder.Destroy()
+
+        # folder.Destroy()
 
     def close(self, event):
         self.Close()
