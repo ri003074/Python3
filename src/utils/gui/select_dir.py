@@ -17,6 +17,14 @@ class SelectDir(wx.Frame):
         self.label2 = ["left", "right"]
         self.label3 = ["left", "center", "right"]
         self.label4 = ["left top", "right top", "left bottom", "right bottom"]
+        self.label6 = [
+            "left top",
+            "center top",
+            "right bottom",
+            "left bottom",
+            "center bottom",
+            "right bottom",
+        ]
 
         self.InitUI()
         self.Centre()
@@ -65,10 +73,11 @@ class SelectDir(wx.Frame):
         if self.radio_box:
             self.radio_box.Destroy()
 
-        self.radio_box = wx.RadioBox(self, -1, choices=["1", "2", "3", "4"])
+        self.radio_box = wx.RadioBox(self, -1, choices=["1", "2", "3", "4", "5", "6"])
         self.radio_box.Bind(wx.EVT_RADIOBOX, self.check)
         self.radio_box.EnableItem(self.folder_count - 1, False)
         self.radio_box.SetSelection(self.folder_count - 1)
+        self.radio_box.EnableItem(4, False)
 
         self.arr.append(self.radio_box)
         self.arr.append(blank1)
@@ -105,4 +114,5 @@ if __name__ == "__main__":
     app.MainLoop()
     print(select_dir.folder[0])
     print(select_dir.folder[1])
-    # print(select_dir.folder[2])
+    print(select_dir.folder[2])
+    print(select_dir.folder[3])
