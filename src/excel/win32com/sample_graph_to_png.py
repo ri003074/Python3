@@ -1,6 +1,7 @@
 import win32com.client
 import os
-import time
+
+# import time
 import glob
 
 # input_file = "202105120920_hei10_site1_free_meas"
