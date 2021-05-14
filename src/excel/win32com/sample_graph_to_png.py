@@ -31,12 +31,13 @@ for file in file_list:
     xl.Visible = True
 
     wb = xl.Workbooks.Open(file)
-    ws = wb.Sheets(1)
 
-    for i in range(ws.Shapes.Count):
-        title = ws.Shapes(i + 1).Chart.ChartTitle.Text
-        ws.Shapes(i + 1).Select()
-        ws.Shapes(i + 1).Chart.Export(Filename=os.getcwd() + "/" + title + ".png")
+    for ws in wb.Sheets:
+
+        for i in range(ws.Shapes.Count):
+            title = ws.Shapes(i + 1).Chart.ChartTitle.Text
+            ws.Shapes(i + 1).Select()
+            ws.Shapes(i + 1).Chart.Export(Filename=os.getcwd() + "/" + title + ".png")
 
     wb.Close()
     xl.Quit()
