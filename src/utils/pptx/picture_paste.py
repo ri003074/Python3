@@ -1,21 +1,10 @@
 from pptx import Presentation
 from pptx import util
+from pptx.enum.text import PP_ALIGN
+from pptx.enum.text import MSO_ANCHOR
 from PIL import Image
 import math
 from pptx.util import Pt
-
-file_list = [
-    "b.png",
-    "e.jpg",
-    "e.jpg",
-    "b.png",
-    "e.jpg",
-    "b.png",
-    "e.jpg",
-]
-
-file_path = "./pictures/"
-output_filename = "dd.pptx"
 
 
 class PowerPoint:
@@ -32,9 +21,9 @@ class PowerPoint:
         self.file_path = file_path
         self.slide_template = "sample_slide.pptx"
         self.output_filename = output_filename
-        self.image_display_height = image_height
+        self.image_display_height = util.Inches(image_height / 2.54)
         self.pic_per_page = pic_per_page
-        self.pic_top_offset = pic_top_offset
+        self.pic_top_offset = util.Inches(pic_top_offset / 2.54)
         self.image_display_width = 0
         self.aspect_ratio = 0
         self.presentaition = Presentation(self.slide_template)
@@ -240,24 +229,45 @@ class PowerPoint:
                 self.add_picture(slide, file_name, left, top)
 
                 # add text
-                width = height = util.Inches(1)
-                txBox = slide.shapes.add_textbox(left, top - 400000, width, height)
-                tf = txBox.text_frame.add_paragraph()
-                tf.text = file_name.replace(".png", "").replace(".jpg", "")
-                tf.font.size = Pt(10)
-                tf.font.bold = True
+                height_cm = 1
+                height = util.Inches(height_cm / 2.54)
+                width = self.image_display_width
+                txBox = slide.shapes.add_textbox(left, top - height, width, height)
+                tf = txBox.text_frame
+                pg = tf.paragraphs[0]
+                pg.text = (
+                    file_name.replace(".png", "")
+                    .replace(".PNG", "")
+                    .replace(".jpg", "")
+                )
+                pg.alignment = PP_ALIGN.CENTER
+                tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+                pg.font.size = Pt(20)
+                pg.font.bold = True
 
         self.presentaition.save(self.output_filename)
 
 
 if __name__ == "__main__":
+    file_list = [
+        "b.png",
+        "e.jpg",
+        "e.jpg",
+        "b.png",
+        "e.jpg",
+        "b.png",
+        "e.jpg",
+    ]
+
+    file_path = "./pictures/"
+    output_filename = "dd.pptx"
     pptx = PowerPoint(
         files=file_list,
         file_path=file_path,
         output_filename=file_path + output_filename,
-        pic_per_page=4,
-        image_height=util.Inches(2.0),
+        pic_per_page=2,
+        image_height=9,  # cm
         pic_top_offset=0,
-        # pic_top_offset=-1000000,  # for 4 or 6 images for 1 slide
+        # pic_top_offset=-2,  # for 4 or 6 images for 1 slide
     )
     pptx.make_pptx()

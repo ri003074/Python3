@@ -1,9 +1,8 @@
 *.pyc
 .DS_Store
-*.png
 *.rtf
 *.pptx
-*.jpg
 *checkpoint.ipynb
-*.csv
 *.xlsx
+src/wxPython/.vscode/settings.json
+*.png
