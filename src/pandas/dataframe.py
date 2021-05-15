@@ -48,6 +48,9 @@ import pandas as pd
 # df.to_csv("data.csv", encoding="shift-jis", index=False)
 
 
-dic = {"cond": "p1", "freq": 10, "duty": 50}
-df = pd.DataFrame([dic])
+# dic = {"cond": "p1", "freq": 10, "duty": 50}
+# df = pd.DataFrame([dic])
+# print(df)
+
+df = pd.read_csv("data.csv", index_col=0)
 print(df)
