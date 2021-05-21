@@ -1,0 +1,6 @@
+﻿condition,vih1,rate,250ps,pin,p1,tr,41,tf,44,duty,51
+condition,vih1,rate,286ps,pin,p1,tr,42,tf,44,duty,52
+condition,vih1,rate,333ps,pin,p1,tr,43,tf,45,duty,51
+condition,vih2,rate,250ps,pin,p1,tr,44,tf,45,duty,43
+condition,vih2,rate,286ps,pin,p1,tr,44,tf,55,duty,43
+condition,vih2,rate,333ps,pin,1p,tr,44,tf,55,duty,43

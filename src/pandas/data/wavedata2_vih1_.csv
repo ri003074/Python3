@@ -1,0 +1,4 @@
+condition,pin,tr,tf,duty
+vih1,p1,41,44,51
+vih1,p2,42,44,52
+vih1,p3,43,45,51

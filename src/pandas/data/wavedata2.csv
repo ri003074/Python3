@@ -1,0 +1,6 @@
+﻿condition,vih1,pin,p1,tr,41,tf,44,duty,51
+condition,vih1,pin,p2,tr,42,tf,44,duty,52
+condition,vih1,pin,p3,tr,43,tf,45,duty,51
+condition,vih2,pin,p1,tr,44,tf,45,duty,43
+condition,vih2,pin,p2,tr,44,tf,55,duty,43
+condition,vih2,pin,p3,tr,44,tf,55,duty,43
