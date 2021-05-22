@@ -31,7 +31,12 @@ class DataSummarize:
                 dic = OrderedDict()
                 dic["condition"] = rows[0]
                 for i in range(1, len(rows) - 1, 2):
-                    dic[rows[i].replace(" ", "")] = float(rows[i + 1].replace(" ", ""))
+                    try:
+                        dic[rows[i].replace(" ", "")] = float(
+                            rows[i + 1].replace(" ", "")
+                        )
+                    except ValueError:
+                        dic[rows[i].replace(" ", "")] = rows[i + 1].replace(" ", "")
 
                 data.append(dic)
 
@@ -108,11 +113,11 @@ class DataSummarize:
         wb = load_workbook(self.input_file.replace("csv", "xlsx"))
         ws = wb.worksheets[0]
 
-        for i in range(ws.max_column - 1):
+        for i in range(ws.max_column + data_start_column * -1 + 1):
             values = Reference(
                 ws,
                 min_row=1,
-                min_col=data_start_column + +i,
+                min_col=data_start_column + i,
                 max_row=ws.max_row,
                 max_col=data_start_column + i,
             )
@@ -149,9 +154,11 @@ class DataSummarize:
         path="",
         filename="",
         rotation=0,
+        groupby="",
+        figsize=(16, 9),
     ):
 
-        fig = plt.figure(figsize=(16, 9))
+        fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(1, 1, 1)
         ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.1f"))
         self.data_df[df_columns_list].plot(
@@ -179,6 +186,38 @@ class DataSummarize:
 
         plt.savefig(path + file_name + ".png")
         plt.close("all")
+
+        if groupby:
+            for name, group in self.data_df.groupby(groupby):
+                fig = plt.figure(figsize=figsize)
+                ax = fig.add_subplot(1, 1, 1)
+                ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.1f"))
+                print(group)
+                group[df_columns_list].plot(
+                    ax=ax, ylim=ylim, style=style, legend=True, fontsize=fontsize
+                )
+                ax.set_ylabel(ylabel, fontsize=fontsize)
+                ax.set_xlabel(xlabel, fontsize=fontsize)
+                lst = [i for i in range(group.shape[0])]
+                ax.set_xticks(lst)  # set number of label
+                # ax.set_xticklabels(["a", "b", "c"])
+                # fig.autofmt_xdate(rotation=rotation)
+                plt.xticks(rotation=rotation)
+                # fig.subplots_adjust(bottom=0.0)
+
+                ax.legend(fontsize=fontsize)
+
+                # file_name = ""
+                # for index, title in enumerate(df_columns_list):
+                #     if index == 0:
+                #         file_name = file_name + title
+                #     else:
+                #         file_name = file_name + "_" + title
+
+                file_name = filename
+
+                plt.savefig(path + name + "_" + file_name + ".png")
+                plt.close("all")
 
     def add_tbl_to_pptx(self, new_presentation, title, cell_width):
         if new_presentation:
@@ -285,6 +324,7 @@ data_summarize_eye.make_graph(
     path=os.getcwd() + "/sample_log/",
     filename="8g_eheight",
     ylabel="ps",
+    # groupby="pin",
 )
 data_summarize_eye.make_graph(
     df_columns_list=["EWIDTH(mV)"],
@@ -306,6 +346,7 @@ data_summarize_eye.add_tbl_to_pptx(
         CELL_WIDTH_BASE * 2,
         CELL_WIDTH_BASE * 2,
         CELL_WIDTH_BASE * 2,
+        CELL_WIDTH_BASE * 2,
     ],
 )
 data_summarize_eye.make_excel_graph_all(
@@ -314,14 +355,14 @@ data_summarize_eye.make_excel_graph_all(
     chart_yaxis_scaling_mins=[300, 0],
     chart_yaxis_scaling_maxes=[400, 10],
 )
-data_summarize_eye.make_excel_graph(
-    data_start_column=2,
-    data_end_column=3,
-    chart_yaxis_title="ps",
-    chart_yaxis_scaling_min=0,
-    chart_yaxis_scaling_max=400,
-    chart_position="F5",
-)
+# data_summarize_eye.make_excel_graph(
+#     data_start_column=2,
+#     data_end_column=3,
+#     chart_yaxis_title="ps",
+#     chart_yaxis_scaling_min=0,
+#     chart_yaxis_scaling_max=400,
+#     chart_position="F5",
+# )
 # data_summarize_eye = DataSummarize(filepath2)
 # data_summarize_eye.make_dataframe()
 # data_summarize_eye.make_list()
