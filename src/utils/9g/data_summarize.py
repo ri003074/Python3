@@ -148,9 +148,10 @@ class DataSummarize:
         style=["bo", "yo", "ro", "go"],
         path="",
         filename="",
+        rotation=0,
     ):
 
-        fig = plt.figure(figsize=(8, 4))
+        fig = plt.figure(figsize=(16, 9))
         ax = fig.add_subplot(1, 1, 1)
         ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.1f"))
         self.data_df[df_columns_list].plot(
@@ -161,6 +162,9 @@ class DataSummarize:
         lst = [i for i in range(self.data_df.shape[0])]
         ax.set_xticks(lst)  # set number of label
         # ax.set_xticklabels(["a", "b", "c"])
+        # fig.autofmt_xdate(rotation=rotation)
+        plt.xticks(rotation=rotation)
+        # fig.subplots_adjust(bottom=0.0)
 
         ax.legend(fontsize=fontsize)
 
