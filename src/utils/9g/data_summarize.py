@@ -23,8 +23,8 @@ class DataSummarize:
         self.header = header
 
     def make_data(self):
-        with open(self.input_file, mode="r", encoding="utf-8-sig") as inp:
-            reader = csv.reader(inp)
+        with open(self.input_file, mode="r", encoding="utf-8-sig") as csvfile:
+            reader = csv.reader(csvfile)
             data = []
 
             for rows in reader:
@@ -219,7 +219,6 @@ class DataSummarize:
         self.fig = plt.figure(figsize=figsize)
         self.ax = self.fig.add_subplot(1, 1, 1)
         self.ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.1f"))
-
         # self.fig.subplots_adjust(bottom=0.2)
 
     def add_tbl_to_pptx(self, new_presentation, title, cell_width):
