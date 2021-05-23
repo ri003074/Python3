@@ -66,6 +66,7 @@ class DataSummarize:
         chart_yaxis_title="",
         chart_yaxis_scaling_min="",
         chart_yaxis_scaling_max="",
+        chart_yaxis_major_unit="",
         chart_position="E5",
         chart_height=9,
         chart_width=16,
@@ -81,24 +82,18 @@ class DataSummarize:
             max_col=data_end_column,
         )
         categories = Reference(ws, min_row=2, min_col=1, max_row=ws.max_row, max_col=1)
+        self.chart_setup(
+            values,
+            categories,
+            chart_height,
+            chart_width,
+            chart_yaxis_titles=chart_yaxis_title,
+            chart_yaxis_scaling_mins=chart_yaxis_scaling_min,
+            chart_yaxis_scaling_maxes=chart_yaxis_scaling_max,
+            chart_yaxis_major_unit=chart_yaxis_major_unit,
+        )
 
-        chart = LineChart()
-        chart.add_data(values, titles_from_data=True)
-        chart.set_categories(categories)
-        chart.height = chart_height
-        chart.width = chart_width
-        chart.x_axis.title = ""
-        chart.y_axis.title = chart_yaxis_title
-        chart.y_axis.scaling.min = chart_yaxis_scaling_min
-        chart.y_axis.scaling.max = chart_yaxis_scaling_max
-
-        for i in range(len(chart.series)):
-            series = chart.series[i]
-            series.marker.symbol = "circle"
-            # series.marker.size = 10
-            series.graphicalProperties.line.noFill = True
-
-        ws.add_chart(chart, chart_position)
+        ws.add_chart(self.chart, chart_position)
         wb.save(self.input_file.replace("csv", "xlsx"))
 
     def make_excel_graph_all(
@@ -107,6 +102,7 @@ class DataSummarize:
         chart_yaxis_titles=[],
         chart_yaxis_scaling_mins=[],
         chart_yaxis_scaling_maxes=[],
+        chart_yaxis_major_unit=[],
         chart_height=9,
         chart_width=16,
     ):
@@ -124,30 +120,54 @@ class DataSummarize:
             categories = Reference(
                 ws, min_row=2, min_col=1, max_row=ws.max_row, max_col=1
             )
+            self.chart_setup(
+                values,
+                categories,
+                chart_height,
+                chart_width,
+                chart_yaxis_titles=chart_yaxis_titles[i],
+                chart_yaxis_scaling_mins=chart_yaxis_scaling_mins[i],
+                chart_yaxis_scaling_maxes=chart_yaxis_scaling_maxes[i],
+                chart_yaxis_major_unit=chart_yaxis_major_unit[i],
+            )
 
-            chart = LineChart()
-            chart.add_data(values, titles_from_data=True)
-            chart.set_categories(categories)
-            chart.height = chart_height
-            chart.width = chart_width
-            chart.x_axis.title = ""
-            chart.y_axis.title = chart_yaxis_titles[i]
-            chart.y_axis.scaling.min = chart_yaxis_scaling_mins[i]
-            chart.y_axis.scaling.max = chart_yaxis_scaling_maxes[i]
+            ws.add_chart(self.chart, "B" + str(5 + 20 * i))
+        wb.save(self.input_file.replace("csv", "xlsx"))
 
-            series = chart.series[0]
+    def chart_setup(
+        self,
+        values,
+        categories,
+        chart_height,
+        chart_width,
+        chart_yaxis_titles,
+        chart_yaxis_scaling_mins,
+        chart_yaxis_scaling_maxes,
+        chart_yaxis_major_unit,
+    ):
+        self.chart = LineChart()
+        self.chart.add_data(values, titles_from_data=True)
+        self.chart.set_categories(categories)
+        self.chart.height = chart_height
+        self.chart.width = chart_width
+        self.chart.x_axis.title = ""
+        self.chart.y_axis.title = chart_yaxis_titles
+        self.chart.y_axis.scaling.min = chart_yaxis_scaling_mins
+        self.chart.y_axis.scaling.max = chart_yaxis_scaling_maxes
+        self.chart.y_axis.majorUnit = chart_yaxis_major_unit
+        # chart.y_axis.majorGridlines = None
+
+        for i in range(len(self.chart.series)):
+            series = self.chart.series[i]
             series.marker.symbol = "circle"
             # series.marker.size = 10
             series.graphicalProperties.line.noFill = True
-
-            ws.add_chart(chart, "B" + str(5 + 20 * i))
-        wb.save(self.input_file.replace("csv", "xlsx"))
 
     def make_graph(
         self,
         df_columns_list,
         ylim,
-        fontsize=10,
+        fontsize=14,
         xlabel="",
         ylabel="",
         style=["bo", "yo", "ro", "go"],
@@ -158,66 +178,49 @@ class DataSummarize:
         figsize=(16, 9),
     ):
 
-        fig = plt.figure(figsize=figsize)
-        ax = fig.add_subplot(1, 1, 1)
-        ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.1f"))
+        self.fig_ax_setup(figsize)
+
+        self.ax.set_xticks(
+            [i for i in range(self.data_df.shape[0])]
+        )  # set number of label
+
         self.data_df[df_columns_list].plot(
-            ax=ax, ylim=ylim, style=style, legend=True, fontsize=fontsize
+            ax=self.ax, ylim=ylim, style=style, legend=True, fontsize=fontsize
         )
-        ax.set_ylabel(ylabel, fontsize=fontsize)
-        ax.set_xlabel(xlabel, fontsize=fontsize)
-        lst = [i for i in range(self.data_df.shape[0])]
-        ax.set_xticks(lst)  # set number of label
-        # ax.set_xticklabels(["a", "b", "c"])
-        # fig.autofmt_xdate(rotation=rotation)
-        plt.xticks(rotation=rotation)
-        # fig.subplots_adjust(bottom=0.0)
 
-        ax.legend(fontsize=fontsize)
+        self.graph_adjust(rotation, xlabel, ylabel, fontsize)
 
-        # file_name = ""
-        # for index, title in enumerate(df_columns_list):
-        #     if index == 0:
-        #         file_name = file_name + title
-        #     else:
-        #         file_name = file_name + "_" + title
-
-        file_name = filename
-
-        plt.savefig(path + file_name + ".png")
+        plt.savefig(path + filename + ".png")
         plt.close("all")
 
         if groupby:
             for name, group in self.data_df.groupby(groupby):
-                fig = plt.figure(figsize=figsize)
-                ax = fig.add_subplot(1, 1, 1)
-                ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.1f"))
-                print(group)
+                self.fig_ax_setup(figsize)
+
+                self.ax.set_xticks(
+                    [i for i in range(group.shape[0])]
+                )  # set number of label
                 group[df_columns_list].plot(
-                    ax=ax, ylim=ylim, style=style, legend=True, fontsize=fontsize
+                    ax=self.ax, ylim=ylim, style=style, legend=True, fontsize=fontsize
                 )
-                ax.set_ylabel(ylabel, fontsize=fontsize)
-                ax.set_xlabel(xlabel, fontsize=fontsize)
-                lst = [i for i in range(group.shape[0])]
-                ax.set_xticks(lst)  # set number of label
-                # ax.set_xticklabels(["a", "b", "c"])
-                # fig.autofmt_xdate(rotation=rotation)
-                plt.xticks(rotation=rotation)
-                # fig.subplots_adjust(bottom=0.0)
 
-                ax.legend(fontsize=fontsize)
+                self.graph_adjust(rotation, xlabel, ylabel, fontsize)
 
-                # file_name = ""
-                # for index, title in enumerate(df_columns_list):
-                #     if index == 0:
-                #         file_name = file_name + title
-                #     else:
-                #         file_name = file_name + "_" + title
-
-                file_name = filename
-
-                plt.savefig(path + name + "_" + file_name + ".png")
+                plt.savefig(path + name + "_" + filename + ".png")
                 plt.close("all")
+
+    def graph_adjust(self, rotation, xlabel, ylabel, fontsize):
+        plt.xticks(rotation=rotation)
+        self.ax.set_ylabel(ylabel, fontsize=fontsize)
+        self.ax.set_xlabel(xlabel, fontsize=fontsize)
+        self.ax.legend(fontsize=fontsize)
+
+    def fig_ax_setup(self, figsize):
+        self.fig = plt.figure(figsize=figsize)
+        self.ax = self.fig.add_subplot(1, 1, 1)
+        self.ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.1f"))
+
+        # self.fig.subplots_adjust(bottom=0.2)
 
     def add_tbl_to_pptx(self, new_presentation, title, cell_width):
         if new_presentation:
@@ -256,9 +259,6 @@ class DataSummarize:
 
         for i in range(1, tbl.Columns.Count + 1):
             tbl.Columns(i).Width = cell_width[i - 1]
-
-        # for i in range(1, tbl.Rows.Count + 1):
-        #     tbl.Rows(i).Height = 18
 
         shp = sld.Shapes(2)
         shp.Left = slide_width / 2 - shp.width / 2
@@ -324,7 +324,7 @@ data_summarize_eye.make_graph(
     path=os.getcwd() + "/sample_log/",
     filename="8g_eheight",
     ylabel="ps",
-    # groupby="pin",
+    groupby="condition",
 )
 data_summarize_eye.make_graph(
     df_columns_list=["EWIDTH(mV)"],
@@ -354,15 +354,17 @@ data_summarize_eye.make_excel_graph_all(
     chart_yaxis_titles=["ps", "mV"],
     chart_yaxis_scaling_mins=[300, 0],
     chart_yaxis_scaling_maxes=[400, 10],
+    chart_yaxis_major_unit=[20, 2],
 )
-# data_summarize_eye.make_excel_graph(
-#     data_start_column=2,
-#     data_end_column=3,
-#     chart_yaxis_title="ps",
-#     chart_yaxis_scaling_min=0,
-#     chart_yaxis_scaling_max=400,
-#     chart_position="F5",
-# )
+data_summarize_eye.make_excel_graph(
+    data_start_column=2,
+    data_end_column=3,
+    chart_yaxis_title="ps",
+    chart_yaxis_scaling_min=0,
+    chart_yaxis_scaling_max=400,
+    chart_yaxis_major_unit=50,
+    chart_position="L5",
+)
 # data_summarize_eye = DataSummarize(filepath2)
 # data_summarize_eye.make_dataframe()
 # data_summarize_eye.make_list()
