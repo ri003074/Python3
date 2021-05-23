@@ -47,3 +47,17 @@ print(df_merge.reset_index(drop=True))
 
 # df_merge = pd.concat([diff_pin, diff_data], axis=1)
 # print(df_merge)
+
+
+import pandas as pd
+
+df1 = pd.DataFrame(
+    [["a", "b"], ["c", "d"]], index=["row1", "row2"], columns=["col1", "col2"]
+)
+df3 = pd.DataFrame(
+    [["c", "d"], ["e", "f"]], index=["row1", "row2"], columns=["col1", "col2"]
+)
+
+with pd.ExcelWriter("data.xlsx") as writer:
+    df1.to_excel(writer, sheet_name="df1")
+    df3.to_excel(writer, sheet_name="df3")

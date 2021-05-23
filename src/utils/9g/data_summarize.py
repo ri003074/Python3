@@ -1,11 +1,11 @@
 import csv
-import win32com.client
-import pandas as pd
-from collections import OrderedDict
-from glob import glob
+import datetime
 import matplotlib.pyplot as plt
 import os
-import datetime
+import pandas as pd
+import win32com.client
+from collections import OrderedDict
+from glob import glob
 from openpyxl import load_workbook
 from openpyxl.chart import LineChart, Reference
 
@@ -15,14 +15,19 @@ now = datetime.datetime.now()
 date_now = now.strftime("%Y%m%d%H%M")
 
 
-class DataSummarize:
-    def __init__(self, file, header=[]):
-        self.input_file = file
+class WaveData:
+    def __init__(
+        self, filename, folderpath, header=[], groupby="",
+    ):
+        self.file_name = filename
+        self.folder_path = folderpath
+        self.input_file = self.folder_path + self.file_name
         self.data_df = ""
         self.data_list = ""
         self.header = header
+        self.groupby = groupby
 
-    def make_data(self):
+    def make_df_and_xlsx(self):
         with open(self.input_file, mode="r", encoding="utf-8-sig") as csvfile:
             reader = csv.reader(csvfile)
             data = []
@@ -57,7 +62,13 @@ class DataSummarize:
             else:
                 self.data_list.insert(0, tmp_df.columns)
 
-            self.data_df.to_excel(self.input_file.replace("csv", "xlsx"))
+            # self.data_df.to_excel(self.input_file.replace("csv", "xlsx"))
+            with pd.ExcelWriter(self.input_file.replace("csv", "xlsx")) as writer:
+                self.data_df.to_excel(writer, sheet_name="summary")
+
+                if self.groupby:
+                    for name, group in self.data_df.groupby(self.groupby):
+                        group.to_excel(writer, sheet_name=name)
 
     def make_excel_graph(
         self,
@@ -72,31 +83,35 @@ class DataSummarize:
         chart_width=16,
     ):
         wb = load_workbook(self.input_file.replace("csv", "xlsx"))
-        ws = wb.worksheets[0]
+        for i in range(len(wb.worksheets)):
+            ws = wb.worksheets[i]
 
-        values = Reference(
-            ws,
-            min_row=1,
-            min_col=data_start_column,
-            max_row=ws.max_row,
-            max_col=data_end_column,
-        )
-        categories = Reference(ws, min_row=2, min_col=1, max_row=ws.max_row, max_col=1)
-        self.chart_setup(
-            values,
-            categories,
-            chart_height,
-            chart_width,
-            chart_yaxis_titles=chart_yaxis_title,
-            chart_yaxis_scaling_mins=chart_yaxis_scaling_min,
-            chart_yaxis_scaling_maxes=chart_yaxis_scaling_max,
-            chart_yaxis_major_unit=chart_yaxis_major_unit,
-        )
+            values = Reference(
+                ws,
+                min_row=1,
+                min_col=data_start_column,
+                max_row=ws.max_row,
+                max_col=data_end_column,
+            )
+            categories = Reference(
+                ws, min_row=2, min_col=1, max_row=ws.max_row, max_col=1
+            )
 
-        ws.add_chart(self.chart, chart_position)
+            self.setup_excel_chart(
+                values,
+                categories,
+                chart_height,
+                chart_width,
+                chart_yaxis_titles=chart_yaxis_title,
+                chart_yaxis_scaling_mins=chart_yaxis_scaling_min,
+                chart_yaxis_scaling_maxes=chart_yaxis_scaling_max,
+                chart_yaxis_major_unit=chart_yaxis_major_unit,
+            )
+
+            ws.add_chart(self.chart, chart_position)
         wb.save(self.input_file.replace("csv", "xlsx"))
 
-    def make_excel_graph_all(
+    def make_excel_graphs(
         self,
         data_start_column,
         chart_yaxis_titles=[],
@@ -107,34 +122,35 @@ class DataSummarize:
         chart_width=16,
     ):
         wb = load_workbook(self.input_file.replace("csv", "xlsx"))
-        ws = wb.worksheets[0]
+        for i in range(len(wb.worksheets)):
+            ws = wb.worksheets[i]
 
-        for i in range(ws.max_column + data_start_column * -1 + 1):
-            values = Reference(
-                ws,
-                min_row=1,
-                min_col=data_start_column + i,
-                max_row=ws.max_row,
-                max_col=data_start_column + i,
-            )
-            categories = Reference(
-                ws, min_row=2, min_col=1, max_row=ws.max_row, max_col=1
-            )
-            self.chart_setup(
-                values,
-                categories,
-                chart_height,
-                chart_width,
-                chart_yaxis_titles=chart_yaxis_titles[i],
-                chart_yaxis_scaling_mins=chart_yaxis_scaling_mins[i],
-                chart_yaxis_scaling_maxes=chart_yaxis_scaling_maxes[i],
-                chart_yaxis_major_unit=chart_yaxis_major_unit[i],
-            )
+            for i in range(ws.max_column + data_start_column * -1 + 1):
+                values = Reference(
+                    ws,
+                    min_row=1,
+                    min_col=data_start_column + i,
+                    max_row=ws.max_row,
+                    max_col=data_start_column + i,
+                )
+                categories = Reference(
+                    ws, min_row=2, min_col=1, max_row=ws.max_row, max_col=1
+                )
+                self.setup_excel_chart(
+                    values,
+                    categories,
+                    chart_height,
+                    chart_width,
+                    chart_yaxis_titles=chart_yaxis_titles[i],
+                    chart_yaxis_scaling_mins=chart_yaxis_scaling_mins[i],
+                    chart_yaxis_scaling_maxes=chart_yaxis_scaling_maxes[i],
+                    chart_yaxis_major_unit=chart_yaxis_major_unit[i],
+                )
 
-            ws.add_chart(self.chart, "B" + str(5 + 20 * i))
+                ws.add_chart(self.chart, "B" + str(5 + 20 * i))
         wb.save(self.input_file.replace("csv", "xlsx"))
 
-    def chart_setup(
+    def setup_excel_chart(
         self,
         values,
         categories,
@@ -150,7 +166,7 @@ class DataSummarize:
         self.chart.set_categories(categories)
         self.chart.height = chart_height
         self.chart.width = chart_width
-        self.chart.x_axis.title = ""
+        # self.chart.x_axis.title = "abc"
         self.chart.y_axis.title = chart_yaxis_titles
         self.chart.y_axis.scaling.min = chart_yaxis_scaling_mins
         self.chart.y_axis.scaling.max = chart_yaxis_scaling_maxes
@@ -171,14 +187,12 @@ class DataSummarize:
         xlabel="",
         ylabel="",
         style=["bo", "yo", "ro", "go"],
-        path="",
         filename="",
         rotation=0,
-        groupby="",
         figsize=(16, 9),
     ):
 
-        self.fig_ax_setup(figsize)
+        self.setup_fig_and_ax(figsize)
 
         self.ax.set_xticks(
             [i for i in range(self.data_df.shape[0])]
@@ -188,14 +202,14 @@ class DataSummarize:
             ax=self.ax, ylim=ylim, style=style, legend=True, fontsize=fontsize
         )
 
-        self.graph_adjust(rotation, xlabel, ylabel, fontsize)
+        self.adjust_graph_params(rotation, xlabel, ylabel, fontsize)
 
-        plt.savefig(path + filename + ".png")
+        plt.savefig(self.folder_path + filename + ".png")
         plt.close("all")
 
-        if groupby:
-            for name, group in self.data_df.groupby(groupby):
-                self.fig_ax_setup(figsize)
+        if self.groupby:
+            for name, group in self.data_df.groupby(self.groupby):
+                self.setup_fig_and_ax(figsize)
 
                 self.ax.set_xticks(
                     [i for i in range(group.shape[0])]
@@ -204,24 +218,24 @@ class DataSummarize:
                     ax=self.ax, ylim=ylim, style=style, legend=True, fontsize=fontsize
                 )
 
-                self.graph_adjust(rotation, xlabel, ylabel, fontsize)
+                self.adjust_graph_params(rotation, xlabel, ylabel, fontsize)
 
-                plt.savefig(path + name + "_" + filename + ".png")
+                plt.savefig(self.folder_path + name + "_" + filename + ".png")
                 plt.close("all")
 
-    def graph_adjust(self, rotation, xlabel, ylabel, fontsize):
+    def adjust_graph_params(self, rotation, xlabel, ylabel, fontsize):
         plt.xticks(rotation=rotation)
         self.ax.set_ylabel(ylabel, fontsize=fontsize)
         self.ax.set_xlabel(xlabel, fontsize=fontsize)
         self.ax.legend(fontsize=fontsize)
 
-    def fig_ax_setup(self, figsize):
-        self.fig = plt.figure(figsize=figsize)
-        self.ax = self.fig.add_subplot(1, 1, 1)
+    def setup_fig_and_ax(self, figsize):
+        self.fig = plt.figure(figsize=figsize)  # create figure object
+        self.ax = self.fig.add_subplot(1, 1, 1)  # create axes object
         self.ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.1f"))
         # self.fig.subplots_adjust(bottom=0.2)
 
-    def add_tbl_to_pptx(self, new_presentation, title, cell_width):
+    def add_table_to_pptx(self, new_presentation, title, cell_width):
         if new_presentation:
             pptx = win32com.client.Dispatch("PowerPoint.Application")
             pptx.Visible = True
@@ -236,19 +250,17 @@ class DataSummarize:
         slide_height = self.active_presentation.PageSetup.SlideHeight
         slide_count = self.active_presentation.Slides.Count
 
-        sld = self.active_presentation.Slides.Add(Index=slide_count + 1, Layout=4)
-        sld.Select()
-        sld.Shapes(1).TextFrame.TextRange.Text = title
+        slide = self.active_presentation.Slides.Add(Index=slide_count + 1, Layout=4)
+        slide.Select()
+        slide.Shapes(1).TextFrame.TextRange.Text = title
 
-        tbl_rows = len(self.data_list)
-        tbl_columns = len(self.data_list[0])
-        print(self.data_list)
+        table_rows = len(self.data_list)
+        table_columns = len(self.data_list[0])
+        table = slide.Shapes.AddTable(table_rows, table_columns).Table
 
-        tbl = sld.Shapes.AddTable(tbl_rows, tbl_columns).Table
-
-        for i in range(tbl_rows):
-            for j in range(tbl_columns):
-                tr = tbl.Cell(i + 1, j + 1).Shape.TextFrame.TextRange
+        for i in range(table_rows):
+            for j in range(table_columns):
+                tr = table.Cell(i + 1, j + 1).Shape.TextFrame.TextRange
                 try:
                     tr.Text = f"{self.data_list[i][j]:.1f}"
                 except ValueError:
@@ -256,12 +268,12 @@ class DataSummarize:
 
                 tr.Font.Size = 14
 
-        for i in range(1, tbl.Columns.Count + 1):
-            tbl.Columns(i).Width = cell_width[i - 1]
+        for i in range(1, table.Columns.Count + 1):
+            table.Columns(i).Width = cell_width[i - 1]
 
-        shp = sld.Shapes(2)
-        shp.Left = slide_width / 2 - shp.width / 2
-        shp.Top = slide_height / 6
+        shape = slide.Shapes(2)
+        shape.Left = slide_width / 2 - shape.width / 2
+        shape.Top = slide_height / 6
 
     def save_pptx(self, file_name):
         self.active_presentation.SaveAs(
@@ -313,31 +325,28 @@ print(filepaths)
 filepath = filepaths[0]
 # filepath2 = filepaths[2]
 
-data_summarize_eye = DataSummarize(
-    filepath, header=["condition", "EHEIGHT(mV)", "EWIDTH(mV)"]
+data_summarize_eye = WaveData(
+    filename="test.csv",
+    folderpath=os.getcwd() + "/sample_log/",
+    header=["condition", "EHEIGHT(mV)", "EWIDTH(mV)"],
+    groupby="condition",
 )
-data_summarize_eye.make_data()
+data_summarize_eye.make_df_and_xlsx()
 data_summarize_eye.make_graph(
     df_columns_list=["EHEIGHT(mV)"],
     ylim=[300, 400],
-    path=os.getcwd() + "/sample_log/",
     filename="8g_eheight",
     ylabel="ps",
-    groupby="condition",
 )
 data_summarize_eye.make_graph(
-    df_columns_list=["EWIDTH(mV)"],
-    ylim=[0, 10],
-    path=os.getcwd() + "/sample_log/",
-    filename="8g_ewidth",
+    df_columns_list=["EWIDTH(mV)"], ylim=[0, 10], filename="8g_ewidth",
 )
 data_summarize_eye.make_graph(
     df_columns_list=["EWIDTH(mV)", "EHEIGHT(mV)"],
     ylim=[0, 500],
-    path=os.getcwd() + "/sample_log/",
     filename="8g_ewidth_eheight",
 )
-data_summarize_eye.add_tbl_to_pptx(
+data_summarize_eye.add_table_to_pptx(
     new_presentation=False,
     title="eye",
     cell_width=[
@@ -348,7 +357,7 @@ data_summarize_eye.add_tbl_to_pptx(
         CELL_WIDTH_BASE * 2,
     ],
 )
-data_summarize_eye.make_excel_graph_all(
+data_summarize_eye.make_excel_graphs(
     data_start_column=2,
     chart_yaxis_titles=["ps", "mV"],
     chart_yaxis_scaling_mins=[300, 0],
@@ -364,7 +373,7 @@ data_summarize_eye.make_excel_graph(
     chart_yaxis_major_unit=50,
     chart_position="L5",
 )
-# data_summarize_eye = DataSummarize(filepath2)
+# data_summarize_eye = WaveData(filepath2)
 # data_summarize_eye.make_dataframe()
 # data_summarize_eye.make_list()
 # data_summarize_eye.make_xlsx()
@@ -386,7 +395,7 @@ data_summarize_eye.make_excel_graph(
 #     path=os.getcwd() + "/sample_log/",
 #     initial="8G_",
 # )
-# data_summarize_eye.add_tbl_to_pptx(
+# data_summarize_eye.add_table_to_pptx(
 #     new_presentation=False,
 #     title="overview",
 #     cell_width=[
