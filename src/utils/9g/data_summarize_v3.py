@@ -8,9 +8,10 @@ from collections import OrderedDict
 from openpyxl import load_workbook
 from openpyxl.chart import LineChart, Reference
 import re
+import sys
 
+image_count = 0
 # from glob import glob
-# import sys
 
 now = datetime.datetime.now()
 date_now = now.strftime("%Y%m%d%H%M")
@@ -212,47 +213,68 @@ class WaveData:
         rotation=0,
         figsize=(16, 9),
     ):
-
-        self.setup_fig_and_ax(figsize)
-
-        self.ax.set_xticks(
-            [i for i in range(self.data_df.shape[0])]
-        )  # set number of label
-
-        self.data_df[df_columns_list].plot(
-            ax=self.ax, ylim=ylim, style=style, legend=True, fontsize=fontsize
-        )
-
-        self.adjust_graph_params(rotation, xlabel, ylabel, fontsize)
-
-        plt.savefig(self.folder_path + filename + ".png")
-        plt.close("all")
+        global image_count
+        # plt.rcParams["font.size"] = fontsize
 
         if self.groupby:
             for name, group in self.data_df.groupby(self.groupby):
-                self.setup_fig_and_ax(figsize)
+                self.setup_fig_and_ax(figsize=figsize, fontsize=fontsize, ylim=ylim)
 
                 self.ax.set_xticks(
                     [i for i in range(group.shape[0])]
                 )  # set number of label
-                group[df_columns_list].plot(
-                    ax=self.ax, ylim=ylim, style=style, legend=True, fontsize=fontsize
-                )
+                # group[df_columns_list].plot(
+                #     ax=self.ax, ylim=ylim, style=style, legend=True, fontsize=fontsize
+                # )
+                print(group)
+
+                for df_column in df_columns_list:
+                    print(df_column)
+                    self.ax.plot(
+                        group[df_column],
+                        label=df_column,
+                        linestyle="",
+                        marker=".",
+                        markersize=fontsize,
+                    )
 
                 self.adjust_graph_params(rotation, xlabel, ylabel, fontsize)
 
-                plt.savefig(self.folder_path + name + "_" + filename + ".png")
+                num = f"{image_count:03}_"
+                plt.savefig(
+                    self.folder_path + num + "_" + name + "_" + filename + ".png"
+                )
                 plt.close("all")
+                plt.figure()
+                self.ax.cla()
+                image_count += 1
+        else:
+            self.setup_fig_and_ax(figsize)
+            self.ax.set_xticks(
+                [i for i in range(self.data_df.shape[0])], fontsize=fontsize
+            )  # set number of label
+
+            self.data_df[df_columns_list].plot(
+                ax=self.ax, ylim=ylim, style=style, legend=True, fontsize=fontsize
+            )
+
+            self.adjust_graph_params(rotation, xlabel, ylabel, fontsize)
+            num = f"{image_count:03}_"
+            plt.savefig(self.folder_path + num + filename + ".png")
+            plt.close("all")
+            image_count += 1
 
     def adjust_graph_params(self, rotation, xlabel, ylabel, fontsize):
         plt.xticks(rotation=rotation)
         self.ax.set_ylabel(ylabel, fontsize=fontsize)
         self.ax.set_xlabel(xlabel, fontsize=fontsize)
         self.ax.legend(fontsize=fontsize)
+        # self.ax.hlines(50, 0, 2, colors=["black"])
 
-    def setup_fig_and_ax(self, figsize):
+    def setup_fig_and_ax(self, figsize, fontsize, ylim):
         self.fig = plt.figure(figsize=figsize)  # create figure object
-        self.ax = self.fig.add_subplot(1, 1, 1)  # create axes object
+        self.ax = self.fig.add_subplot(1, 1, 1, ylim=ylim)  # create axes object
+        self.ax.tick_params(labelsize=fontsize)
         self.ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.1f"))
         # self.fig.subplots_adjust(bottom=0.2)
 
@@ -356,105 +378,105 @@ CELL_WIDTH_BASE = 72
 DATA_START_COLUMNS = 7
 
 
-data_summarize_eye = WaveData(
-    filename="result_eye.csv",
-    folderpath=os.getcwd() + "/sample_log/",
-    header=[  # header order is important. must be same as data after extra items added
-        "Condition",
-        "Pin_Rate",
-        "Pin_Vi",
-        "Pin",
-        "Vi",
-        "Rate",
-        "Eye Height(mV)",
-        "Eye Width(mV)",
-    ],
-    groupby="Vi",
-)
-data_summarize_eye.make_df_and_xlsx()
-data_summarize_eye.make_graph(
-    df_columns_list=["Eye Height(mV)"],
-    ylim=[300, 400],
-    filename="8g_eheight",
-    ylabel="ps",
-)
-data_summarize_eye.make_graph(
-    df_columns_list=["Eye Width(mV)"], ylim=[0, 10], filename="8g_ewidth",
-)
-data_summarize_eye.make_graph(
-    df_columns_list=["Eye Width(mV)", "Eye Height(mV)"],
-    ylim=[0, 500],
-    filename="8g_ewidth_eheight",
-)
-data_summarize_eye.add_table_to_pptx(
-    new_presentation=False,
-    title="eye",
-    cell_width=[
-        # CELL_WIDTH_BASE * 5,
-        CELL_WIDTH_BASE * 2,
-        CELL_WIDTH_BASE * 2,
-        CELL_WIDTH_BASE * 2,
-        CELL_WIDTH_BASE * 2,
-        CELL_WIDTH_BASE * 2,
-        CELL_WIDTH_BASE * 2,
-        CELL_WIDTH_BASE * 2,
-    ],
-    items=["Condition", "Pin", "Vi", "Rate", "Eye Height(mV)", "Eye Width(mV)"],
-)
-data_summarize_eye.make_excel_graphs(
-    data_start_column=DATA_START_COLUMNS,
-    chart_yaxis_titles=["ps", "mV"],
-    chart_yaxis_scaling_mins=[300, 0],
-    chart_yaxis_scaling_maxes=[400, 10],
-    chart_yaxis_major_unit=[20, 2],
-)
-data_summarize_eye.make_excel_graph(
-    data_start_column=DATA_START_COLUMNS,
-    data_end_column=8,
-    chart_yaxis_title="ps",
-    chart_yaxis_scaling_min=0,
-    chart_yaxis_scaling_max=400,
-    chart_yaxis_major_unit=50,
-    chart_position="L5",
-)
+# data_summarize_eye = WaveData(
+#     filename="result_eye.csv",
+#     folderpath=os.getcwd() + "/sample_log/",
+#     header=[  # header order is important. must be same as data after extra items added
+#         "Condition",
+#         "Pin_Rate",
+#         "Pin_Vi",
+#         "Pin",
+#         "Vi",
+#         "Rate",
+#         "Eye Height(mV)",
+#         "Eye Width(mV)",
+#     ],
+#     groupby="Vi",
+# )
+# data_summarize_eye.make_df_and_xlsx()
+# data_summarize_eye.make_graph(
+#     df_columns_list=["Eye Height(mV)"],
+#     ylim=[300, 400],
+#     filename="8g_eheight",
+#     ylabel="ps",
+# )
+# data_summarize_eye.make_graph(
+#     df_columns_list=["Eye Width(mV)"], ylim=[0, 10], filename="8g_ewidth",
+# )
+# data_summarize_eye.make_graph(
+#     df_columns_list=["Eye Width(mV)", "Eye Height(mV)"],
+#     ylim=[0, 500],
+#     filename="8g_ewidth_eheight",
+# )
+# data_summarize_eye.add_table_to_pptx(
+#     new_presentation=False,
+#     title="eye",
+#     cell_width=[
+#         # CELL_WIDTH_BASE * 5,
+#         CELL_WIDTH_BASE * 2,
+#         CELL_WIDTH_BASE * 2,
+#         CELL_WIDTH_BASE * 2,
+#         CELL_WIDTH_BASE * 2,
+#         CELL_WIDTH_BASE * 2,
+#         CELL_WIDTH_BASE * 2,
+#         CELL_WIDTH_BASE * 2,
+#     ],
+#     items=["Condition", "Pin", "Vi", "Rate", "Eye Height(mV)", "Eye Width(mV)"],
+# )
+# data_summarize_eye.make_excel_graphs(
+#     data_start_column=DATA_START_COLUMNS,
+#     chart_yaxis_titles=["ps", "mV"],
+#     chart_yaxis_scaling_mins=[300, 0],
+#     chart_yaxis_scaling_maxes=[400, 10],
+#     chart_yaxis_major_unit=[20, 2],
+# )
+# data_summarize_eye.make_excel_graph(
+#     data_start_column=DATA_START_COLUMNS,
+#     data_end_column=8,
+#     chart_yaxis_title="ps",
+#     chart_yaxis_scaling_min=0,
+#     chart_yaxis_scaling_max=400,
+#     chart_yaxis_major_unit=50,
+#     chart_position="L5",
+# )
 data_summarize_overview = WaveData(
-    filename="result_overview2.csv",
+    filename="result_overview3.csv",
     folderpath=os.getcwd() + "/sample_log/",
     groupby="Vi",
 )
 data_summarize_overview.make_df_and_xlsx()
-data_summarize_overview.make_graph(
-    df_columns_list=["Risetime"], ylim=[40, 70], filename="8g_risetime",
-)
-data_summarize_overview.make_graph(
-    df_columns_list=["Falltime"], ylim=[40, 70], filename="8g_falltime",
-)
+# data_summarize_overview.make_graph(
+#     df_columns_list=["Risetime"], ylim=[40, 70], filename="8g_risetime",
+# )
+# data_summarize_overview.make_graph(
+#     df_columns_list=["Falltime"], ylim=[40, 70], filename="8g_falltime",
+# )
 data_summarize_overview.make_graph(
     df_columns_list=["Falltime", "Risetime"],
-    ylim=[40, 70],
+    ylim=[0, 100],
     filename="8g_falltime_risetime",
 )
-data_summarize_overview.add_table_to_pptx(
-    new_presentation=False,
-    title="overview",
-    cell_width=[
-        CELL_WIDTH_BASE * 1.1,
-        CELL_WIDTH_BASE * 4,
-        CELL_WIDTH_BASE * 1.1,
-        CELL_WIDTH_BASE * 1.1,
-        CELL_WIDTH_BASE * 1.1,
-        CELL_WIDTH_BASE * 1.1,
-        CELL_WIDTH_BASE * 1.1,
-        CELL_WIDTH_BASE * 1.1,
-        CELL_WIDTH_BASE * 1.1,
-    ],
-    items=["Pin", "Vi", "Rate", "Risetime", "Falltime"],
-)
-data_summarize_overview.make_excel_graphs(
-    data_start_column=DATA_START_COLUMNS,
-    chart_yaxis_titles=["ps", "ps", "%", "GHz", "mV", "mV", "mV", "mV"],
-    chart_yaxis_scaling_mins=[0, 0, 45, 3.9, 400, 400, 400, -50],
-    chart_yaxis_scaling_maxes=[100, 100, 55, 4.1, 600, 600, 600, 50],
-    chart_yaxis_major_unit=[20, 20, 2, 0.05, 20, 20, 20, 20],
-)
-data_summarize_eye.save_pptx(file_name="test")
+# data_summarize_overview.add_table_to_pptx(
+#     new_presentation=False,
+#     title="overview",
+#     cell_width=[
+#         CELL_WIDTH_BASE * 1.1,
+#         CELL_WIDTH_BASE * 4,
+#         CELL_WIDTH_BASE * 1.1,
+#         CELL_WIDTH_BASE * 1.1,
+#         CELL_WIDTH_BASE * 1.1,
+#         CELL_WIDTH_BASE * 1.1,
+#         CELL_WIDTH_BASE * 1.1,
+#         CELL_WIDTH_BASE * 1.1,
+#         CELL_WIDTH_BASE * 1.1,
+#     ],
+#     items=["Pin", "Vi", "Rate", "Risetime", "Falltime"],
+# )
+# data_summarize_overview.make_excel_graphs(
+#     data_start_column=DATA_START_COLUMNS,
+#     chart_yaxis_titles=["ps", "ps", "%", "GHz", "mV", "mV", "mV", "mV"],
+#     chart_yaxis_scaling_mins=[0, 0, 45, 3.9, 400, 400, 400, -50],
+#     chart_yaxis_scaling_maxes=[100, 100, 55, 4.1, 600, 600, 600, 50],
+#     chart_yaxis_major_unit=[20, 20, 2, 0.05, 20, 20, 20, 20],
+# )
+# data_summarize_eye.save_pptx(file_name="test")
