@@ -8,7 +8,8 @@ from collections import OrderedDict
 from openpyxl import load_workbook
 from openpyxl.chart import LineChart, Reference
 import re
-import sys
+
+# import sys
 
 image_count = 0
 # from glob import glob
@@ -293,43 +294,40 @@ class WaveData:
         slide_height = self.active_presentation.PageSetup.SlideHeight
         slide_count = self.active_presentation.Slides.Count
 
-        slide = self.active_presentation.Slides.Add(Index=slide_count + 1, Layout=4)
-        slide.Select()
-        slide.Shapes(1).TextFrame.TextRange.Text = title
+        if self.groupby:
+            for name, group in self.data_df.groupby(self.groupby):
+                slide = self.active_presentation.Slides.Add(
+                    Index=slide_count + 1, Layout=4
+                )
+                slide.Select()
+                slide.Shapes(1).TextFrame.TextRange.Text = name
 
-        data_list_to_table = self.data_list.copy()
-        if items:
-            items_removed = list(set(data_list_to_table[0]) ^ set(items))
-            items_removed_index = []
-            for item in items_removed:
-                items_removed_index.append(data_list_to_table[0].index(item))
+                data_list_to_table_df = group.reset_index()
+                data_list_to_table_df = data_list_to_table_df.loc[:, items]
+                data_list_to_table = data_list_to_table_df.values.tolist()
+                data_list_to_table.insert(0, data_list_to_table_df.columns.to_list())
 
-            data_list_to_table = []
-            for item in self.data_list:
-                for i in sorted(items_removed_index, reverse=True):
-                    item.pop(i)
-                data_list_to_table.append(item)
+                print(data_list_to_table)
+                table_rows = len(data_list_to_table)
+                table_columns = len(data_list_to_table[0])
+                table = slide.Shapes.AddTable(table_rows, table_columns).Table
 
-        table_rows = len(data_list_to_table)
-        table_columns = len(data_list_to_table[0])
-        table = slide.Shapes.AddTable(table_rows, table_columns).Table
+                for i in range(table_rows):
+                    for j in range(table_columns):
+                        tr = table.Cell(i + 1, j + 1).Shape.TextFrame.TextRange
+                        try:
+                            tr.Text = f"{data_list_to_table[i][j]:.1f}"
+                        except ValueError:
+                            tr.Text = data_list_to_table[i][j]
 
-        for i in range(table_rows):
-            for j in range(table_columns):
-                tr = table.Cell(i + 1, j + 1).Shape.TextFrame.TextRange
-                try:
-                    tr.Text = f"{data_list_to_table[i][j]:.1f}"
-                except ValueError:
-                    tr.Text = data_list_to_table[i][j]
+                        tr.Font.Size = 14
 
-                tr.Font.Size = 14
+                for i in range(1, table.Columns.Count + 1):
+                    table.Columns(i).Width = cell_width[i - 1]
 
-        for i in range(1, table.Columns.Count + 1):
-            table.Columns(i).Width = cell_width[i - 1]
-
-        shape = slide.Shapes(2)
-        shape.Left = slide_width / 2 - shape.width / 2
-        shape.Top = slide_height / 6
+                shape = slide.Shapes(2)
+                shape.Left = slide_width / 2 - shape.width / 2
+                shape.Top = slide_height / 6
 
     def save_pptx(self, file_name):
         self.active_presentation.SaveAs(
@@ -456,22 +454,22 @@ data_summarize_overview.make_graph(
     ylim=[0, 100],
     filename="8g_falltime_risetime",
 )
-# data_summarize_overview.add_table_to_pptx(
-#     new_presentation=False,
-#     title="overview",
-#     cell_width=[
-#         CELL_WIDTH_BASE * 1.1,
-#         CELL_WIDTH_BASE * 4,
-#         CELL_WIDTH_BASE * 1.1,
-#         CELL_WIDTH_BASE * 1.1,
-#         CELL_WIDTH_BASE * 1.1,
-#         CELL_WIDTH_BASE * 1.1,
-#         CELL_WIDTH_BASE * 1.1,
-#         CELL_WIDTH_BASE * 1.1,
-#         CELL_WIDTH_BASE * 1.1,
-#     ],
-#     items=["Pin", "Vi", "Rate", "Risetime", "Falltime"],
-# )
+data_summarize_overview.add_table_to_pptx(
+    new_presentation=False,
+    title="overview",
+    cell_width=[
+        CELL_WIDTH_BASE * 1.1,
+        CELL_WIDTH_BASE * 4,
+        CELL_WIDTH_BASE * 1.1,
+        CELL_WIDTH_BASE * 1.1,
+        CELL_WIDTH_BASE * 1.1,
+        CELL_WIDTH_BASE * 1.1,
+        CELL_WIDTH_BASE * 1.1,
+        CELL_WIDTH_BASE * 1.1,
+        CELL_WIDTH_BASE * 1.1,
+    ],
+    items=["Pin", "Vi", "Rate", "Falltime", "Risetime"],
+)
 # data_summarize_overview.make_excel_graphs(
 #     data_start_column=DATA_START_COLUMNS,
 #     chart_yaxis_titles=["ps", "ps", "%", "GHz", "mV", "mV", "mV", "mV"],
