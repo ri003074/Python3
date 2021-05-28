@@ -348,7 +348,13 @@ class WaveData:
         self.fig.subplots_adjust(bottom=0.3)
 
     def add_table_to_pptx(
-        self, title, cell_width, cell_height=20, items=[], groupby_table="",
+        self,
+        title,
+        cell_width,
+        cell_height=20,
+        items=[],
+        groupby_table="",
+        header_rename_dict={},
     ):
 
         self.add_slide(title=title, slide_count=self.slide_count, layout=4)
@@ -360,6 +366,7 @@ class WaveData:
             cell_height=cell_height,
             slide_width=self.slide_width,
             slide_height=self.slide_height,
+            header_rename_dict=header_rename_dict,
         )
 
         if groupby_table:
@@ -374,6 +381,7 @@ class WaveData:
                     cell_height=cell_height,
                     slide_width=self.slide_width,
                     slide_height=self.slide_height,
+                    header_rename_dict=header_rename_dict,
                 )
 
     def add_slide(self, title, slide_count, layout):
@@ -385,7 +393,16 @@ class WaveData:
         self.slide.Shapes(1).TextFrame.TextRange.Font.Size = 28
         self.slide_count += 1
 
-    def add_table(self, df, items, cell_width, cell_height, slide_width, slide_height):
+    def add_table(
+        self,
+        df,
+        items,
+        cell_width,
+        cell_height,
+        slide_width,
+        slide_height,
+        header_rename_dict,
+    ):
         df = df.loc[:, items]
         data_list_to_table = df.values.tolist()
         data_list_to_table.insert(0, df.columns.tolist())
@@ -400,7 +417,13 @@ class WaveData:
                 try:
                     tr.Text = f"{data_list_to_table[i][j]:.1f}"
                 except ValueError:
-                    tr.Text = data_list_to_table[i][j]
+                    if header_rename_dict:
+                        for key, value in header_rename_dict.items():
+                            if key == data_list_to_table[i][j]:
+                                tr.Text = value
+                                break
+                            else:
+                                tr.Text = data_list_to_table[i][j]
 
                 tr.Font.Size = 10
 
@@ -555,9 +578,9 @@ wave_data_overview.make_graph(
     df_columns_list=["Risetime", "Falltime"],
     ylim=[30, 70],
     filename=PE + "Risetime_Falltime",
+    ylabel="ps",
     hlines=60,
 )
-sys.exit()
 wave_data_overview.add_table_to_pptx(
     title="overview",
     cell_width=[
@@ -573,6 +596,7 @@ wave_data_overview.add_table_to_pptx(
     ],
     items=["Pin", "Vi", "Rate", "Risetime", "Falltime"],
     groupby_table="Vi",
+    header_rename_dict={"Risetime": "Risetime(ps)", "Falltime": "Falltime(ps)"},
 )
 wave_data_overview.make_excel_graphs(
     data_start_column=DATA_START_COLUMNS,
