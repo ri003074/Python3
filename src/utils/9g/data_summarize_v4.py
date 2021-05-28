@@ -85,7 +85,7 @@ class WaveData:
 
                     rows.insert(5, pin_kind)
                     rows.insert(6, "Vi")
-                    rows.insert(7, match.group(3).replace("0V", "V"))
+                    rows.insert(7, match.group(3).replace("00V", "V"))
                     rows.insert(8, "Rate")
                     rows.insert(
                         9, match.group(4).replace("Rate0r", "").replace("ns", "ps")
@@ -258,6 +258,7 @@ class WaveData:
         rotation=45,
         figsize=(10, 5.5),
         yticks=[],
+        hlines="",
     ):
         global image_count
 
@@ -272,7 +273,15 @@ class WaveData:
                     ax=self.ax, ylim=ylim, style=style, legend=True, fontsize=fontsize
                 )
 
-                self.adjust_graph_params(rotation, xlabel, ylabel, fontsize, yticks)
+                self.adjust_graph_params(
+                    rotation,
+                    xlabel,
+                    ylabel,
+                    fontsize,
+                    yticks,
+                    hlines,
+                    len(group[df_columns_list].index),
+                )
                 num = f"{image_count:03}_"
                 filename_full = self.folder_path + num + name + "_" + filename + ".png"
                 plt.savefig(filename_full)
@@ -314,13 +323,23 @@ class WaveData:
             plt.close("all")
             image_count += 1
 
-    def adjust_graph_params(self, rotation, xlabel, ylabel, fontsize, yticks):
+    def adjust_graph_params(
+        self, rotation, xlabel, ylabel, fontsize, yticks, hlines, num_of_index
+    ):
         plt.xticks(rotation=rotation)
         self.ax.set_ylabel(ylabel, fontsize=fontsize)
         self.ax.set_xlabel(xlabel, fontsize=fontsize)
         self.ax.legend(fontsize=fontsize)
         if yticks:
             self.ax.set_yticks(np.arange(yticks[0], yticks[1], yticks[2]))
+        if hlines:
+            self.ax.hlines(
+                y=hlines,
+                xmin=0,
+                xmax=num_of_index - 1,
+                linestyle={"dashed"},
+                colors=["gray"],
+            )
 
     def setup_fig_and_ax(self, figsize):
         self.fig = plt.figure(figsize=figsize)  # create figure object
@@ -363,6 +382,7 @@ class WaveData:
         )
         self.slide.Select()
         self.slide.Shapes(1).TextFrame.TextRange.Text = title
+        self.slide.Shapes(1).TextFrame.TextRange.Font.Size = 28
         self.slide_count += 1
 
     def add_table(self, df, items, cell_width, cell_height, slide_width, slide_height):
@@ -514,7 +534,7 @@ wave_data_overview = WaveData(
     filename="result_overview3.csv",
     folderpath=FOLDER_PATH,
     groupby="Pkind_Vi",
-    new_presentation=True,
+    new_presentation=False,
 )
 wave_data_overview.make_df_and_xlsx()
 wave_data_overview.make_graph(
@@ -531,18 +551,13 @@ wave_data_overview.make_graph(
     yticks=[40, 61, 2],
     ylabel="%",
 )
-sys.exit()
-wave_data_overview.make_graph(
-    df_columns_list=["Risetime"], ylim=[40, 70], filename=PE + "Risetime",
-)
-wave_data_overview.make_graph(
-    df_columns_list=["Falltime"], ylim=[40, 70], filename=PE + "Falltime",
-)
 wave_data_overview.make_graph(
     df_columns_list=["Risetime", "Falltime"],
-    ylim=[40, 70],
+    ylim=[30, 70],
     filename=PE + "Risetime_Falltime",
+    hlines=60,
 )
+sys.exit()
 wave_data_overview.add_table_to_pptx(
     title="overview",
     cell_width=[
