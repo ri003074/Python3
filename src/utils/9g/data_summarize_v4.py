@@ -18,11 +18,6 @@ image_count = 0
 now = datetime.datetime.now()
 date_now = now.strftime("%Y%m%d%H%M")
 
-"""
-P773A1_eye_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r250ns_Duty0r500	 EHEIGHT	3.64E-01	 EWIDTH	9.62E-11
-P773A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r250ns_Duty0r500	 RISETIME	4.76E-11	 FALLTIME	4.54E-11	 DUTYCYCLE	4.97E+01	 FREQUENCY	4.00E+09	 VAMPLITUDE	5.05E-01	 VPP	5.43E-01	 VMAXIMUM	5.21E-01	 VMINIMUM	-2.23E-02
-"""
-
 
 class WaveData:
     def __init__(
@@ -57,6 +52,14 @@ class WaveData:
         self.slide_count = self.active_presentation.Slides.Count
 
     def make_df_and_xlsx(self):
+        """Make pandas dataframe and xlsx data
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         with open(self.input_file, mode="r", encoding="utf-8-sig") as csvfile:
             reader = csv.reader(csvfile)
             data = []
@@ -351,33 +354,41 @@ class WaveData:
         global image_count
 
         self.setup_fig_and_ax(figsize=figsize)
+
         df_posi = pd.read_csv(posi_pin_file, header=None)
         df_nega = pd.read_csv(nega_pin_file, header=None)
+
         df_posi = df_posi.set_axis(["t", "wck_t"], axis=1)
         df_nega = df_nega.set_axis(["t", "wck_c"], axis=1)
+
         df_posi = df_posi.set_index("t")
         df_nega = df_nega.set_index("t")
+
         df_posi_nega = pd.concat([df_posi, df_nega], axis=1)
+
+        # make diff column
         df_posi_nega["wck_t-wck_c"] = df_posi_nega["wck_t"] - df_posi_nega["wck_c"]
-        print(df_posi_nega)
+
+        # make dataframe df_vix. df_vix has 4 data which wck_t - wck_c is close to 0
         df_tmp = df_posi_nega
         df_vix = pd.DataFrame()
-
         for i in range(4):
-            val1 = self.getNearestValue(df_tmp["wck_t-wck_c"].values.tolist(), 0)
-            print(val1)
-            min_row1 = df_tmp[df_tmp["wck_t-wck_c"] == val1]
-            print(min_row1)
+            val = self.getNearestValue(df_tmp["wck_t-wck_c"].values.tolist(), 0)
+            min_row1 = df_tmp[df_tmp["wck_t-wck_c"] == val]
             df_vix = pd.concat([df_vix, min_row1])
             df_tmp = df_tmp.drop(min_row1.index)
-        df_vix["(wck_t-wck_c)/2"] = (df_vix["wck_t"] + df_vix["wck_c"]) / 2
 
-        df_vix = df_vix["(wck_t-wck_c)/2"]
+        # get average in casel there is no cross point in data
+        df_vix["(wck_t+wck_c)/2"] = (df_vix["wck_t"] + df_vix["wck_c"]) / 2
+
+        df_vix = df_vix["(wck_t+wck_c)/2"]
         df_vix = df_vix.reset_index()
         df_vix_list = df_vix.values.tolist()
 
         df_posi_nega = df_posi_nega.drop("wck_t-wck_c", axis=1)
         df_posi_nega.plot(ax=self.ax)
+
+        # reference level line
         self.ax.hlines(
             y=0,
             xmin=0,
@@ -386,6 +397,7 @@ class WaveData:
             linestyle="dashed",
         )
 
+        # add x, y cordinates to graph
         for df_vix_p in df_vix_list:
             x = df_vix_p[0]
             y = df_vix_p[1]
@@ -406,7 +418,7 @@ class WaveData:
         )
         num = f"{image_count:03}_"
         filename_full = self.folder_path + num + filename + ".png"
-        plt.savefig(self.folder_path + num + filename + ".png")
+        plt.savefig(filename_full)
         plt.close("all")
         self.add_slide(
             title=num + filename, slide_count=self.slide_count, layout=11,
@@ -536,6 +548,13 @@ class WaveData:
         shape.Top = slide_height / 6
 
     def save_pptx(self, file_name):
+        """save pptx file
+            Args:
+                arg1 (str): file name
+
+            Returns:
+                None
+        """
         self.active_presentation.SaveAs(
             FileName=os.getcwd() + "/" + str(date_now) + "_" + file_name
         )
@@ -589,7 +608,7 @@ if __name__ == "__main__":
     wave_data_overview = WaveData(
         filename="result_overview3.csv",
         folderpath=FOLDER_PATH,
-        # groupby="Pkind_Vi",
+        groupby="Pkind_Vi",
         new_presentation=False,
         index="Pin_Rate",
     )
