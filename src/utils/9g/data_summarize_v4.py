@@ -448,6 +448,62 @@ class WaveData:
             FileName=os.getcwd() + "/" + str(date_now) + "_" + file_name
         )
 
+    def getNearestValue(self, list, num):
+        idx = np.abs(np.asarray(list) - num).argmin()
+        return list[idx]
+
+    def make_vix_graph(self, posi_pin_file, nega_pin_file, filename):
+        global image_count
+
+        self.setup_fig_and_ax(figsize=(16, 9))
+        df_posi = pd.read_csv(posi_pin_file, header=None)
+        df_nega = pd.read_csv(nega_pin_file, header=None)
+        df_posi = df_posi.set_axis(["t", "wck_t"], axis=1)
+        df_nega = df_nega.set_axis(["t", "wck_c"], axis=1)
+        df_posi = df_posi.set_index("t")
+        df_nega = df_nega.set_index("t")
+        df_posi_nega = pd.concat([df_posi, df_nega], axis=1)
+        df_posi_nega["wck_t-wck_c"] = df_posi_nega["wck_t"] - df_posi_nega["wck_c"]
+        print(df_posi_nega)
+        df_tmp = df_posi_nega
+        df_vix = pd.DataFrame()
+
+        for i in range(4):
+            val1 = self.getNearestValue(df_tmp["wck_t-wck_c"].values.tolist(), 0)
+            print(val1)
+            min_row1 = df_tmp[df_tmp["wck_t-wck_c"] == val1]
+            print(min_row1)
+            df_vix = pd.concat([df_vix, min_row1])
+            df_tmp = df_tmp.drop(min_row1.index)
+        df_vix["(wck_t-wck_c)/2"] = (df_vix["wck_t"] + df_vix["wck_c"]) / 2
+
+        df_vix = df_vix["(wck_t-wck_c)/2"]
+        df_vix = df_vix.reset_index()
+        df_vix_list = df_vix.values.tolist()
+
+        df_posi_nega = df_posi_nega.drop("wck_t-wck_c", axis=1)
+        df_posi_nega.plot(ax=self.ax)
+        self.ax.hlines(
+            y=0,
+            xmin=0,
+            xmax=len(df_posi_nega.index) / 16,
+            color="black",
+            linestyle="dashed",
+        )
+
+        for df_vix_p in df_vix_list:
+            x = df_vix_p[0]
+            y = df_vix_p[1]
+            self.ax.text(x + 0.2, y, f"({x:.2f}, {y:.2f})")
+            self.ax.annotate(
+                "", xy=[x, 0], xytext=df_vix_p, arrowprops=dict(arrowstyle="<->")
+            )
+
+        num = f"{image_count:03}_"
+        plt.savefig(self.folder_path + num + filename + ".png")
+        plt.close("all")
+        image_count += 1
+
     def mul3(self, x):
         return x * 1e3
 
@@ -486,123 +542,130 @@ class WaveData:
             self.data_df["Vminimum"] = self.data_df["Vminimum"].apply(self.mul3)
 
 
-CELL_WIDTH_BASE = 72
-DATA_START_COLUMNS = 9
-FOLDER_PATH = os.getcwd() + "/sample_log/"
-FILE_NAME = "8GPE_TEST.pptx"
-PE = "8GPE_"
+if __name__ == "__main__":
 
+    CELL_WIDTH_BASE = 72
+    DATA_START_COLUMNS = 9
+    FOLDER_PATH = os.getcwd() + "/sample_log/"
+    FILE_NAME = "8GPE_TEST.pptx"
+    PE = "8GPE_"
 
-wave_data_overview = WaveData(
-    filename="result_overview3.csv",
-    folderpath=FOLDER_PATH,
-    groupby="Pkind_Vi",
-    new_presentation=False,
-)
-wave_data_overview.make_df_and_xlsx()
-wave_data_overview.make_graph(
-    df_columns_list=["Frequency"],
-    ylim=[3.3, 4.7],
-    filename=PE + "Frequency",
-    yticks=[3.0, 5.01, 0.2],
-    ylabel="GHz",
-    legends=["Freq(GHz)"],
-)
-wave_data_overview.make_graph(
-    df_columns_list=["Dutycycle"],
-    ylim=[40, 60],
-    filename=PE + "Duty",
-    yticks=[40, 61, 2],
-    ylabel="%",
-    legends=["Duty(%)"],
-)
-wave_data_overview.make_graph(
-    df_columns_list=["Risetime", "Falltime"],
-    ylim=[30, 70],
-    filename=PE + "Risetime_Falltime",
-    ylabel="ps",
-    hlines=60,
-    legends=["Tr(ps)", "Tf(ps)"],
-)
-wave_data_overview.add_table_to_pptx(
-    title="overview",
-    cell_width=[
-        CELL_WIDTH_BASE * 1.1,
-        CELL_WIDTH_BASE * 2,
-        CELL_WIDTH_BASE * 1.1,
-        CELL_WIDTH_BASE * 1.1,
-        CELL_WIDTH_BASE * 1.1,
-        CELL_WIDTH_BASE * 1.1,
-        CELL_WIDTH_BASE * 1.1,
-        CELL_WIDTH_BASE * 1.1,
-        CELL_WIDTH_BASE * 1.1,
-    ],
-    items=["Pin", "Vi", "Rate", "Risetime", "Falltime"],
-    groupby_table="Vi",
-    header_rename_dict={"Risetime": "Risetime(ps)", "Falltime": "Falltime(ps)"},
-)
-wave_data_overview.make_excel_graphs(
-    data_start_column=DATA_START_COLUMNS,
-    chart_yaxis_titles=["ps", "ps", "%", "GHz", "mV", "mV", "mV", "mV"],
-    chart_yaxis_scaling_mins=[0, 0, 45, 3.9, 400, 400, 400, -60],
-    chart_yaxis_scaling_maxes=[100, 100, 55, 4.1, 600, 600, 600, 60],
-    chart_yaxis_major_unit=[20, 20, 2, 0.05, 20, 20, 20, 20],
-)
-wave_data_eye = WaveData(
-    filename="result_eye.csv",
-    folderpath=FOLDER_PATH,
-    groupby="Pkind_Vi",
-    new_presentation=False,
-)
-wave_data_eye.make_df_and_xlsx()
-wave_data_eye.make_graph(
-    df_columns_list=["Eheight"],
-    ylim=[300, 400],
-    filename=PE + "Eheight",
-    ylabel="ps",
-    legends=["Eye Height(mV)"],
-)
-wave_data_eye.make_graph(
-    df_columns_list=["Ewidth"],
-    ylim=[0, 10],
-    filename=PE + "Ewidth",
-    legends=["Eye Width(mV)"],
-)
-wave_data_eye.make_graph(
-    df_columns_list=["Eheight", "Ewidth"],
-    ylim=[0, 500],
-    filename=PE + "EyEWidth_EyeHeight",
-    legends=["Eye Height(mV)", "Eye Width(mV)"],
-)
-wave_data_eye.add_table_to_pptx(
-    title="eye",
-    cell_width=[
-        # CELL_WIDTH_BASE * 5,
-        CELL_WIDTH_BASE * 2,
-        CELL_WIDTH_BASE * 2,
-        CELL_WIDTH_BASE * 2,
-        CELL_WIDTH_BASE * 2,
-        CELL_WIDTH_BASE * 2,
-        CELL_WIDTH_BASE * 2,
-        CELL_WIDTH_BASE * 2,
-    ],
-    items=["Pin", "Vi", "Rate", "Eheight", "Ewidth"],
-    groupby_table="Vi",
-)
-wave_data_eye.make_excel_graphs(
-    data_start_column=DATA_START_COLUMNS,
-    chart_yaxis_titles=["ps", "mV"],
-    chart_yaxis_scaling_mins=[300, 0],
-    chart_yaxis_scaling_maxes=[400, 10],
-    chart_yaxis_major_unit=[20, 2],
-)
-wave_data_eye.make_excel_graph(
-    data_start_column=DATA_START_COLUMNS,
-    data_end_column=8,
-    chart_yaxis_title="ps",
-    chart_yaxis_scaling_min=0,
-    chart_yaxis_scaling_max=400,
-    chart_yaxis_major_unit=50,
-    chart_position="L5",
-)
-wave_data_overview.save_pptx(file_name=FILE_NAME)
+    wave_data_overview = WaveData(
+        filename="result_overview3.csv",
+        folderpath=FOLDER_PATH,
+        groupby="Pkind_Vi",
+        new_presentation=False,
+    )
+    wave_data_overview.make_vix_graph(
+        posi_pin_file="./sample_log/posi.csv",
+        nega_pin_file="./sample_log/nega.csv",
+        filename="abc",
+    )
+    sys.exit()
+    wave_data_overview.make_df_and_xlsx()
+    wave_data_overview.make_graph(
+        df_columns_list=["Frequency"],
+        ylim=[3.3, 4.7],
+        filename=PE + "Frequency",
+        yticks=[3.0, 5.01, 0.2],
+        ylabel="GHz",
+        legends=["Freq(GHz)"],
+    )
+    wave_data_overview.make_graph(
+        df_columns_list=["Dutycycle"],
+        ylim=[40, 60],
+        filename=PE + "Duty",
+        yticks=[40, 61, 2],
+        ylabel="%",
+        legends=["Duty(%)"],
+    )
+    wave_data_overview.make_graph(
+        df_columns_list=["Risetime", "Falltime"],
+        ylim=[30, 70],
+        filename=PE + "Risetime_Falltime",
+        ylabel="ps",
+        hlines=60,
+        legends=["Tr(ps)", "Tf(ps)"],
+    )
+    wave_data_overview.add_table_to_pptx(
+        title="overview",
+        cell_width=[
+            CELL_WIDTH_BASE * 1.1,
+            CELL_WIDTH_BASE * 2,
+            CELL_WIDTH_BASE * 1.1,
+            CELL_WIDTH_BASE * 1.1,
+            CELL_WIDTH_BASE * 1.1,
+            CELL_WIDTH_BASE * 1.1,
+            CELL_WIDTH_BASE * 1.1,
+            CELL_WIDTH_BASE * 1.1,
+            CELL_WIDTH_BASE * 1.1,
+        ],
+        items=["Pin", "Vi", "Rate", "Risetime", "Falltime"],
+        groupby_table="Vi",
+        header_rename_dict={"Risetime": "Risetime(ps)", "Falltime": "Falltime(ps)"},
+    )
+    wave_data_overview.make_excel_graphs(
+        data_start_column=DATA_START_COLUMNS,
+        chart_yaxis_titles=["ps", "ps", "%", "GHz", "mV", "mV", "mV", "mV"],
+        chart_yaxis_scaling_mins=[0, 0, 45, 3.9, 400, 400, 400, -60],
+        chart_yaxis_scaling_maxes=[100, 100, 55, 4.1, 600, 600, 600, 60],
+        chart_yaxis_major_unit=[20, 20, 2, 0.05, 20, 20, 20, 20],
+    )
+    wave_data_eye = WaveData(
+        filename="result_eye.csv",
+        folderpath=FOLDER_PATH,
+        groupby="Pkind_Vi",
+        new_presentation=False,
+    )
+    wave_data_eye.make_df_and_xlsx()
+    wave_data_eye.make_graph(
+        df_columns_list=["Eheight"],
+        ylim=[300, 400],
+        filename=PE + "Eheight",
+        ylabel="ps",
+        legends=["Eye Height(mV)"],
+    )
+    wave_data_eye.make_graph(
+        df_columns_list=["Ewidth"],
+        ylim=[0, 10],
+        filename=PE + "Ewidth",
+        legends=["Eye Width(mV)"],
+    )
+    wave_data_eye.make_graph(
+        df_columns_list=["Eheight", "Ewidth"],
+        ylim=[0, 500],
+        filename=PE + "EyEWidth_EyeHeight",
+        legends=["Eye Height(mV)", "Eye Width(mV)"],
+    )
+    wave_data_eye.add_table_to_pptx(
+        title="eye",
+        cell_width=[
+            # CELL_WIDTH_BASE * 5,
+            CELL_WIDTH_BASE * 2,
+            CELL_WIDTH_BASE * 2,
+            CELL_WIDTH_BASE * 2,
+            CELL_WIDTH_BASE * 2,
+            CELL_WIDTH_BASE * 2,
+            CELL_WIDTH_BASE * 2,
+            CELL_WIDTH_BASE * 2,
+        ],
+        items=["Pin", "Vi", "Rate", "Eheight", "Ewidth"],
+        groupby_table="Vi",
+    )
+    wave_data_eye.make_excel_graphs(
+        data_start_column=DATA_START_COLUMNS,
+        chart_yaxis_titles=["ps", "mV"],
+        chart_yaxis_scaling_mins=[300, 0],
+        chart_yaxis_scaling_maxes=[400, 10],
+        chart_yaxis_major_unit=[20, 2],
+    )
+    wave_data_eye.make_excel_graph(
+        data_start_column=DATA_START_COLUMNS,
+        data_end_column=8,
+        chart_yaxis_title="ps",
+        chart_yaxis_scaling_min=0,
+        chart_yaxis_scaling_max=400,
+        chart_yaxis_major_unit=50,
+        chart_position="L5",
+    )
+    wave_data_overview.save_pptx(file_name=FILE_NAME)
