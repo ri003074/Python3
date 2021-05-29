@@ -294,18 +294,7 @@ class WaveData:
                     layout=11,
                 )
 
-                image = self.active_presentation.Slides(
-                    self.slide_count
-                ).Shapes.AddPicture(
-                    FileName=filename_full,
-                    LinkToFile=-1,
-                    SaveWithDocument=-1,
-                    Left=0,
-                    Top=0,
-                )
-                image.Left = self.slide_width / 2 - image.Width / 2
-                image.Top = self.slide_height / 2 - image.Height / 2
-                image_count += 1
+                self.add_picture(filename_full=filename_full)
 
         else:
             self.setup_fig_and_ax(figsize)
@@ -318,12 +307,121 @@ class WaveData:
                 ax=self.ax, ylim=ylim, style=style, legend=True, fontsize=fontsize
             )
 
-            self.adjust_graph_params(rotation, xlabel, ylabel, fontsize)
+            self.adjust_graph_params(
+                rotation,
+                xlabel,
+                ylabel,
+                fontsize,
+                yticks,
+                hlines,
+                len(self.data_df.index),
+                legends,
+            )
 
             num = f"{image_count:03}_"
+            filename_full = self.folder_path + num + filename + ".png"
             plt.savefig(self.folder_path + num + filename + ".png")
             plt.close("all")
-            image_count += 1
+            self.add_slide(
+                title=num + filename, slide_count=self.slide_count, layout=11,
+            )
+
+            self.add_picture(filename_full=filename_full)
+
+    def add_picture(self, filename_full):
+        global image_count
+        image = self.active_presentation.Slides(self.slide_count).Shapes.AddPicture(
+            FileName=filename_full, LinkToFile=-1, SaveWithDocument=-1, Left=0, Top=0,
+        )
+        image.Left = self.slide_width / 2 - image.Width / 2
+        image.Top = self.slide_height / 2 - image.Height / 2
+        image_count += 1
+
+    def make_vix_graph(
+        self,
+        posi_pin_file,
+        nega_pin_file,
+        filename,
+        fontsize=14,
+        rotation=0,
+        xlabel="",
+        ylabel="",
+        figsize=(10, 5.5),
+    ):
+        global image_count
+
+        self.setup_fig_and_ax(figsize=figsize)
+        df_posi = pd.read_csv(posi_pin_file, header=None)
+        df_nega = pd.read_csv(nega_pin_file, header=None)
+        df_posi = df_posi.set_axis(["t", "wck_t"], axis=1)
+        df_nega = df_nega.set_axis(["t", "wck_c"], axis=1)
+        df_posi = df_posi.set_index("t")
+        df_nega = df_nega.set_index("t")
+        df_posi_nega = pd.concat([df_posi, df_nega], axis=1)
+        df_posi_nega["wck_t-wck_c"] = df_posi_nega["wck_t"] - df_posi_nega["wck_c"]
+        print(df_posi_nega)
+        df_tmp = df_posi_nega
+        df_vix = pd.DataFrame()
+
+        for i in range(4):
+            val1 = self.getNearestValue(df_tmp["wck_t-wck_c"].values.tolist(), 0)
+            print(val1)
+            min_row1 = df_tmp[df_tmp["wck_t-wck_c"] == val1]
+            print(min_row1)
+            df_vix = pd.concat([df_vix, min_row1])
+            df_tmp = df_tmp.drop(min_row1.index)
+        df_vix["(wck_t-wck_c)/2"] = (df_vix["wck_t"] + df_vix["wck_c"]) / 2
+
+        df_vix = df_vix["(wck_t-wck_c)/2"]
+        df_vix = df_vix.reset_index()
+        df_vix_list = df_vix.values.tolist()
+
+        df_posi_nega = df_posi_nega.drop("wck_t-wck_c", axis=1)
+        df_posi_nega.plot(ax=self.ax)
+        self.ax.hlines(
+            y=0,
+            xmin=0,
+            xmax=len(df_posi_nega.index) / 16,
+            color="black",
+            linestyle="dashed",
+        )
+
+        for df_vix_p in df_vix_list:
+            x = df_vix_p[0]
+            y = df_vix_p[1]
+            self.ax.text(x + 0.2, y, f"({x:.2f}, {y:.2f})")
+            self.ax.annotate(
+                "", xy=[x, 0], xytext=df_vix_p, arrowprops=dict(arrowstyle="<->")
+            )
+
+        self.adjust_graph_params(
+            rotation=rotation,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            fontsize=fontsize,
+            yticks=[],
+            hlines="",
+            num_of_index=[],
+            legends=[],
+        )
+        num = f"{image_count:03}_"
+        filename_full = self.folder_path + num + filename + ".png"
+        plt.savefig(self.folder_path + num + filename + ".png")
+        plt.close("all")
+        self.add_slide(
+            title=num + filename, slide_count=self.slide_count, layout=11,
+        )
+        self.add_picture(filename_full=filename_full)
+
+    def getNearestValue(self, list, num):
+        idx = np.abs(np.asarray(list) - num).argmin()
+        return list[idx]
+
+    def setup_fig_and_ax(self, figsize):
+        self.fig = plt.figure(figsize=figsize)  # create figure object
+        self.ax = self.fig.add_subplot(1, 1, 1)  # create axes object
+        self.ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.1f"))
+        self.fig.subplots_adjust(bottom=0.3)
 
     def adjust_graph_params(
         self, rotation, xlabel, ylabel, fontsize, yticks, hlines, num_of_index, legends
@@ -343,12 +441,6 @@ class WaveData:
                 linestyle={"dashed"},
                 colors=["gray"],
             )
-
-    def setup_fig_and_ax(self, figsize):
-        self.fig = plt.figure(figsize=figsize)  # create figure object
-        self.ax = self.fig.add_subplot(1, 1, 1)  # create axes object
-        self.ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.1f"))
-        self.fig.subplots_adjust(bottom=0.3)
 
     def add_table_to_pptx(
         self,
@@ -448,62 +540,6 @@ class WaveData:
             FileName=os.getcwd() + "/" + str(date_now) + "_" + file_name
         )
 
-    def getNearestValue(self, list, num):
-        idx = np.abs(np.asarray(list) - num).argmin()
-        return list[idx]
-
-    def make_vix_graph(self, posi_pin_file, nega_pin_file, filename):
-        global image_count
-
-        self.setup_fig_and_ax(figsize=(16, 9))
-        df_posi = pd.read_csv(posi_pin_file, header=None)
-        df_nega = pd.read_csv(nega_pin_file, header=None)
-        df_posi = df_posi.set_axis(["t", "wck_t"], axis=1)
-        df_nega = df_nega.set_axis(["t", "wck_c"], axis=1)
-        df_posi = df_posi.set_index("t")
-        df_nega = df_nega.set_index("t")
-        df_posi_nega = pd.concat([df_posi, df_nega], axis=1)
-        df_posi_nega["wck_t-wck_c"] = df_posi_nega["wck_t"] - df_posi_nega["wck_c"]
-        print(df_posi_nega)
-        df_tmp = df_posi_nega
-        df_vix = pd.DataFrame()
-
-        for i in range(4):
-            val1 = self.getNearestValue(df_tmp["wck_t-wck_c"].values.tolist(), 0)
-            print(val1)
-            min_row1 = df_tmp[df_tmp["wck_t-wck_c"] == val1]
-            print(min_row1)
-            df_vix = pd.concat([df_vix, min_row1])
-            df_tmp = df_tmp.drop(min_row1.index)
-        df_vix["(wck_t-wck_c)/2"] = (df_vix["wck_t"] + df_vix["wck_c"]) / 2
-
-        df_vix = df_vix["(wck_t-wck_c)/2"]
-        df_vix = df_vix.reset_index()
-        df_vix_list = df_vix.values.tolist()
-
-        df_posi_nega = df_posi_nega.drop("wck_t-wck_c", axis=1)
-        df_posi_nega.plot(ax=self.ax)
-        self.ax.hlines(
-            y=0,
-            xmin=0,
-            xmax=len(df_posi_nega.index) / 16,
-            color="black",
-            linestyle="dashed",
-        )
-
-        for df_vix_p in df_vix_list:
-            x = df_vix_p[0]
-            y = df_vix_p[1]
-            self.ax.text(x + 0.2, y, f"({x:.2f}, {y:.2f})")
-            self.ax.annotate(
-                "", xy=[x, 0], xytext=df_vix_p, arrowprops=dict(arrowstyle="<->")
-            )
-
-        num = f"{image_count:03}_"
-        plt.savefig(self.folder_path + num + filename + ".png")
-        plt.close("all")
-        image_count += 1
-
     def mul3(self, x):
         return x * 1e3
 
@@ -553,15 +589,16 @@ if __name__ == "__main__":
     wave_data_overview = WaveData(
         filename="result_overview3.csv",
         folderpath=FOLDER_PATH,
-        groupby="Pkind_Vi",
+        # groupby="Pkind_Vi",
         new_presentation=False,
+        index="Pin_Rate",
     )
     wave_data_overview.make_vix_graph(
         posi_pin_file="./sample_log/posi.csv",
         nega_pin_file="./sample_log/nega.csv",
         filename="abc",
+        ylabel="mV",
     )
-    sys.exit()
     wave_data_overview.make_df_and_xlsx()
     wave_data_overview.make_graph(
         df_columns_list=["Frequency"],
