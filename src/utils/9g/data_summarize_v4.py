@@ -285,7 +285,7 @@ class WaveData:
 
         if self.groupby:
             for name, group in self.data_df.groupby(self.groupby):
-                self.setup_fig_and_ax(figsize)
+                self.setup_fig_and_ax(figsize, bottom=0.3)
 
                 self.ax.set_xticks(
                     [i for i in range(group.shape[0])]
@@ -321,7 +321,7 @@ class WaveData:
                 self.add_picture(file_name_full=file_name_full)
 
         else:
-            self.setup_fig_and_ax(figsize)
+            self.setup_fig_and_ax(figsize, bottom=0.3)
 
             self.ax.set_xticks(
                 [i for i in range(self.data_df.shape[0])]
@@ -451,11 +451,11 @@ class WaveData:
         idx = np.abs(np.asarray(list) - num).argmin()
         return list[idx]
 
-    def setup_fig_and_ax(self, figsize):
+    def setup_fig_and_ax(self, figsize, bottom=0.2):
         self.fig = plt.figure(figsize=figsize)  # create figure object
         self.ax = self.fig.add_subplot(1, 1, 1)  # create axes object
         self.ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.1f"))
-        self.fig.subplots_adjust(bottom=0.3)
+        self.fig.subplots_adjust(bottom=bottom)
 
     def adjust_graph_params(
         self, rotation, xlabel, ylabel, fontsize, yticks, hlines, num_of_index, legends
@@ -637,7 +637,7 @@ if __name__ == "__main__":
     wave_data_overview.make_vix_graph(
         posi_pin_file="./sample_log/posi.csv",
         nega_pin_file="./sample_log/nega.csv",
-        file_name="abc",
+        file_name="Vix",
         ylabel="mV",
         legends=["wck_t", "wck_c"],
     )
