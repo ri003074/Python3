@@ -235,6 +235,10 @@ class WaveData:
         chart_yaxis_scaling_maxes,
         chart_yaxis_major_unit,
     ):
+        """ excel chart setup
+
+        """
+
         self.chart = LineChart()
         self.chart.add_data(values, titles_from_data=True)
         self.chart.set_categories(categories)
@@ -320,13 +324,13 @@ class WaveData:
                 plt.savefig(file_name_full)
                 plt.close("all")
 
-                self.add_slide(
+                self.add_slide_to_pptx(
                     title=num + name + "_" + file_name,
                     slide_count=self.slide_count,
                     layout=11,
                 )
 
-                self.add_picture(file_name_full=file_name_full)
+                self.add_picture_to_pptx(file_name_full=file_name_full)
 
         else:
             self.setup_fig_and_ax(figsize, bottom=0.3)
@@ -354,20 +358,11 @@ class WaveData:
             file_name_full = self.folder_path + num + file_name + ".png"
             plt.savefig(self.folder_path + num + file_name + ".png")
             plt.close("all")
-            self.add_slide(
+            self.add_slide_to_pptx(
                 title=num + file_name, slide_count=self.slide_count, layout=11,
             )
 
-            self.add_picture(file_name_full=file_name_full)
-
-    def add_picture(self, file_name_full):
-        global image_count
-        image = self.active_presentation.Slides(self.slide_count).Shapes.AddPicture(
-            FileName=file_name_full, LinkToFile=-1, SaveWithDocument=-1, Left=0, Top=0,
-        )
-        image.Left = self.slide_width / 2 - image.Width / 2
-        image.Top = self.slide_height / 2 - image.Height / 2
-        image_count += 1
+            self.add_picture_to_pptx(file_name_full=file_name_full)
 
     def make_vix_graph(
         self,
@@ -450,10 +445,10 @@ class WaveData:
         file_name_full = self.folder_path + num + file_name + ".png"
         plt.savefig(file_name_full)
         plt.close("all")
-        self.add_slide(
+        self.add_slide_to_pptx(
             title=num + file_name, slide_count=self.slide_count, layout=11,
         )
-        self.add_picture(file_name_full=file_name_full)
+        self.add_picture_to_pptx(file_name_full=file_name_full)
 
     def getNearestValue(self, list, num):
         idx = np.abs(np.asarray(list) - num).argmin()
@@ -484,6 +479,15 @@ class WaveData:
                 colors=["gray"],
             )
 
+    def add_picture_to_pptx(self, file_name_full):
+        global image_count
+        image = self.active_presentation.Slides(self.slide_count).Shapes.AddPicture(
+            FileName=file_name_full, LinkToFile=-1, SaveWithDocument=-1, Left=0, Top=0,
+        )
+        image.Left = self.slide_width / 2 - image.Width / 2
+        image.Top = self.slide_height / 2 - image.Height / 2
+        image_count += 1
+
     def add_table_to_pptx(
         self,
         title,
@@ -494,7 +498,7 @@ class WaveData:
         header_rename_dict={},
     ):
 
-        self.add_slide(title=title, slide_count=self.slide_count, layout=4)
+        self.add_slide_to_pptx(title=title, slide_count=self.slide_count, layout=4)
         data_list_to_table_df = self.data_df.reset_index()
         self.add_table(
             df=data_list_to_table_df,
@@ -509,7 +513,7 @@ class WaveData:
         if groupby_table:
             for name, group in self.data_df.groupby(groupby_table):
                 slide_count = self.active_presentation.Slides.Count
-                self.add_slide(title=name, slide_count=slide_count, layout=4)
+                self.add_slide_to_pptx(title=name, slide_count=slide_count, layout=4)
                 data_list_to_table_df = group.reset_index()
                 self.add_table(
                     df=data_list_to_table_df,
@@ -521,7 +525,7 @@ class WaveData:
                     header_rename_dict=header_rename_dict,
                 )
 
-    def add_slide(self, title, slide_count, layout):
+    def add_slide_to_pptx(self, title, slide_count, layout):
         self.slide = self.active_presentation.Slides.Add(
             Index=slide_count + 1, Layout=layout
         )
