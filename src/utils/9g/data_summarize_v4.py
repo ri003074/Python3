@@ -577,6 +577,7 @@ class WaveData:
         for i in range(1, table.Rows.Count + 1):
             table.Rows(i).Height = cell_height
 
+        # adjust table position
         shape = self.slide.Shapes(2)
         shape.Left = slide_width / 2 - shape.width / 2
         shape.Top = slide_height / 6
