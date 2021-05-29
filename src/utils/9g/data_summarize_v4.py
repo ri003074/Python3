@@ -371,6 +371,7 @@ class WaveData:
         xlabel="",
         ylabel="",
         figsize=(10, 5.5),
+        legends=[],
     ):
         global image_count
 
@@ -435,7 +436,7 @@ class WaveData:
             yticks=[],
             hlines="",
             num_of_index=[],
-            legends=[],
+            legends=legends,
         )
         num = f"{image_count:03}_"
         file_name_full = self.folder_path + num + file_name + ".png"
@@ -462,8 +463,8 @@ class WaveData:
         plt.xticks(rotation=rotation)
         self.ax.set_ylabel(ylabel, fontsize=fontsize)
         self.ax.set_xlabel(xlabel, fontsize=fontsize)
-        self.ax.legend(fontsize=fontsize)
-        self.ax.legend(legends)
+        self.ax.legend(labels=legends, fontsize=fontsize, loc="upper right")
+
         if yticks:
             self.ax.set_yticks(np.arange(yticks[0], yticks[1], yticks[2]))
         if hlines:
@@ -638,6 +639,7 @@ if __name__ == "__main__":
         nega_pin_file="./sample_log/nega.csv",
         file_name="abc",
         ylabel="mV",
+        legends=["wck_t", "wck_c"],
     )
     wave_data_overview.make_df_and_xlsx()
     wave_data_overview.make_graph(
