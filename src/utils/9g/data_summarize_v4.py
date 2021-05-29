@@ -148,6 +148,10 @@ class WaveData:
         chart_height=9,
         chart_width=16,
     ):
+        """ make specified excel graph using xlsx data
+
+        """
+
         wb = load_workbook(self.input_file.replace("csv", "xlsx"))
         for i in range(len(wb.worksheets)):
             ws = wb.worksheets[i]
@@ -187,6 +191,10 @@ class WaveData:
         chart_height=9,
         chart_width=16,
     ):
+        """ make excel graphs using xlsx data
+
+        """
+
         wb = load_workbook(self.input_file.replace("csv", "xlsx"))
         for i in range(len(wb.worksheets)):
             ws = wb.worksheets[i]
@@ -263,7 +271,7 @@ class WaveData:
         hlines="",
         legends=[],
     ):
-        """ make graph from dataframe and matplotlib
+        """ make graph from dataframe using matplotlib
             Args:
                 df_columns_list (list): dataframe columns list to make graph
                 ylim (list): y limit of graph
