@@ -22,15 +22,15 @@ date_now = now.strftime("%Y%m%d%H%M")
 class WaveData:
     def __init__(
         self,
-        filename,
-        folderpath,
+        file_name,
+        folder_path,
         new_presentation,
-        header=[],
         groupby="",
+        header=[],
         index="Pin_Rate",
     ):
-        self.file_name = filename
-        self.folder_path = folderpath
+        self.file_name = file_name
+        self.folder_path = folder_path
         self.input_file = self.folder_path + self.file_name
         self.data_df = ""
         self.header = header
@@ -94,8 +94,6 @@ class WaveData:
                         9, match.group(4).replace("Rate0r", "").replace("ns", "ps")
                     )
 
-                    # pin = match.group(1)
-
                 dic = OrderedDict()
                 for i in range(0, len(rows) - 1, 2):
                     try:
@@ -121,7 +119,8 @@ class WaveData:
                 3, "Pkind_Vi", self.data_df["Pkind"] + "_" + self.data_df["Vi"]
             )
 
-            self.adjust_unit()  # adjust unit of dataframe
+            # adjust unit of dataframe
+            self.adjust_unit()
 
             if self.header:
                 self.data_df = self.data_df.set_axis(self.header, axis="columns")
@@ -257,13 +256,31 @@ class WaveData:
         xlabel="",
         ylabel="",
         style=["bo", "yo", "ro", "go"],
-        filename="",
+        file_name="",
         rotation=45,
         figsize=(10, 5.5),
         yticks=[],
         hlines="",
         legends=[],
     ):
+        """ make graph from dataframe and matplotlib
+            Args:
+                df_columns_list (list): dataframe columns list to make graph
+                ylim (list): y limit of graph
+                fontsize (int): font size
+                xlabel (str): xlabel
+                ylabel (str): ylabel
+                style (list): marker style
+                file_name (str): filename
+                rotation (int): rotation
+                figsize (list): figure size
+                yticks (list): yticks
+                hlines (int): yaxis hline
+                legends (list): legend
+
+            Returns:
+                None
+        """
         global image_count
 
         if self.groupby:
@@ -278,26 +295,30 @@ class WaveData:
                 )
 
                 self.adjust_graph_params(
-                    rotation,
-                    xlabel,
-                    ylabel,
-                    fontsize,
-                    yticks,
-                    hlines,
-                    len(group[df_columns_list].index),
-                    legends,
+                    rotation=rotation,
+                    xlabel=xlabel,
+                    ylabel=ylabel,
+                    fontsize=fontsize,
+                    yticks=yticks,
+                    hlines=hlines,
+                    num_of_index=len(group[df_columns_list].index),
+                    legends=legends,
                 )
+
                 num = f"{image_count:03}_"
-                filename_full = self.folder_path + num + name + "_" + filename + ".png"
-                plt.savefig(filename_full)
+                file_name_full = (
+                    self.folder_path + num + name + "_" + file_name + ".png"
+                )
+                plt.savefig(file_name_full)
                 plt.close("all")
+
                 self.add_slide(
-                    title=num + name + "_" + filename,
+                    title=num + name + "_" + file_name,
                     slide_count=self.slide_count,
                     layout=11,
                 )
 
-                self.add_picture(filename_full=filename_full)
+                self.add_picture(file_name_full=file_name_full)
 
         else:
             self.setup_fig_and_ax(figsize)
@@ -311,30 +332,30 @@ class WaveData:
             )
 
             self.adjust_graph_params(
-                rotation,
-                xlabel,
-                ylabel,
-                fontsize,
-                yticks,
-                hlines,
-                len(self.data_df.index),
-                legends,
+                rotation=rotation,
+                xlabel=xlabel,
+                ylabel=ylabel,
+                fontsize=fontsize,
+                yticks=yticks,
+                hlines=hlines,
+                num_of_index=len(self.data_df.index),
+                legends=legends,
             )
 
             num = f"{image_count:03}_"
-            filename_full = self.folder_path + num + filename + ".png"
-            plt.savefig(self.folder_path + num + filename + ".png")
+            file_name_full = self.folder_path + num + file_name + ".png"
+            plt.savefig(self.folder_path + num + file_name + ".png")
             plt.close("all")
             self.add_slide(
-                title=num + filename, slide_count=self.slide_count, layout=11,
+                title=num + file_name, slide_count=self.slide_count, layout=11,
             )
 
-            self.add_picture(filename_full=filename_full)
+            self.add_picture(file_name_full=file_name_full)
 
-    def add_picture(self, filename_full):
+    def add_picture(self, file_name_full):
         global image_count
         image = self.active_presentation.Slides(self.slide_count).Shapes.AddPicture(
-            FileName=filename_full, LinkToFile=-1, SaveWithDocument=-1, Left=0, Top=0,
+            FileName=file_name_full, LinkToFile=-1, SaveWithDocument=-1, Left=0, Top=0,
         )
         image.Left = self.slide_width / 2 - image.Width / 2
         image.Top = self.slide_height / 2 - image.Height / 2
@@ -344,7 +365,7 @@ class WaveData:
         self,
         posi_pin_file,
         nega_pin_file,
-        filename,
+        file_name,
         fontsize=14,
         rotation=0,
         xlabel="",
@@ -417,13 +438,13 @@ class WaveData:
             legends=[],
         )
         num = f"{image_count:03}_"
-        filename_full = self.folder_path + num + filename + ".png"
-        plt.savefig(filename_full)
+        file_name_full = self.folder_path + num + file_name + ".png"
+        plt.savefig(file_name_full)
         plt.close("all")
         self.add_slide(
-            title=num + filename, slide_count=self.slide_count, layout=11,
+            title=num + file_name, slide_count=self.slide_count, layout=11,
         )
-        self.add_picture(filename_full=filename_full)
+        self.add_picture(file_name_full=file_name_full)
 
     def getNearestValue(self, list, num):
         idx = np.abs(np.asarray(list) - num).argmin()
@@ -606,8 +627,8 @@ if __name__ == "__main__":
     PE = "8GPE_"
 
     wave_data_overview = WaveData(
-        filename="result_overview3.csv",
-        folderpath=FOLDER_PATH,
+        file_name="result_overview3.csv",
+        folder_path=FOLDER_PATH,
         groupby="Pkind_Vi",
         new_presentation=False,
         index="Pin_Rate",
@@ -615,14 +636,14 @@ if __name__ == "__main__":
     wave_data_overview.make_vix_graph(
         posi_pin_file="./sample_log/posi.csv",
         nega_pin_file="./sample_log/nega.csv",
-        filename="abc",
+        file_name="abc",
         ylabel="mV",
     )
     wave_data_overview.make_df_and_xlsx()
     wave_data_overview.make_graph(
         df_columns_list=["Frequency"],
         ylim=[3.3, 4.7],
-        filename=PE + "Frequency",
+        file_name=PE + "Frequency",
         yticks=[3.0, 5.01, 0.2],
         ylabel="GHz",
         legends=["Freq(GHz)"],
@@ -630,7 +651,7 @@ if __name__ == "__main__":
     wave_data_overview.make_graph(
         df_columns_list=["Dutycycle"],
         ylim=[40, 60],
-        filename=PE + "Duty",
+        file_name=PE + "Duty",
         yticks=[40, 61, 2],
         ylabel="%",
         legends=["Duty(%)"],
@@ -638,7 +659,7 @@ if __name__ == "__main__":
     wave_data_overview.make_graph(
         df_columns_list=["Risetime", "Falltime"],
         ylim=[30, 70],
-        filename=PE + "Risetime_Falltime",
+        file_name=PE + "Risetime_Falltime",
         ylabel="ps",
         hlines=60,
         legends=["Tr(ps)", "Tf(ps)"],
@@ -668,8 +689,8 @@ if __name__ == "__main__":
         chart_yaxis_major_unit=[20, 20, 2, 0.05, 20, 20, 20, 20],
     )
     wave_data_eye = WaveData(
-        filename="result_eye.csv",
-        folderpath=FOLDER_PATH,
+        file_name="result_eye.csv",
+        folder_path=FOLDER_PATH,
         groupby="Pkind_Vi",
         new_presentation=False,
     )
@@ -677,20 +698,20 @@ if __name__ == "__main__":
     wave_data_eye.make_graph(
         df_columns_list=["Eheight"],
         ylim=[300, 400],
-        filename=PE + "Eheight",
+        file_name=PE + "Eheight",
         ylabel="ps",
         legends=["Eye Height(mV)"],
     )
     wave_data_eye.make_graph(
         df_columns_list=["Ewidth"],
         ylim=[0, 10],
-        filename=PE + "Ewidth",
+        file_name=PE + "Ewidth",
         legends=["Eye Width(mV)"],
     )
     wave_data_eye.make_graph(
         df_columns_list=["Eheight", "Ewidth"],
         ylim=[0, 500],
-        filename=PE + "EyEWidth_EyeHeight",
+        file_name=PE + "EyEWidth_EyeHeight",
         legends=["Eye Height(mV)", "Eye Width(mV)"],
     )
     wave_data_eye.add_table_to_pptx(
