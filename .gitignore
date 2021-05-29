@@ -6,3 +6,4 @@
 *.xlsx
 src/wxPython/.vscode/settings.json
 *.png
+*checkpoint.csv
