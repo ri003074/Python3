@@ -302,6 +302,14 @@ class WaveData:
                 self.ax.set_xticks(
                     [i for i in range(group.shape[0])]
                 )  # set number of label
+
+                # df_tmp = group[df_columns_list].copy()
+                # df_tmp = df_tmp.dropna(how="any", axis=0)
+
+                # df_tmp.plot(
+                #     ax=self.ax, ylim=ylim, style=style, legend=True, fontsize=fontsize,
+                # )
+                print(group[df_columns_list])
                 group[df_columns_list].plot(
                     ax=self.ax, ylim=ylim, style=style, legend=True, fontsize=fontsize,
                 )
