@@ -487,10 +487,27 @@ class WaveData:
         self.add_picture_to_pptx(file_name_full=file_name_full)
 
     def getNearestValue(self, list, num):
+        """ return nearest value of num from list
+
+        Args:
+            list (list): list of num
+            num (int): num of value
+
+        Returns:
+            nearest value of num from list
+        """
         idx = np.abs(np.asarray(list) - num).argmin()
         return list[idx]
 
     def setup_fig_and_ax(self, figsize=(16, 9), bottom=0.2, xmargin=0.1):
+        """
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         self.fig = plt.figure(figsize=figsize)  # create figure object
         self.ax = self.fig.add_subplot(1, 1, 1, xmargin=xmargin)  # create axes object
         self.ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.1f"))
@@ -508,6 +525,14 @@ class WaveData:
         yticks=[],
         group_name="",
     ):
+        """
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         plt.xticks(rotation=rotation)
         self.ax.set_ylabel(ylabel, fontsize=fontsize)
         self.ax.set_xlabel(xlabel, fontsize=fontsize)
@@ -528,6 +553,14 @@ class WaveData:
             )
 
     def add_picture_to_pptx(self, file_name_full):
+        """
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         global image_count
         image = self.active_presentation.Slides(self.slide_count).Shapes.AddPicture(
             FileName=file_name_full, LinkToFile=-1, SaveWithDocument=-1, Left=0, Top=0,
@@ -588,6 +621,14 @@ class WaveData:
                 )
 
     def add_slide_to_pptx(self, title, slide_count, layout):
+        """
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         self.slide = self.active_presentation.Slides.Add(
             Index=slide_count + 1, Layout=layout
         )
@@ -606,6 +647,14 @@ class WaveData:
         slide_height,
         header_rename_dict,
     ):
+        """
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         df = df.loc[:, items]
         print(df)
         data_list_to_table = df.values.tolist()
@@ -666,6 +715,14 @@ class WaveData:
         return x * 1e-9
 
     def adjust_unit(self):
+        """
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         if "Eheight" in self.data_df.columns:
             self.data_df["Eheight"] = self.data_df["Eheight"].apply(self.mul3)
 
