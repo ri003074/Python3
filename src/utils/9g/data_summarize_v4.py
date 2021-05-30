@@ -398,6 +398,20 @@ class WaveData:
         xlabel="",
         ylabel="",
     ):
+        """ make vix graph from posi/nega wave data file using matplotlib
+            Args:
+                file_name (str): file name
+                nega_pin_file (str): csv nega pin file name
+                posi_pin_file (str): csv posi pin file name
+                fontsize (int): fontsize
+                figsize (list): figure size
+                legends (list): legend labels
+                rotation (int): xlabel rotation value
+                xlabel (str): xlabel
+                ylabel (str): ylabel
+            Returns:
+                None
+        """
         global image_count
 
         self.setup_fig_and_ax(figsize=figsize, xmargin=0.01)
