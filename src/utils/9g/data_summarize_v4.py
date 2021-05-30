@@ -431,7 +431,8 @@ class WaveData:
         df_posi_nega["wck_t-wck_c"] = df_posi_nega["wck_t"] - df_posi_nega["wck_c"]
 
         # make dataframe df_vix. df_vix has 4 data which wck_t - wck_c is close to 0
-        df_tmp = df_posi_nega
+        # close to 0 or 0 means cross point
+        df_tmp = df_posi_nega.copy()
         df_vix = pd.DataFrame()
         for i in range(4):
             val = self.getNearestValue(df_tmp["wck_t-wck_c"].values.tolist(), 0)
@@ -778,6 +779,7 @@ if __name__ == "__main__":
         ylabel="mV",
         legends=["wck_t", "wck_c"],
     )
+    sys.exit()
     wave_data_overview.make_graph(
         df_columns_list=["Frequency"],
         file_name=PE + "Frequency",
