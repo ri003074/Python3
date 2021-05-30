@@ -269,6 +269,7 @@ class WaveData:
         fontsize=14,
         hlines="",
         legends=[],
+        pkind="",
         rotation=45,
         style=["bo", "ro", "go", "yo"],
         xlabel="",
@@ -278,24 +279,31 @@ class WaveData:
         """ make specified graph from dataframe using matplotlib
             Args:
                 df_columns_list (list): dataframe columns list to make graph
+                figsize (list): figure size
+                file_name (str): filename
                 fontsize (int): font size
+                hlines (int): yaxis hline
+                legends (list): legend
+                pkind (str): pin kind
+                rotation (int): rotation
                 xlabel (str): xlabel
                 ylabel (str): ylabel
                 style (list): marker style
-                file_name (str): filename
-                rotation (int): rotation
-                figsize (list): figure size
                 yticks (list): yticks
-                hlines (int): yaxis hline
-                legends (list): legend
 
             Returns:
                 None
         """
         global image_count
 
+        # if needs to separate result per pin kind
+        if pkind:
+            df = self.data_df[self.data_df["Pkind"] == pkind].copy()
+        else:
+            df = self.data_df.copy()
+
         if self.groupby:
-            for name, group in self.data_df.groupby(self.groupby):
+            for name, group in df.groupby(self.groupby):
 
                 # skip if dataframe has missing value
                 if group[df_columns_list].isnull().values.sum() != 0:
@@ -308,6 +316,10 @@ class WaveData:
                     group[df_columns_list].isnull().values.sum() != 0
                 ):
                     xmargin = 0.5
+
+                elif num_of_index == 2:
+                    xmargin = 0.5
+
                 else:
                     xmargin = 0.1
 
@@ -579,9 +591,10 @@ class WaveData:
         title,
         cell_width=[],
         cell_height=20,
-        items=[],
         groupby_table="",
         header_rename_dict={},
+        items=[],
+        pkind="",
     ):
         """ add summary table to pptx
 
@@ -590,16 +603,26 @@ class WaveData:
                 title (str): slide title
                 cell_width (list): cell width
                 cell_height (list): cell height
-                items (list): items for table
                 groupby_table (str): group name of table in case separate table by group
                 header_rename_dict (dict): specify header original and after name in case rename
+                items (list): items for table
+                pkind (str): pin kind
 
             Returns:
                 None
         """
 
         self.add_slide_to_pptx(title=title, slide_count=self.slide_count, layout=4)
-        data_list_to_table_df = self.data_df.reset_index()
+
+        # if needs to separate result per pin kind
+        if pkind:
+            data_list_to_table_df = (
+                self.data_df[self.data_df["Pkind"] == pkind].copy().reset_index()
+            )
+        else:
+            data_list_to_table_df = self.data_df.reset_index()
+
+        # data_list_to_table_df = self.data_df.reset_index()
         self.add_table(
             df=data_list_to_table_df,
             items=items,
@@ -611,7 +634,7 @@ class WaveData:
         )
 
         if groupby_table:
-            for name, group in self.data_df.groupby(groupby_table):
+            for name, group in data_list_to_table_df.groupby(groupby_table):
                 slide_count = self.active_presentation.Slides.Count
                 self.add_slide_to_pptx(title=name, slide_count=slide_count, layout=4)
                 data_list_to_table_df = group.reset_index()
@@ -773,8 +796,8 @@ if __name__ == "__main__":
         file_name="result_overview3.csv",
         folder_path=FOLDER_PATH,
         groupby="Pkind_Vi",
-        new_presentation=False,
         index="Pin_Rate",
+        new_presentation=False,
     )
     wave_data_overview.make_vix_graph(
         posi_pin_file="./sample_log/posi.csv",
@@ -789,6 +812,7 @@ if __name__ == "__main__":
         yticks=FREQ_YTICKS,
         ylabel="GHz",
         legends=["Freq(GHz)"],
+        # pkind="IO",
     )
     wave_data_overview.make_graph(
         df_columns_list=["Dutycycle"],
@@ -821,6 +845,7 @@ if __name__ == "__main__":
         items=["Pin", "Vi", "Rate", "Risetime", "Falltime"],
         groupby_table="Vi",
         header_rename_dict={"Risetime": "Risetime(ps)", "Falltime": "Falltime(ps)"},
+        # pkind="IO"
     )
     wave_data_overview.make_excel_graphs(
         data_start_column=DATA_START_COLUMNS,
