@@ -31,13 +31,13 @@ class WaveData:
         header=[],
         index="Pin_Rate",
     ):
+        self.data_df = ""
         self.file_name = file_name
         self.folder_path = folder_path
-        self.input_file = self.folder_path + self.file_name
-        self.data_df = ""
-        self.header = header
         self.groupby = groupby
+        self.header = header
         self.index = index
+        self.input_file = self.folder_path + self.file_name
 
         if new_presentation:
             pptx = win32com.client.Dispatch("PowerPoint.Application")
@@ -52,6 +52,7 @@ class WaveData:
         self.slide_width = self.active_presentation.PageSetup.SlideWidth
         self.slide_height = self.active_presentation.PageSetup.SlideHeight
         self.slide_count = self.active_presentation.Slides.Count
+        self.make_df_and_xlsx()
 
     def make_df_and_xlsx(self):
         """Make pandas dataframe and xlsx data
@@ -136,19 +137,17 @@ class WaveData:
                     for name, group in self.data_df.groupby(self.groupby):
                         group.to_excel(writer, sheet_name=name)
 
-            print(self.data_df)
-
     def make_excel_graph(
         self,
-        data_start_column,
-        data_end_column,
+        chart_height=9,
+        chart_width=16,
         chart_yaxis_title="",
         chart_yaxis_scaling_min="",
         chart_yaxis_scaling_max="",
         chart_yaxis_major_unit="",
         chart_position="E5",
-        chart_height=9,
-        chart_width=16,
+        data_start_column=0,
+        data_end_column=0,
     ):
         """ make specified excel graph using xlsx data
 
@@ -170,10 +169,10 @@ class WaveData:
             )
 
             self.setup_excel_chart(
-                values,
-                categories,
-                chart_height,
-                chart_width,
+                values=values,
+                categories=categories,
+                chart_height=chart_height,
+                chart_width=chart_width,
                 chart_yaxis_titles=chart_yaxis_title,
                 chart_yaxis_scaling_mins=chart_yaxis_scaling_min,
                 chart_yaxis_scaling_maxes=chart_yaxis_scaling_max,
@@ -185,13 +184,13 @@ class WaveData:
 
     def make_excel_graphs(
         self,
-        data_start_column,
+        chart_height=9,
+        chart_width=16,
         chart_yaxis_titles=[],
         chart_yaxis_scaling_mins=[],
         chart_yaxis_scaling_maxes=[],
         chart_yaxis_major_unit=[],
-        chart_height=9,
-        chart_width=16,
+        data_start_column=0,
     ):
         """ make excel graphs using xlsx data
 
@@ -213,10 +212,10 @@ class WaveData:
                     ws, min_row=2, min_col=1, max_row=ws.max_row, max_col=1
                 )
                 self.setup_excel_chart(
-                    values,
-                    categories,
-                    chart_height,
-                    chart_width,
+                    values=values,
+                    categories=categories,
+                    chart_height=chart_height,
+                    chart_width=chart_width,
                     chart_yaxis_titles=chart_yaxis_titles[i],
                     chart_yaxis_scaling_mins=chart_yaxis_scaling_mins[i],
                     chart_yaxis_scaling_maxes=chart_yaxis_scaling_maxes[i],
@@ -265,22 +264,20 @@ class WaveData:
     def make_graph(
         self,
         df_columns_list,
-        ylim,
-        fontsize=14,
-        xlabel="",
-        ylabel="",
-        style=["bo", "yo", "ro", "go"],
-        file_name="",
-        rotation=45,
         figsize=(10, 5.5),
-        yticks=[],
+        file_name="default",
+        fontsize=14,
         hlines="",
         legends=[],
+        rotation=45,
+        style=["bo", "ro", "go", "yo"],
+        xlabel="",
+        ylabel="",
+        yticks=[],
     ):
-        """ make graph from dataframe using matplotlib
+        """ make specified graph from dataframe using matplotlib
             Args:
                 df_columns_list (list): dataframe columns list to make graph
-                ylim (list): y limit of graph
                 fontsize (int): font size
                 xlabel (str): xlabel
                 ylabel (str): ylabel
@@ -324,7 +321,11 @@ class WaveData:
                 # )
                 print(group[df_columns_list])
                 group[df_columns_list].plot(
-                    ax=self.ax, ylim=ylim, style=style, legend=True, fontsize=fontsize,
+                    ax=self.ax,
+                    ylim=yticks[:2],
+                    style=style,
+                    legend=True,
+                    fontsize=fontsize,
                 )
 
                 self.adjust_graph_params(
@@ -336,6 +337,7 @@ class WaveData:
                     hlines=hlines,
                     num_of_index=num_of_index,
                     legends=legends,
+                    group_name=name,
                 )
 
                 num = f"{image_count:03}_"
@@ -356,12 +358,11 @@ class WaveData:
         else:
             self.setup_fig_and_ax(figsize, bottom=0.3)
 
-            self.ax.set_xticks(
-                [i for i in range(self.data_df.shape[0])]
-            )  # set number of label
+            # set number of label
+            self.ax.set_xticks([i for i in range(self.data_df.shape[0])])
 
             self.data_df[df_columns_list].plot(
-                ax=self.ax, ylim=ylim, style=style, legend=True, fontsize=fontsize
+                ax=self.ax, ylim=yticks[:2], style=style, legend=True, fontsize=fontsize
             )
 
             self.adjust_graph_params(
@@ -387,15 +388,15 @@ class WaveData:
 
     def make_vix_graph(
         self,
-        posi_pin_file,
-        nega_pin_file,
         file_name,
+        nega_pin_file,
+        posi_pin_file,
         fontsize=14,
+        figsize=(10, 5.5),
+        legends=[],
         rotation=0,
         xlabel="",
         ylabel="",
-        figsize=(10, 5.5),
-        legends=[],
     ):
         global image_count
 
@@ -424,7 +425,7 @@ class WaveData:
             df_vix = pd.concat([df_vix, min_row1])
             df_tmp = df_tmp.drop(min_row1.index)
 
-        # get average in casel there is no cross point in data
+        # get average in case there is no cross point in data
         df_vix["(wck_t+wck_c)/2"] = (df_vix["wck_t"] + df_vix["wck_c"]) / 2
 
         df_vix = df_vix["(wck_t+wck_c)/2"]
@@ -475,14 +476,23 @@ class WaveData:
         idx = np.abs(np.asarray(list) - num).argmin()
         return list[idx]
 
-    def setup_fig_and_ax(self, figsize, bottom=0.2, xmargin=0.1):
+    def setup_fig_and_ax(self, figsize=(16, 9), bottom=0.2, xmargin=0.1):
         self.fig = plt.figure(figsize=figsize)  # create figure object
         self.ax = self.fig.add_subplot(1, 1, 1, xmargin=xmargin)  # create axes object
         self.ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.1f"))
         self.fig.subplots_adjust(bottom=bottom)
 
     def adjust_graph_params(
-        self, rotation, xlabel, ylabel, fontsize, yticks, hlines, num_of_index, legends
+        self,
+        fontsize=14,
+        hlines="",
+        legends=[],
+        num_of_index=0,
+        rotation=0,
+        xlabel="",
+        ylabel="",
+        yticks=[],
+        group_name="",
     ):
         plt.xticks(rotation=rotation)
         self.ax.set_ylabel(ylabel, fontsize=fontsize)
@@ -490,8 +500,11 @@ class WaveData:
         self.ax.legend(labels=legends, fontsize=fontsize, loc="upper right")
 
         if yticks:
-            self.ax.set_yticks(np.arange(yticks[0], yticks[1], yticks[2]))
-        if hlines:
+            self.ax.set_yticks(np.arange(yticks[0], yticks[1] + yticks[2], yticks[2]))
+
+        # add limit line in case AT condition Vih/Vil=1V/0V
+        match_at_condition = re.match(r".*Vih1r0V_Vil0r0V", group_name)
+        if match_at_condition and hlines:
             self.ax.hlines(
                 y=hlines,
                 xmin=0,
@@ -512,7 +525,7 @@ class WaveData:
     def add_table_to_pptx(
         self,
         title,
-        cell_width,
+        cell_width=[],
         cell_height=20,
         items=[],
         groupby_table="",
@@ -660,6 +673,11 @@ if __name__ == "__main__":
     FOLDER_PATH = os.getcwd() + "/sample_log/"
     FILE_NAME = "8GPE_TEST.pptx"
     PE = "8GPE_"
+    FREQ_YTICKS = [3.0, 5.0, 0.2]
+    DUTY_YTICKS = [40.0, 60.0, 5]
+    TRTF_YTICKS = [30.0, 70.0, 10]
+    EHEIGHT_YTICS = [300, 400, 10]
+    EWIDTH_YTICKS = [60, 120, 10]
 
     wave_data_overview = WaveData(
         file_name="result_overview3.csv",
@@ -675,26 +693,23 @@ if __name__ == "__main__":
         ylabel="mV",
         legends=["wck_t", "wck_c"],
     )
-    wave_data_overview.make_df_and_xlsx()
     wave_data_overview.make_graph(
         df_columns_list=["Frequency"],
-        ylim=[3.3, 4.7],
         file_name=PE + "Frequency",
-        yticks=[3.0, 5.01, 0.2],
+        yticks=FREQ_YTICKS,
         ylabel="GHz",
         legends=["Freq(GHz)"],
     )
     wave_data_overview.make_graph(
         df_columns_list=["Dutycycle"],
-        ylim=[40, 60],
         file_name=PE + "Duty",
-        yticks=[40, 61, 2],
+        yticks=DUTY_YTICKS,
         ylabel="%",
         legends=["Duty(%)"],
     )
     wave_data_overview.make_graph(
         df_columns_list=["Risetime", "Falltime"],
-        ylim=[30, 70],
+        yticks=TRTF_YTICKS,
         file_name=PE + "Risetime_Falltime",
         ylabel="ps",
         hlines=60,
@@ -730,25 +745,19 @@ if __name__ == "__main__":
         groupby="Pkind_Vi",
         new_presentation=False,
     )
-    wave_data_eye.make_df_and_xlsx()
     wave_data_eye.make_graph(
         df_columns_list=["Eheight"],
-        ylim=[300, 400],
+        yticks=EHEIGHT_YTICS,
         file_name=PE + "Eheight",
-        ylabel="ps",
+        ylabel="mV",
         legends=["Eye Height(mV)"],
     )
     wave_data_eye.make_graph(
         df_columns_list=["Ewidth"],
-        ylim=[0, 10],
+        yticks=EWIDTH_YTICKS,
         file_name=PE + "Ewidth",
-        legends=["Eye Width(mV)"],
-    )
-    wave_data_eye.make_graph(
-        df_columns_list=["Eheight", "Ewidth"],
-        ylim=[0, 500],
-        file_name=PE + "EyEWidth_EyeHeight",
-        legends=["Eye Height(mV)", "Eye Width(mV)"],
+        legends=["Eye Width(ps)"],
+        ylabel="ps",
     )
     wave_data_eye.add_table_to_pptx(
         title="eye",
