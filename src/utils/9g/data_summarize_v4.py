@@ -55,7 +55,7 @@ class WaveData:
         self.make_df_and_xlsx()
 
     def make_df_and_xlsx(self):
-        """Make pandas dataframe and xlsx data
+        """Make pandas dataframe and xlsx data from csv data
 
         Args:
             None
@@ -522,7 +522,7 @@ class WaveData:
         image.Top = self.slide_height / 2 - image.Height / 2
         image_count += 1
 
-    def add_table_to_pptx(
+    def add_summary_table_to_pptx(
         self,
         title,
         cell_width=[],
@@ -531,6 +531,20 @@ class WaveData:
         groupby_table="",
         header_rename_dict={},
     ):
+        """ add summary table to pptx
+
+        add slide, add table to pptx.
+            Args:
+                title (str): slide title
+                cell_width (list): cell width
+                cell_height (list): cell height
+                items (list): items for table
+                groupby_table (str): group name of table in case separate table by group
+                header_rename_dict (dict): specify header original and after name in case rename
+
+            Returns:
+                None
+        """
 
         self.add_slide_to_pptx(title=title, slide_count=self.slide_count, layout=4)
         data_list_to_table_df = self.data_df.reset_index()
@@ -619,7 +633,7 @@ class WaveData:
     def save_pptx(self, file_name):
         """save pptx file
             Args:
-                arg1 (str): file name
+                file_name (str): file name
 
             Returns:
                 None
@@ -715,7 +729,7 @@ if __name__ == "__main__":
         hlines=60,
         legends=["Tr(ps)", "Tf(ps)"],
     )
-    wave_data_overview.add_table_to_pptx(
+    wave_data_overview.add_summary_table_to_pptx(
         title="overview",
         cell_width=[
             CELL_WIDTH_BASE * 1.1,
@@ -759,7 +773,7 @@ if __name__ == "__main__":
         legends=["Eye Width(ps)"],
         ylabel="ps",
     )
-    wave_data_eye.add_table_to_pptx(
+    wave_data_eye.add_summary_table_to_pptx(
         title="eye",
         cell_width=[
             # CELL_WIDTH_BASE * 5,
