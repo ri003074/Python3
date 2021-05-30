@@ -1,17 +1,19 @@
 import csv
 import datetime
-import matplotlib.pyplot as plt
 import os
+import re
+import sys
+
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import win32com.client
+
 from collections import OrderedDict
 from openpyxl import load_workbook
 from openpyxl.chart import LineChart, Reference
-import re
-import numpy as np
 
 # from glob import glob
-import sys
 
 image_count = 0
 
