@@ -297,7 +297,18 @@ class WaveData:
 
         if self.groupby:
             for name, group in self.data_df.groupby(self.groupby):
-                self.setup_fig_and_ax(figsize, bottom=0.3)
+
+                num_of_index = len(group[df_columns_list].index)
+
+                # adjust graph in case few index or missing value
+                if (num_of_index == 3) & (
+                    group[df_columns_list].isnull().values.sum() != 0
+                ):
+                    xmargin = 0.5
+                else:
+                    xmargin = 0.1
+
+                self.setup_fig_and_ax(figsize, bottom=0.3, xmargin=xmargin)
 
                 self.ax.set_xticks(
                     [i for i in range(group.shape[0])]
@@ -321,7 +332,7 @@ class WaveData:
                     fontsize=fontsize,
                     yticks=yticks,
                     hlines=hlines,
-                    num_of_index=len(group[df_columns_list].index),
+                    num_of_index=num_of_index,
                     legends=legends,
                 )
 
@@ -386,7 +397,7 @@ class WaveData:
     ):
         global image_count
 
-        self.setup_fig_and_ax(figsize=figsize)
+        self.setup_fig_and_ax(figsize=figsize, xmargin=0.01)
 
         df_posi = pd.read_csv(posi_pin_file, header=None)
         df_nega = pd.read_csv(nega_pin_file, header=None)
@@ -462,9 +473,9 @@ class WaveData:
         idx = np.abs(np.asarray(list) - num).argmin()
         return list[idx]
 
-    def setup_fig_and_ax(self, figsize, bottom=0.2):
+    def setup_fig_and_ax(self, figsize, bottom=0.2, xmargin=0.1):
         self.fig = plt.figure(figsize=figsize)  # create figure object
-        self.ax = self.fig.add_subplot(1, 1, 1)  # create axes object
+        self.ax = self.fig.add_subplot(1, 1, 1, xmargin=xmargin)  # create axes object
         self.ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.1f"))
         self.fig.subplots_adjust(bottom=bottom)
 
