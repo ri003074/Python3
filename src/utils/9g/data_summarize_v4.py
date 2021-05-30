@@ -297,6 +297,10 @@ class WaveData:
         if self.groupby:
             for name, group in self.data_df.groupby(self.groupby):
 
+                # skip if dataframe has missing value
+                if group[df_columns_list].isnull().values.sum() != 0:
+                    continue
+
                 num_of_index = len(group[df_columns_list].index)
 
                 # adjust graph in case few index or missing value
@@ -779,7 +783,6 @@ if __name__ == "__main__":
         ylabel="mV",
         legends=["wck_t", "wck_c"],
     )
-    sys.exit()
     wave_data_overview.make_graph(
         df_columns_list=["Frequency"],
         file_name=PE + "Frequency",
