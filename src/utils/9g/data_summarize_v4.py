@@ -265,7 +265,7 @@ class WaveData:
         legends=[],
         pkind="",
         rotation=45,
-        style=["bo", "ro", "go", "yo"],
+        style=["o", "o", "o", "o"],
         xlabel="",
         ylabel="",
         yticks=[],
@@ -439,15 +439,18 @@ class WaveData:
         df_posi_nega = pd.concat([df_posi, df_nega], axis=1)
 
         # make diff column
-        df_posi_nega["wck_t-wck_c"] = df_posi_nega["wck_t"] - df_posi_nega["wck_c"]
+        df_posi_nega["f(t)"] = df_posi_nega["wck_t"] - df_posi_nega["wck_c"]
+        df_posi_nega = df_posi_nega.iloc[
+            int(len(df_posi_nega) * 0.23) : int(len(df_posi_nega) * 0.73), :
+        ]
 
         # make dataframe df_vix. df_vix has 4 data which wck_t - wck_c is close to 0
         # close to 0 or 0 means cross point
         df_tmp = df_posi_nega.copy()
         df_vix = pd.DataFrame()
-        for i in range(3):
-            val = self.getNearestValue(df_tmp["wck_t-wck_c"].values.tolist(), 0)
-            min_row1 = df_tmp[df_tmp["wck_t-wck_c"] == val]
+        for i in range(2):
+            val = self.getNearestValue(df_tmp["f(t)"].values.tolist(), 0)
+            min_row1 = df_tmp[df_tmp["f(t)"] == val]
             df_vix = pd.concat([df_vix, min_row1])
             df_tmp = df_tmp.drop(min_row1.index)
 
@@ -458,38 +461,20 @@ class WaveData:
         df_vix = df_vix.reset_index()
         df_vix_list = df_vix.values.tolist()
 
-        df_posi_nega = df_posi_nega.drop("wck_t-wck_c", axis=1)
-        df_posi_nega.plot(ax=self.ax)
-
-        # reference level line
-        # TODO needs to clean up
-        self.ax.hlines(
-            y=reference_level,
-            xmin=1.61e-8,
-            xmax=1.68e-8,
-            color="black",
-            linestyle="dashed",
-            zorder=10,
-        )
-
-        # add x, y cordinates to graph
+        # add x, y cordinates of differeential input cross point voltage to graph
         for df_vix_p in df_vix_list:
             x_position = df_vix_p[0]
             y_position = df_vix_p[1]
-            # self.ax.text(x + 0.01, y, f"({x:.2f}, {y:.2f})")
-            # label position
-            y_position_offset = 0.01
+
+            if x_position < df_posi_nega.index[int(len(df_posi_nega) / 2)]:
+                label = "Vix_WCK_FR"
+            else:
+                label = "Vix_WCK_RF"
+
             self.ax.text(
-                x_position + 0.002 * 1e-8,
-                y_position + y_position_offset,
-                f"({x_position*1e8:.2f}, {y_position:.2f})",
-                zorder=11,
-            )
-            self.ax.text(
-                x_position + 0.002 * 1e-8,
-                reference_level + y_position_offset,
-                f"({x_position*1e8:.2f}, {reference_level:.2f})",
-                zorder=11,
+                x_position + x_position * 0.01,
+                (y_position + reference_level) / 2,
+                f"{label}={y_position-reference_level:.2f}mV",
             )
             self.ax.annotate(
                 "",
@@ -497,6 +482,54 @@ class WaveData:
                 xytext=[x_position, reference_level],
                 arrowprops=dict(arrowstyle="<->"),
             )
+
+        # for Min(f(t)), Max(f(t))
+        max_index = df_posi_nega["f(t)"].idxmax()
+        min_index = df_posi_nega["f(t)"].idxmin()
+        max_index_values = df_posi_nega.loc[max_index]
+        min_index_values = df_posi_nega.loc[min_index]
+
+        # Max(f(t))
+        self.ax.annotate(
+            "",
+            xy=[max_index_values.name, max_index_values["wck_t"]],
+            xytext=[max_index_values.name, max_index_values["wck_c"]],
+            arrowprops=dict(arrowstyle="->"),
+        )
+        max_ft = max_index_values["wck_t"] - max_index_values["wck_c"]
+        self.ax.text(
+            max_index_values.name + max_index_values.name * 0.01,  # includes offset
+            (max_index_values["wck_t"] + max_index_values["wck_c"]) / 2,
+            f"Max(f(t))={max_ft:.2f}mV",
+        )
+
+        # Min(f(t))
+        self.ax.annotate(
+            "",
+            xy=[min_index_values.name, min_index_values["wck_t"]],
+            xytext=[min_index_values.name, min_index_values["wck_c"]],
+            arrowprops=dict(arrowstyle="->"),
+        )
+        min_ft = min_index_values["wck_t"] - min_index_values["wck_c"]
+        self.ax.text(
+            min_index_values.name + min_index_values.name * 0.01,  # includes offset
+            (min_index_values["wck_t"] + min_index_values["wck_c"]) / 2,
+            f"Min(f(t))={min_ft:.2f}mV",
+        )
+
+        # reference level line
+        # TODO needs to clean up
+        self.ax.hlines(
+            y=reference_level,
+            xmin=df_posi_nega.index[0],
+            xmax=df_posi_nega.index[len(df_posi_nega) - 1],
+            color="black",
+            linestyle="dashed",
+            zorder=10,
+        )
+
+        df_posi_nega = df_posi_nega.drop("f(t)", axis=1)
+        df_posi_nega.plot(ax=self.ax)
 
         self.adjust_graph_params(
             rotation=rotation,
@@ -798,30 +831,32 @@ if __name__ == "__main__":
     CELL_WIDTH_BASE = 72
     DATA_START_COLUMNS = 9
     FOLDER_PATH = os.getcwd() + "/sample_log/"
-    FILE_NAME = "8GPE_TEST.pptx"
+    PPTX_FILE_NAME = "8GPE_TEST.pptx"
+    OVERVIEW_FILE_NAME = "result_overview3.csv"
+    EYE_FILE_NAME = "result_eye.csv"
     PE = "8GPE_"
-    FREQ_YTICKS = [3.0, 5.0, 0.2]
-    DUTY_YTICKS = [40.0, 60.0, 5]
-    TRTF_YTICKS = [30.0, 70.0, 10]
-    EHEIGHT_YTICS = [300, 400, 10]
+    FREQ_YTICKS = [3.0, 5.0, 0.25]
+    DUTY_YTICKS = [40.0, 60.0, 2.5]
+    TRTF_YTICKS = [30.0, 70.0, 5]
+    EHEIGHT_YTICS = [300, 400, 20]
     EWIDTH_YTICKS = [60, 120, 10]
 
     wave_data_overview = WaveData(
-        file_name="result_overview3.csv",
+        file_name=OVERVIEW_FILE_NAME,
         folder_path=FOLDER_PATH,
         groupby="Pkind_Vi",
         index="Pin_Rate",
-        new_presentation=True,
+        new_presentation=False,
     )
     wave_data_overview.make_vix_graph(
-        posi_pin_file="./sample_log/P1859A2.csv",
-        nega_pin_file="./sample_log/P1860A2.csv",
+        posi_pin_file="./sample_log/posi.csv",
+        nega_pin_file="./sample_log/nega.csv",
         file_name="Vix",
-        reference_level=0.229,
+        reference_level=-0.4,
         ylabel="mV",
         legends=["wck_t", "wck_c"],
     )
-    wave_data_overview.save_pptx(file_name=FILE_NAME)
+    wave_data_overview.save_pptx(file_name=PPTX_FILE_NAME)
     wave_data_overview.make_graph(
         df_columns_list=["Frequency"],
         file_name=PE + "Frequency",
@@ -858,9 +893,14 @@ if __name__ == "__main__":
             CELL_WIDTH_BASE * 1.1,
             CELL_WIDTH_BASE * 1.1,
         ],
-        items=["Pin", "Vi", "Rate", "Risetime", "Falltime"],
+        items=["Pin", "Vi", "Rate", "Frequency", "Dutycycle", "Risetime", "Falltime"],
         groupby_table="Vi",
-        header_rename_dict={"Risetime": "Risetime(ps)", "Falltime": "Falltime(ps)"},
+        header_rename_dict={
+            "Risetime": "Tr(ps)",
+            "Frequency": "Freq(GHz)",
+            "Dutycycle": "Duty(%)",
+            "Falltime": "Tf(ps)",
+        },
         # pkind="IO"
     )
     wave_data_overview.make_excel_graphs(
@@ -871,7 +911,7 @@ if __name__ == "__main__":
         chart_yaxis_major_unit=[20, 20, 2, 0.05, 20, 20, 20, 20],
     )
     wave_data_eye = WaveData(
-        file_name="result_eye.csv",
+        file_name=EYE_FILE_NAME,
         folder_path=FOLDER_PATH,
         groupby="Pkind_Vi",
         new_presentation=False,
@@ -921,4 +961,4 @@ if __name__ == "__main__":
         chart_yaxis_major_unit=50,
         chart_position="L5",
     )
-    wave_data_overview.save_pptx(file_name=FILE_NAME)
+    wave_data_overview.save_pptx(file_name=PPTX_FILE_NAME)
