@@ -149,9 +149,7 @@ class WaveData:
         data_start_column=0,
         data_end_column=0,
     ):
-        """ make specified excel graph using xlsx data
-
-        """
+        """make specified excel graph using xlsx data"""
 
         wb = load_workbook(self.input_file.replace("csv", "xlsx"))
         for i in range(len(wb.worksheets)):
@@ -192,9 +190,7 @@ class WaveData:
         chart_yaxis_major_unit=[],
         data_start_column=0,
     ):
-        """ make excel graphs using xlsx data
-
-        """
+        """make excel graphs using xlsx data"""
 
         wb = load_workbook(self.input_file.replace("csv", "xlsx"))
         for i in range(len(wb.worksheets)):
@@ -236,9 +232,7 @@ class WaveData:
         chart_yaxis_scaling_maxes,
         chart_yaxis_major_unit,
     ):
-        """ excel chart setup
-
-        """
+        """excel chart setup"""
 
         self.chart = LineChart()
         self.chart.add_data(values, titles_from_data=True)
@@ -276,23 +270,23 @@ class WaveData:
         ylabel="",
         yticks=[],
     ):
-        """ make specified graph from dataframe using matplotlib
-            Args:
-                df_columns_list (list): dataframe columns list to make graph
-                figsize (list): figure size
-                file_name (str): filename
-                fontsize (int): font size
-                hlines (int): yaxis hline
-                legends (list): legend
-                pkind (str): pin kind
-                rotation (int): rotation
-                xlabel (str): xlabel
-                ylabel (str): ylabel
-                style (list): marker style
-                yticks (list): yticks
+        """make specified graph from dataframe using matplotlib
+        Args:
+            df_columns_list (list): dataframe columns list to make graph
+            figsize (list): figure size
+            file_name (str): filename
+            fontsize (int): font size
+            hlines (int): yaxis hline
+            legends (list): legend
+            pkind (str): pin kind
+            rotation (int): rotation
+            xlabel (str): xlabel
+            ylabel (str): ylabel
+            style (list): marker style
+            yticks (list): yticks
 
-            Returns:
-                None
+        Returns:
+            None
         """
         global image_count
 
@@ -410,23 +404,24 @@ class WaveData:
         fontsize=14,
         figsize=(10, 5.5),
         legends=[],
+        reference_level=0,
         rotation=0,
         xlabel="",
         ylabel="",
     ):
-        """ make vix graph from posi/nega wave data file using matplotlib
-            Args:
-                file_name (str): file name
-                nega_pin_file (str): csv nega pin file name
-                posi_pin_file (str): csv posi pin file name
-                fontsize (int): fontsize
-                figsize (list): figure size
-                legends (list): legend labels
-                rotation (int): xlabel rotation value
-                xlabel (str): xlabel
-                ylabel (str): ylabel
-            Returns:
-                None
+        """make vix graph from posi/nega wave data file using matplotlib
+        Args:
+            file_name (str): file name
+            nega_pin_file (str): csv nega pin file name
+            posi_pin_file (str): csv posi pin file name
+            fontsize (int): fontsize
+            figsize (list): figure size
+            legends (list): legend labels
+            rotation (int): xlabel rotation value
+            xlabel (str): xlabel
+            ylabel (str): ylabel
+        Returns:
+            None
         """
         global image_count
 
@@ -450,7 +445,7 @@ class WaveData:
         # close to 0 or 0 means cross point
         df_tmp = df_posi_nega.copy()
         df_vix = pd.DataFrame()
-        for i in range(4):
+        for i in range(3):
             val = self.getNearestValue(df_tmp["wck_t-wck_c"].values.tolist(), 0)
             min_row1 = df_tmp[df_tmp["wck_t-wck_c"] == val]
             df_vix = pd.concat([df_vix, min_row1])
@@ -467,21 +462,40 @@ class WaveData:
         df_posi_nega.plot(ax=self.ax)
 
         # reference level line
+        # TODO needs to clean up
         self.ax.hlines(
-            y=0,
-            xmin=0,
-            xmax=len(df_posi_nega.index) / 16,
+            y=reference_level,
+            xmin=1.61e-8,
+            xmax=1.68e-8,
             color="black",
             linestyle="dashed",
+            zorder=10,
         )
 
         # add x, y cordinates to graph
         for df_vix_p in df_vix_list:
-            x = df_vix_p[0]
-            y = df_vix_p[1]
-            self.ax.text(x + 0.2, y, f"({x:.2f}, {y:.2f})")
+            x_position = df_vix_p[0]
+            y_position = df_vix_p[1]
+            # self.ax.text(x + 0.01, y, f"({x:.2f}, {y:.2f})")
+            # label position
+            y_position_offset = 0.01
+            self.ax.text(
+                x_position + 0.002 * 1e-8,
+                y_position + y_position_offset,
+                f"({x_position*1e8:.2f}, {y_position:.2f})",
+                zorder=11,
+            )
+            self.ax.text(
+                x_position + 0.002 * 1e-8,
+                reference_level + y_position_offset,
+                f"({x_position*1e8:.2f}, {reference_level:.2f})",
+                zorder=11,
+            )
             self.ax.annotate(
-                "", xy=[x, 0], xytext=df_vix_p, arrowprops=dict(arrowstyle="<->")
+                "",
+                xy=[x_position, y_position],
+                xytext=[x_position, reference_level],
+                arrowprops=dict(arrowstyle="<->"),
             )
 
         self.adjust_graph_params(
@@ -504,7 +518,7 @@ class WaveData:
         self.add_picture_to_pptx(file_name_full=file_name_full)
 
     def getNearestValue(self, list, num):
-        """ return nearest value of num from list
+        """return nearest value of num from list
 
         Args:
             list (list): list of num
@@ -596,7 +610,7 @@ class WaveData:
         items=[],
         pkind="",
     ):
-        """ add summary table to pptx
+        """add summary table to pptx
 
         add slide, add table to pptx.
             Args:
@@ -723,11 +737,11 @@ class WaveData:
 
     def save_pptx(self, file_name):
         """save pptx file
-            Args:
-                file_name (str): file name
+        Args:
+            file_name (str): file name
 
-            Returns:
-                None
+        Returns:
+            None
         """
         self.active_presentation.SaveAs(
             FileName=os.getcwd() + "/" + str(date_now) + "_" + file_name
@@ -797,15 +811,17 @@ if __name__ == "__main__":
         folder_path=FOLDER_PATH,
         groupby="Pkind_Vi",
         index="Pin_Rate",
-        new_presentation=False,
+        new_presentation=True,
     )
     wave_data_overview.make_vix_graph(
-        posi_pin_file="./sample_log/posi.csv",
-        nega_pin_file="./sample_log/nega.csv",
+        posi_pin_file="./sample_log/P1859A2.csv",
+        nega_pin_file="./sample_log/P1860A2.csv",
         file_name="Vix",
+        reference_level=0.229,
         ylabel="mV",
         legends=["wck_t", "wck_c"],
     )
+    wave_data_overview.save_pptx(file_name=FILE_NAME)
     wave_data_overview.make_graph(
         df_columns_list=["Frequency"],
         file_name=PE + "Frequency",
