@@ -639,7 +639,7 @@ class WaveData:
         cell_width=[],
         cell_height=20,
         groupby_table="",
-        header_rename_dict={},
+        rename={},
         items=[],
         pkind="",
     ):
@@ -651,7 +651,7 @@ class WaveData:
                 cell_width (list): cell width
                 cell_height (list): cell height
                 groupby_table (str): group name of table in case separate table by group
-                header_rename_dict (dict): specify header original and after name in case rename
+                rename (dict): specify header original and after name in case rename
                 items (list): items for table
                 pkind (str): pin kind
 
@@ -677,7 +677,7 @@ class WaveData:
             cell_height=cell_height,
             slide_width=self.slide_width,
             slide_height=self.slide_height,
-            header_rename_dict=header_rename_dict,
+            rename=rename,
         )
 
         if groupby_table:
@@ -692,7 +692,7 @@ class WaveData:
                     cell_height=cell_height,
                     slide_width=self.slide_width,
                     slide_height=self.slide_height,
-                    header_rename_dict=header_rename_dict,
+                    rename=rename,
                 )
 
     def add_slide_to_pptx(self, title, slide_count, layout):
@@ -713,14 +713,7 @@ class WaveData:
         self.slide_count += 1
 
     def add_table(
-        self,
-        df,
-        items,
-        cell_width,
-        cell_height,
-        slide_width,
-        slide_height,
-        header_rename_dict,
+        self, df, items, cell_width, cell_height, slide_width, slide_height, rename,
     ):
         """
 
@@ -745,8 +738,8 @@ class WaveData:
                 try:
                     tr.Text = f"{data_list_to_table[i][j]:.1f}"
                 except ValueError:
-                    if header_rename_dict:
-                        for key, value in header_rename_dict.items():
+                    if rename:
+                        for key, value in rename.items():
                             if key == data_list_to_table[i][j]:
                                 tr.Text = value
                                 break
@@ -834,6 +827,8 @@ if __name__ == "__main__":
     PPTX_FILE_NAME = "8GPE_TEST.pptx"
     OVERVIEW_FILE_NAME = "result_overview3.csv"
     EYE_FILE_NAME = "result_eye.csv"
+    DATA_GROUP = "Pkind_Vi"
+    DATA_INDEX = "Pin_Rate"
     PE = "8GPE_"
     FREQ_YTICKS = [3.0, 5.0, 0.25]
     DUTY_YTICKS = [40.0, 60.0, 2.5]
@@ -844,8 +839,8 @@ if __name__ == "__main__":
     wave_data_overview = WaveData(
         file_name=OVERVIEW_FILE_NAME,
         folder_path=FOLDER_PATH,
-        groupby="Pkind_Vi",
-        index="Pin_Rate",
+        groupby=DATA_GROUP,
+        index=DATA_INDEX,
         new_presentation=False,
     )
     wave_data_overview.make_vix_graph(
@@ -895,7 +890,7 @@ if __name__ == "__main__":
         ],
         items=["Pin", "Vi", "Rate", "Frequency", "Dutycycle", "Risetime", "Falltime"],
         groupby_table="Vi",
-        header_rename_dict={
+        rename={
             "Risetime": "Tr(ps)",
             "Frequency": "Freq(GHz)",
             "Dutycycle": "Duty(%)",
@@ -913,7 +908,8 @@ if __name__ == "__main__":
     wave_data_eye = WaveData(
         file_name=EYE_FILE_NAME,
         folder_path=FOLDER_PATH,
-        groupby="Pkind_Vi",
+        groupby=DATA_GROUP,
+        index=DATA_INDEX,
         new_presentation=False,
     )
     wave_data_eye.make_graph(
@@ -943,6 +939,7 @@ if __name__ == "__main__":
             CELL_WIDTH_BASE * 2,
         ],
         items=["Pin", "Vi", "Rate", "Eheight", "Ewidth"],
+        rename={"Eheight": "Eye Height(mV)", "Ewidth": "Eye Width(ps)"},
         groupby_table="Vi",
     )
     wave_data_eye.make_excel_graphs(
