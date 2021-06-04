@@ -133,28 +133,21 @@ class WaveData:
 
     def make_excel_graph(
         self,
+        file_name,
+        chart_yaxis_scaling,
         chart_height=9,
         chart_width=16,
-        chart_yaxis_title="",
-        chart_yaxis_scaling_min="",
-        chart_yaxis_scaling_max="",
-        chart_yaxis_major_unit="",
-        chart_position="E5",
-        data_start_column=0,
-        data_end_column=0,
+        chart_position="C2",
+        chart_yaxis_title=None,
     ):
         """make specified excel graph using xlsx data"""
 
-        wb = load_workbook(self.input_file.replace("csv", "xlsx"))
+        wb = load_workbook(file_name)
         for i in range(len(wb.worksheets)):
             ws = wb.worksheets[i]
 
             values = Reference(
-                ws,
-                min_row=1,
-                min_col=data_start_column,
-                max_row=ws.max_row,
-                max_col=data_end_column,
+                ws, min_row=1, min_col=2, max_row=ws.max_row, max_col=ws.max_column,
             )
             categories = Reference(
                 ws, min_row=2, min_col=1, max_row=ws.max_row, max_col=1
@@ -166,13 +159,13 @@ class WaveData:
                 chart_height=chart_height,
                 chart_width=chart_width,
                 chart_yaxis_titles=chart_yaxis_title,
-                chart_yaxis_scaling_mins=chart_yaxis_scaling_min,
-                chart_yaxis_scaling_maxes=chart_yaxis_scaling_max,
-                chart_yaxis_major_unit=chart_yaxis_major_unit,
+                chart_yaxis_scaling_mins=chart_yaxis_scaling[0],
+                chart_yaxis_scaling_maxes=chart_yaxis_scaling[1],
+                chart_yaxis_major_unit=chart_yaxis_scaling[2],
             )
 
             ws.add_chart(self.chart, chart_position)
-        wb.save(self.input_file.replace("csv", "xlsx"))
+        wb.save(file_name)
 
     def make_excel_graphs(
         self,
@@ -230,10 +223,10 @@ class WaveData:
 
         self.chart = LineChart()
         self.chart.add_data(values, titles_from_data=True)
+        self.chart.title = ""
         self.chart.set_categories(categories)
         self.chart.height = chart_height
         self.chart.width = chart_width
-        # self.chart.x_axis.title = "abc"
         self.chart.y_axis.title = chart_yaxis_titles
         self.chart.y_axis.scaling.min = chart_yaxis_scaling_mins
         self.chart.y_axis.scaling.max = chart_yaxis_scaling_maxes
@@ -285,6 +278,9 @@ class WaveData:
         """
         global image_count
 
+        # for excel graph
+        os.makedirs(self.folder_path + "excel_graph_data", exist_ok=True)
+
         # if needs to separate result per pin kind
         if pkind:
             df = self.data_df[self.data_df["Pkind"] == pkind].copy()
@@ -293,20 +289,11 @@ class WaveData:
 
         if self.groupby:
             for name, group in df.groupby(self.groupby):
+                df_plot = group[df_columns_list].dropna(how="all")
 
-                # skip if dataframe has missing value
-                if group[df_columns_list].isnull().values.sum() != 0:
-                    continue
+                num_of_index = len(df_plot.index)
 
-                num_of_index = len(group[df_columns_list].index)
-
-                # adjust graph in case few index or missing value
-                if (num_of_index == 3) & (
-                    group[df_columns_list].isnull().values.sum() != 0
-                ):
-                    xmargin = 0.5
-
-                elif num_of_index == 2:
+                if num_of_index == 2:
                     xmargin = 0.5
 
                 else:
@@ -319,14 +306,8 @@ class WaveData:
                 # set number of label
                 self.ax.set_xticks([i for i in range(group.shape[0])])
 
-                # df_tmp = group[df_columns_list].copy()
-                # df_tmp = df_tmp.dropna(how="any", axis=0)
-
-                # df_tmp.plot(
-                #     ax=self.ax, ylim=ylim, style=style, legend=True, fontsize=fontsize,
-                # )
-                print(group[df_columns_list])
-                group[df_columns_list].plot(
+                print(df_plot)
+                df_plot.plot(
                     ax=self.ax,
                     ylim=yticks[:2],
                     style=style,
@@ -348,6 +329,27 @@ class WaveData:
                 )
 
                 num = f"{image_count:03}_"
+
+                # for excel graph
+                excel_file_name = (
+                    self.folder_path
+                    + "/excel_graph_data/"
+                    + num
+                    + self.file_name.replace(".csv", "")
+                    + "_"
+                    + name
+                    + "_"
+                    + "_".join(df_columns_list)
+                    + ".xlsx"
+                )
+
+                df_plot.to_excel(excel_file_name)
+                self.make_excel_graph(
+                    file_name=excel_file_name,
+                    chart_yaxis_scaling=yticks,
+                    chart_yaxis_title=ylabel,
+                )
+
                 file_name_full = (
                     self.folder_path + num + name + "_" + file_name + ".png"
                 )
@@ -1192,14 +1194,6 @@ if __name__ == "__main__":
         # sort="Order"
         # pkind="IO"
     )
-    wave_data_overview.make_excel_graphs(
-        data_start_column=DATA_START_COLUMNS,
-        # freq, duty, tr, tf, overshoot, preshoot, pwidth
-        chart_yaxis_titles=["GHz", "%", "ps", "ps", "%", "%", "ps"],
-        chart_yaxis_scaling_mins=[3.9, 40, 30, 30, 0, 0, 100],
-        chart_yaxis_scaling_maxes=[4.1, 60, 70, 70, 10, 10, 150],
-        chart_yaxis_major_unit=[0.05, 2, 10, 10, 5, 5, 10],
-    )
     wave_data_eye = WaveData(
         file_name=EYE_FILE_NAME,
         folder_path=FOLDER_PATH,
@@ -1236,15 +1230,6 @@ if __name__ == "__main__":
     #     chart_yaxis_scaling_mins=[300, 0],
     #     chart_yaxis_scaling_maxes=[400, 10],
     #     chart_yaxis_major_unit=[20, 2],
-    # )
-    # wave_data_eye.make_excel_graph(
-    #     data_start_column=DATA_START_COLUMNS,
-    #     data_end_column=8,
-    #     chart_yaxis_title="ps",
-    #     chart_yaxis_scaling_min=0,
-    #     chart_yaxis_scaling_max=400,
-    #     chart_yaxis_major_unit=50,
-    #     chart_position="L5",
     # )
     wave_data_histogram = WaveData(
         file_name=HISTOGRAM_FILE_NAME,
