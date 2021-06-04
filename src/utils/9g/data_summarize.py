@@ -12,6 +12,11 @@ import win32com.client
 from collections import OrderedDict
 from openpyxl import load_workbook
 from openpyxl.chart import LineChart, Reference
+from openpyxl.chart.layout import Layout, ManualLayout
+from openpyxl.chart.shapes import GraphicalProperties
+
+# from openpyxl.drawing.line import LineProperties
+
 
 from glob import glob
 
@@ -233,6 +238,17 @@ class WaveData:
         self.chart.y_axis.majorUnit = chart_yaxis_major_unit
         self.chart.y_axis.numFmt = "0.0"
         self.chart.x_axis.tickLblPos = "low"
+        self.chart.layout = Layout(
+            ManualLayout(x=0.1, y=0.1, h=0.8, w=0.8, xMode="edge", yMode="edge")
+        )
+        # self.chart.legend.legendPos = "tr"
+        self.chart.legend.layout = Layout(
+            manualLayout=ManualLayout(yMode="edge", xMode="edge", x=0.75, y=0.13)
+        )
+        self.chart.legend.spPr = GraphicalProperties()
+        self.chart.legend.spPr.solidFill = "FFFFFF"
+        self.chart.legend.spPr.ln.solidFill = "E0E0E0"
+        self.chart.legend.spPr.ln.w = 1 * 12700
 
         # chart.y_axis.majorGridlines = None
 
@@ -343,7 +359,8 @@ class WaveData:
                     + ".xlsx"
                 )
 
-                df_plot.to_excel(excel_file_name)
+                df_to_excel = df_plot.set_axis(legends, axis=1)
+                df_to_excel.to_excel(excel_file_name)
                 self.make_excel_graph(
                     file_name=excel_file_name,
                     chart_yaxis_scaling=yticks,
