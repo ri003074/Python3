@@ -527,6 +527,11 @@ class WaveData:
             linestyle="dashed",
             zorder=10,
         )
+        x = np.array(df_posi_nega.index.tolist())
+        y1 = np.array(df_posi_nega["wck_t"].tolist())
+        print(x)
+        self.ax.fill_between(x, y1, 0.8, where=y1 > 0.8, color="gray", alpha=0.2)
+        self.ax.fill_between(x, y1, -0.8, where=y1 < -0.8, color="C0", alpha=0.2)
 
         df_posi_nega = df_posi_nega.drop("f(t)", axis=1)
         df_posi_nega.plot(ax=self.ax)
@@ -733,7 +738,9 @@ class WaveData:
         table = self.slide.Shapes.AddTable(table_rows, table_columns).Table
 
         for i in range(table_rows):
+            table.Rows(i + 1).Height = cell_height
             for j in range(table_columns):
+                table.Columns(j + 1).Width = cell_width[j]
                 tr = table.Cell(i + 1, j + 1).Shape.TextFrame.TextRange
                 try:
                     tr.Text = f"{data_list_to_table[i][j]:.1f}"
@@ -750,11 +757,11 @@ class WaveData:
 
                 tr.Font.Size = 10
 
-        for i in range(1, table.Columns.Count + 1):
-            table.Columns(i).Width = cell_width[i - 1]
+        # for i in range(1, table.Columns.Count + 1):
+        #     table.Columns(i).Width = cell_width[i - 1]
 
-        for i in range(1, table.Rows.Count + 1):
-            table.Rows(i).Height = cell_height
+        # for i in range(1, table.Rows.Count + 1):
+        #     table.Rows(i).Height = cell_height
 
         # adjust table position
         shape = self.slide.Shapes(2)
@@ -843,6 +850,29 @@ if __name__ == "__main__":
         index=DATA_INDEX,
         new_presentation=False,
     )
+    wave_data_overview.add_summary_table_to_pptx(
+        title="overview",
+        cell_width=[
+            CELL_WIDTH_BASE * 1.1,
+            CELL_WIDTH_BASE * 2,
+            CELL_WIDTH_BASE * 1.1,
+            CELL_WIDTH_BASE * 1.1,
+            CELL_WIDTH_BASE * 1.1,
+            CELL_WIDTH_BASE * 1.1,
+            CELL_WIDTH_BASE * 1.1,
+            CELL_WIDTH_BASE * 1.1,
+            CELL_WIDTH_BASE * 1.1,
+        ],
+        items=["Pin", "Vi", "Rate", "Frequency", "Dutycycle", "Risetime", "Falltime"],
+        groupby_table="Vi",
+        rename={
+            "Risetime": "Tr(ps)",
+            "Frequency": "Freq(GHz)",
+            "Dutycycle": "Duty(%)",
+            "Falltime": "Tf(ps)",
+        },
+        # pkind="IO"
+    )
     wave_data_overview.make_vix_graph(
         posi_pin_file="./sample_log/posi.csv",
         nega_pin_file="./sample_log/nega.csv",
@@ -874,29 +904,6 @@ if __name__ == "__main__":
         ylabel="ps",
         hlines=60,
         legends=["Tr(ps)", "Tf(ps)"],
-    )
-    wave_data_overview.add_summary_table_to_pptx(
-        title="overview",
-        cell_width=[
-            CELL_WIDTH_BASE * 1.1,
-            CELL_WIDTH_BASE * 2,
-            CELL_WIDTH_BASE * 1.1,
-            CELL_WIDTH_BASE * 1.1,
-            CELL_WIDTH_BASE * 1.1,
-            CELL_WIDTH_BASE * 1.1,
-            CELL_WIDTH_BASE * 1.1,
-            CELL_WIDTH_BASE * 1.1,
-            CELL_WIDTH_BASE * 1.1,
-        ],
-        items=["Pin", "Vi", "Rate", "Frequency", "Dutycycle", "Risetime", "Falltime"],
-        groupby_table="Vi",
-        rename={
-            "Risetime": "Tr(ps)",
-            "Frequency": "Freq(GHz)",
-            "Dutycycle": "Duty(%)",
-            "Falltime": "Tf(ps)",
-        },
-        # pkind="IO"
     )
     wave_data_overview.make_excel_graphs(
         data_start_column=DATA_START_COLUMNS,
