@@ -3,6 +3,7 @@ import datetime
 import os
 import re
 import sys
+import time
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,6 +15,10 @@ from openpyxl import load_workbook
 from openpyxl.chart import LineChart, Reference
 from openpyxl.chart.layout import Layout, ManualLayout
 from openpyxl.chart.shapes import GraphicalProperties
+from pptx import Presentation
+from pptx.enum.text import PP_ALIGN
+from pptx.util import Pt
+from PIL import Image
 
 # from openpyxl.drawing.line import LineProperties
 
@@ -51,7 +56,8 @@ class WaveData:
         self,
         file_name,
         folder_path,
-        new_presentation,
+        active_presentation,
+        pptx_lib,
         index="Pin_Rate",
         groupby=None,
         header=None,
@@ -65,20 +71,19 @@ class WaveData:
         self.header = header
         self.index = index
         self.input_file = self.folder_path + self.file_name
+        self.pptx_lib = pptx_lib
+        self.active_presentation = active_presentation
 
-        if new_presentation:
-            pptx = win32com.client.Dispatch("PowerPoint.Application")
-            pptx.Visible = True
-            self.active_presentation = pptx.Presentations.Open(
-                os.getcwd() + "/advtemplate_mini.pptx"
-            )
-        else:
-            pptx = win32com.client.GetActiveObject("PowerPoint.Application")
-            self.active_presentation = pptx.ActivePresentation
+        if self.pptx_lib == "win32com":
+            self.slide_width = self.active_presentation.PageSetup.SlideWidth
+            self.slide_height = self.active_presentation.PageSetup.SlideHeight
+            self.slide_count = self.active_presentation.Slides.Count
 
-        self.slide_width = self.active_presentation.PageSetup.SlideWidth
-        self.slide_height = self.active_presentation.PageSetup.SlideHeight
-        self.slide_count = self.active_presentation.Slides.Count
+        elif self.pptx_lib == "python-pptx":
+            self.slide_width = self.active_presentation.slide_width
+            self.slide_height = self.active_presentation.slide_height
+            self.slide_count = 0
+
         self.make_df_and_xlsx()
 
     def make_df_and_xlsx(self):
@@ -921,8 +926,14 @@ class WaveData:
 
         if groupby_table:
             for name, group in data_list_to_table_df.groupby(groupby_table):
-                slide_count = self.active_presentation.Slides.Count
+                if self.pptx_lib == "win32com":
+                    slide_count = self.active_presentation.Slides.Count
+
+                elif self.pptx_lib == "python-pptx":
+                    slide_count = 0
+
                 self.add_slide_to_pptx(title=name, slide_count=slide_count, layout=4)
+
                 data_list_to_table_df = group.reset_index()
                 self.add_table(
                     df=data_list_to_table_df,
@@ -966,15 +977,41 @@ class WaveData:
 
         """
         global picture_counter
-        picture = self.active_presentation.Slides(self.slide_count).Shapes.AddPicture(
-            FileName=file_name_full, LinkToFile=-1, SaveWithDocument=-1, Left=0, Top=0,
-        )
 
-        if resize:
-            picture.Height = 400
+        if self.pptx_lib == "win32com":
+            picture = self.active_presentation.Slides(
+                self.slide_count
+            ).Shapes.AddPicture(
+                FileName=file_name_full,
+                LinkToFile=-1,
+                SaveWithDocument=-1,
+                Left=0,
+                Top=0,
+            )
 
-        picture.Left = self.slide_width / 2 - picture.Width / 2
-        picture.Top = self.slide_height / 2 - picture.Height / 2
+        elif self.pptx_lib == "python-pptx":
+            im = Image.open(file_name_full)
+            im_width, im_height = im.size
+
+            picture = self.slide.shapes.add_picture(
+                image_file=file_name_full,
+                left=self.slide_width / 2 - im_width / 2,
+                top=0,
+            )
+
+        if self.pptx_lib == "win32com":
+            if resize:
+                picture.Height = 400
+
+            picture.Left = self.slide_width / 2 - picture.Width / 2
+            picture.Top = self.slide_height / 2 - picture.Height / 2
+
+        elif self.pptx_lib == "python-pptx":
+            if resize:
+                picture.height = Pt(400)
+
+            picture.left = int(self.slide_width / 2 - picture.width / 2)
+            picture.top = int(self.slide_height / 2 - picture.height / 2)
 
         if count_picture:
             picture_counter += 1
@@ -991,13 +1028,22 @@ class WaveData:
             None
 
         """
-        self.slide = self.active_presentation.Slides.Add(
-            Index=slide_count + 1, Layout=layout
-        )
-        self.slide.Select()
-        self.slide.Shapes(1).TextFrame.TextRange.Text = title
-        self.slide.Shapes(1).TextFrame.TextRange.Font.Size = 20
-        self.slide_count += 1
+        if self.pptx_lib == "win32com":
+            self.slide = self.active_presentation.Slides.Add(
+                Index=slide_count + 1, Layout=layout
+            )
+            self.slide.Select()
+            self.slide.Shapes(1).TextFrame.TextRange.Text = title
+            self.slide.Shapes(1).TextFrame.TextRange.Font.Size = 20
+            self.slide_count += 1
+
+        elif self.pptx_lib == "python-pptx":
+            # TODO check slide layout for table
+            self.slide = self.active_presentation.slides.add_slide(
+                self.active_presentation.slide_layouts[5]
+            )
+            self.slide.shapes[0].text = title
+            self.slide.shapes[0].text_frame.paragraphs[0].font.size = Pt(20)
 
     def add_table(
         self, df, items, cell_width, cell_height, slide_width, slide_height, rename,
@@ -1025,11 +1071,30 @@ class WaveData:
 
         table_rows = len(data_list_to_table)
         table_columns = len(data_list_to_table[0])
-        table = self.slide.Shapes.AddTable(table_rows, table_columns).Table
+
+        if self.pptx_lib == "win32com":
+            table = self.slide.Shapes.AddTable(table_rows, table_columns).Table
+
+        elif self.pptx_lib == "python-pptx":
+            table_shape = self.slide.shapes.add_table(
+                table_rows,
+                table_columns,
+                left=0,
+                top=0,
+                width=self.slide_width,
+                height=self.slide_height,
+            )
+
+            table = table_shape.table
 
         for i in range(table_rows):
             for j in range(table_columns):
-                tr = table.Cell(i + 1, j + 1).Shape.TextFrame.TextRange
+                if self.pptx_lib == "win32com":
+                    tr = table.Cell(i + 1, j + 1).Shape.TextFrame.TextRange
+
+                elif self.pptx_lib == "python-pptx":
+                    tr = table.cell(i, j)
+
                 try:
                     if data_list_to_table[i][j] == 9.91e37:
                         data_list_to_table[i][j] = "aquisition failure"
@@ -1037,34 +1102,71 @@ class WaveData:
                     elif str(data_list_to_table[i][j]) == "nan":
                         data_list_to_table[i][j] = "-"
 
-                    tr.Text = f"{data_list_to_table[i][j]:.1f}"
+                    if self.pptx_lib == "win32com":
+                        tr.Text = f"{data_list_to_table[i][j]:.1f}"
+
+                    elif self.pptx_lib == "python-pptx":
+                        tr.text = f"{data_list_to_table[i][j]:.1f}"
+
                 except ValueError:
                     if rename:
                         for key, value in rename.items():
                             if key == data_list_to_table[i][j]:
-                                tr.Text = value
+                                if self.pptx_lib == "win32com":
+                                    tr.Text = value
+
+                                elif self.pptx_lib == "python-pptx":
+                                    tr.text = value
+
                                 break
                             else:
-                                tr.Text = data_list_to_table[i][j]
+                                if self.pptx_lib == "win32com":
+                                    tr.Text = data_list_to_table[i][j]
+
+                                elif self.pptx_lib == "python-pptx":
+                                    tr.text = data_list_to_table[i][j]
+
                     else:
-                        tr.Text = data_list_to_table[i][j]
+                        if self.pptx_lib == "win32com":
+                            tr.Text = data_list_to_table[i][j]
 
-                tr.Font.Size = 10
-                tr.ParagraphFormat.Alignment = 2  # centering
+                        elif self.pptx_lib == "python-pptx":
+                            tr.text = data_list_to_table[i][j]
 
-        for i in range(1, table.Columns.Count + 1):
-            table.Columns(i).Width = cell_width[i - 1]
+                if self.pptx_lib == "win32com":
+                    tr.Font.Size = 10
+                    tr.ParagraphFormat.Alignment = 2  # centering
 
-        for i in range(1, table.Rows.Count + 1):
-            table.Rows(i).Height = cell_height
+                elif self.pptx_lib == "python-pptx":
+                    tr.text_frame.paragraphs[0].font.size = Pt(10)
+                    tr.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
 
-        # adjust table position
-        shape = self.slide.Shapes(2)
-        shape.Left = slide_width / 2 - shape.width / 2
-        shape.Top = slide_height / 6
+        if self.pptx_lib == "win32com":
+            for i in range(1, table.Columns.Count + 1):
+                table.Columns(i).Width = cell_width[i - 1]
+
+            for i in range(1, table.Rows.Count + 1):
+                table.Rows(i).Height = cell_height
+
+            # adjust table position
+            shape = self.slide.Shapes(2)
+            shape.Left = slide_width / 2 - shape.width / 2
+            shape.Top = slide_height / 6
+
+        elif self.pptx_lib == "python-pptx":
+            for i in range(table_columns):
+                table.columns[i].width = Pt(cell_width[i])
+
+            for i in range(table_rows):
+                table.rows[i].height = Pt(cell_height)
+
+            # adjust table position
+            table_shape.left = int(slide_width / 2 - table_shape.width / 2)
+            table_shape.top = int(slide_height / 6)
 
     def save_pptx(self, file_name, folder_name):
         """save pptx file
+
         Args:
             file_name (str): file name
 
@@ -1072,9 +1174,12 @@ class WaveData:
             None
 
         """
-        self.active_presentation.SaveAs(
-            FileName=folder_name + str(date_now) + "_" + file_name
-        )
+        file_name_full = folder_name + str(date_now) + "_" + file_name
+        if self.pptx_lib == "win32com":
+            self.active_presentation.SaveAs(FileName=file_name_full)
+
+        elif self.pptx_lib == "python-pptx":
+            self.active_presentation.save(file=file_name_full)
 
     def wf_txt_data_to_csv(self, file):
         """create csv file from osc output text file
@@ -1191,7 +1296,7 @@ class WaveData:
 
 
 if __name__ == "__main__":
-
+    start = time.time()
     CELL_WIDTH_BASE = 72
     DATA_START_COLUMNS = 10
     FOLDER_PATH = os.getcwd() + "/20210602_debug_8gpe/"
@@ -1211,13 +1316,26 @@ if __name__ == "__main__":
     EHEIGHT_YTICS = [300, 400, 20]
     EWIDTH_YTICKS = [60, 120, 10]
     PP_YTICKS = [00, 50, 10]
+    # PPTX_LIB = "win32com"
+    PPTX_LIB = "python-pptx"
+
+    if PPTX_LIB == "win32com":
+        pptx = win32com.client.Dispatch("PowerPoint.Application")
+        pptx.Visible = True
+        active_presentation = pptx.Presentations.Open(
+            os.getcwd() + "/advtemplate_mini.pptx"
+        )
+
+    elif PPTX_LIB == "python-pptx":
+        active_presentation = Presentation(os.getcwd() + "/advtemplate_mini.pptx")
 
     wave_data_overview = WaveData(
+        active_presentation=active_presentation,
         file_name=OVERVIEW_FILE_NAME,
         folder_path=FOLDER_PATH,
         groupby=DATA_GROUP,
         index=DATA_INDEX,
-        new_presentation=True,
+        pptx_lib=PPTX_LIB,
     )
     wave_data_overview.make_overshoot_graph(
         file=FOLDER_PATH
@@ -1326,11 +1444,12 @@ if __name__ == "__main__":
         # pkind="IO"
     )
     wave_data_eye = WaveData(
+        active_presentation=active_presentation,
         file_name=EYE_FILE_NAME,
         folder_path=FOLDER_PATH,
         groupby=DATA_GROUP,
         index=DATA_INDEX,
-        new_presentation=False,
+        pptx_lib=PPTX_LIB,
     )
     wave_data_eye.make_graph(
         df_columns_list=["Eheight"],
@@ -1363,11 +1482,12 @@ if __name__ == "__main__":
     #     chart_yaxis_major_unit=[20, 2],
     # )
     wave_data_histogram = WaveData(
+        active_presentation=active_presentation,
         file_name=HISTOGRAM_FILE_NAME,
         folder_path=FOLDER_PATH,
         groupby=DATA_GROUP,
         index=DATA_INDEX,
-        new_presentation=False,
+        pptx_lib=PPTX_LIB,
     )
     wave_data_histogram.make_graph(
         df_columns_list=["Pp"],
@@ -1380,3 +1500,5 @@ if __name__ == "__main__":
     wave_data_histogram.add_pictures_to_pptx(file_list=OSC_PICTURE_LIST_EYE,)
     wave_data_histogram.add_pictures_to_pptx(file_list=OSC_PICTURE_LIST_HISTOGRAM,)
     wave_data_overview.save_pptx(file_name=PPTX_FILE_NAME, folder_name=FOLDER_PATH)
+    elapsed_time = time.time() - start
+    print(f"elapsed_time:{elapsed_time:.1f}[sec]")

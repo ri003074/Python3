@@ -33,3 +33,31 @@ class Outer:
 outer = Outer()
 
 outer.inner.abc()
+
+from pptx import Presentation
+from pptx.util import Inches, Pt, Cm
+from pptx.enum.text import PP_ALIGN
+
+
+prs = Presentation()
+blank_slide_layout = prs.slide_layouts[6]
+slide = prs.slides.add_slide(blank_slide_layout)
+
+left = Cm(3)
+top = Cm(2.5)
+width = Cm(15)
+height = Cm(1)
+txBox = slide.shapes.add_textbox(left, top, width, height)
+tf = txBox.text_frame
+tf.text = "Hello"
+txBox.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
+
+p = tf.add_paragraph()
+p.alignment = PP_ALIGN.CENTER
+run = p.add_run()
+run.text = "Just an example"
+font = run.font
+
+
+prs.save("test.pptx")
+

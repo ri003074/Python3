@@ -3,6 +3,8 @@ from pptx.util import Pt
 import time
 import numpy as np
 import sys
+from pptx.enum.text import PP_ALIGN
+
 
 # from pptx.util import Inches
 
@@ -52,6 +54,7 @@ for i in range(len(data)):
     table.rows[i].height = Pt(9 / 1.3333333333333)
     for j in range(len(data[0])):
         table.cell(i, j).text = str(data[i][j])
+        table.cell(i, j).text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
         # table.columns[j].width = int(slide_width / len(data[0]))
         # table.columns[j].width = Pt(54 / 1.3333333333333333)
         table.columns[j].width = Pt(54)
