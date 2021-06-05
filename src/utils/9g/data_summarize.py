@@ -1317,16 +1317,19 @@ if __name__ == "__main__":
     OSC_PICTURE_LIST_HISTOGRAM = glob(FOLDER_PATH + "/*histogram/*.png")
     DATA_GROUP = "Pkind_Vi"
     DATA_INDEX = "Pin_Rate"
-    PE = "8GPE_"
-    FREQ_YTICKS = [3.0, 5.0, 0.25]
+    FREQ_YTICKS = [1.0, 5.0, 0.5]
     # DUTY_YTICKS = [40.0, 60.0, 2.5]
     DUTY_YTICKS = [41.0, 59.0, 3.0]
     TRTF_YTICKS = [30.0, 70.0, 5]
     EHEIGHT_YTICS = [300, 400, 20]
     EWIDTH_YTICKS = [60, 120, 10]
     PP_YTICKS = [00, 50, 10]
-    # PPTX_LIB = "win32com"
-    PPTX_LIB = "python-pptx"
+
+    PE = "8GPE_"
+    PKINDS = ["IO", "WCK", "CK", "CA", "CS"]
+    pkind = "IO"
+    PPTX_LIB = "win32com"
+    # PPTX_LIB = "python-pptx"
 
     if PPTX_LIB == "win32com":
         pptx = win32com.client.Dispatch("PowerPoint.Application")
@@ -1386,6 +1389,7 @@ if __name__ == "__main__":
         ],
         cell_height=20,
     )
+    # for pkind in PKINDS:
     wave_data_overview.make_graph(
         df_columns_list=["Frequency"],
         file_name=PE + "Frequency",
@@ -1393,7 +1397,7 @@ if __name__ == "__main__":
         legends=["Freq(GHz)"],
         yticks=FREQ_YTICKS,
         ylabel="GHz",
-        # pkind="IO",
+        pkind=pkind,
     )
     wave_data_overview.make_graph(
         axhline=[47, 53],  # reference line
@@ -1402,6 +1406,7 @@ if __name__ == "__main__":
         legends=["Duty(%)"],
         yticks=DUTY_YTICKS,
         ylabel="%",
+        pkind=pkind,
     )
     wave_data_overview.make_graph(
         axhline=[60],  # spec line
