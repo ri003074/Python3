@@ -277,17 +277,18 @@ class WaveData:
         """make specified graph from dataframe using matplotlib
         Args:
             df_columns_list (list): dataframe columns list to make graph
+            yticks (list): yticks
             figsize (list): figure size
             file_name (str): filename
             fontsize (int): font size
-            hlines (int): yaxis hline
+            format (str): axis format settin
+            rotation (int): rotation
+            style (list): marker style
+            axline (int): yaxis line
             legends (list): legend
             pkind (str): pin kind
-            rotation (int): rotation
             xlabel (str): xlabel
             ylabel (str): ylabel
-            style (list): marker style
-            yticks (list): yticks
 
         Returns:
             None
@@ -340,7 +341,7 @@ class WaveData:
                     yticks=yticks,
                     fontsize=fontsize,
                     axhline=axhline,
-                    num_of_index=num_of_index,
+                    # num_of_index=num_of_index,
                     grid=True,
                 )
 
@@ -398,7 +399,7 @@ class WaveData:
                 fontsize=fontsize,
                 yticks=yticks,
                 axhline=axhline,
-                num_of_index=len(self.data_df.index),
+                # num_of_index=len(self.data_df.index),
                 legends=legends,
             )
 
@@ -480,13 +481,10 @@ class WaveData:
             item_name (str): item name (Vix)
             nega_pin_file (str): csv nega pin file name
             posi_pin_file (str): csv posi pin file name
-            freq (str): frequency
-            rate (str): rate
-            vi (str): vi setting
             description (bool): if put vix min/max ft description
             fontsize (int): fontsize
             figsize (list): figure size
-            legends (list): legend labels
+            reference_level (float): reference level
             rotation (int): xlabel rotation value
             xlabel (str): xlabel
             ylabel (str): ylabel
@@ -667,7 +665,7 @@ class WaveData:
             fontsize=fontsize,
             yticks=[],
             axhline="",
-            num_of_index=[],
+            # num_of_index=[],
             legends=[positive_pin_name, negative_pin_name],
         )
         num = f"{image_count:03}_"
@@ -717,10 +715,13 @@ class WaveData:
         return list[idx]
 
     def setup_fig_and_ax(self, figsize=(16, 9), bottom=0.2, xmargin=0.1, format="%.1f"):
-        """
+        """set up matploblib fix and ax object
 
         Args:
-            None
+            figsize (tuple): fig size
+            bottom (float): bottom margin
+            xmargin (float): xmargin
+            format (str): yaxis format setting
 
         Returns:
             None
@@ -735,7 +736,7 @@ class WaveData:
         legends,
         yticks,
         fontsize=14,
-        num_of_index=0,
+        # num_of_index=0,
         rotation=0,
         group_name="",
         xlabel=None,
@@ -743,10 +744,18 @@ class WaveData:
         axhline=None,
         grid=False,
     ):
-        """
+        """adjust graph parameters
 
         Args:
-            None
+            legends (list): legend list
+            yticks (list): yticks min, max, resolution
+            fontsize (int): font size
+            rotation (int): rotation
+            group_name (str): group name
+            xlabel (str): xlabel
+            ylabel (str): ylabel
+            axline (float): axhline
+            grid (bool): grid
 
         Returns:
             None
@@ -775,6 +784,17 @@ class WaveData:
             )
 
     def add_vix_table_to_pptx(self, title, items, cell_width, cell_height=20):
+        """add vix table to pptx
+
+            Args:
+                title (str): slide title
+                items (list): items for table
+                cell_width (list): cell width
+                cell_height (int): cell height
+
+            Returns:
+                None
+        """
         vix_data_list_to_table_df = pd.DataFrame(self.data_vix)
         print(vix_data_list_to_table_df)
         self.add_slide_to_pptx(title=title, slide_count=self.slide_count, layout=4)
@@ -802,14 +822,16 @@ class WaveData:
         """add summary table to pptx
 
         add slide, add table to pptx.
+
             Args:
                 title (str): slide title
                 cell_width (list): cell width
-                cell_height (list): cell height
+                items (list): items for table
+                cell_height (int): cell height
                 groupby_table (str): group name of table in case separate table by group
                 rename (dict): specify header original and after name in case rename
-                items (list): items for table
                 pkind (str): pin kind
+                sort (bool): if sort data by one of data frame column, specify df column name.
 
             Returns:
                 None
@@ -854,7 +876,15 @@ class WaveData:
                     rename=rename,
                 )
 
-    def add_osc_pictures_to_slide(self, file_list):
+    def add_pictures_to_pptx(self, file_list):
+        """add pictures to pptx
+
+        Args:
+            file_list (list): image list
+
+        Returns:
+            None
+        """
         for file in file_list:
             title = file.replace("\\", "xyz").replace(".png", "")
             title = re.sub(".*xyz", "", title)
@@ -865,10 +895,12 @@ class WaveData:
             )
 
     def add_picture_to_pptx(self, file_name_full, resize=False, count_image=True):
-        """
+        """add picture to pptx
 
         Args:
-            None
+            file_name_full (str): file name full path
+            resize (bool): set True if resize image
+            count_image (bool): image counter
 
         Returns:
             None
@@ -888,10 +920,12 @@ class WaveData:
             image_count += 1
 
     def add_slide_to_pptx(self, title, slide_count, layout):
-        """
+        """add slide to pptx
 
         Args:
-            None
+            title (str): slide title
+            slide_count (int): slide count
+            layout (int): slide layout
 
         Returns:
             None
@@ -907,10 +941,16 @@ class WaveData:
     def add_table(
         self, df, items, cell_width, cell_height, slide_width, slide_height, rename,
     ):
-        """
+        """add table to slide.
 
         Args:
-            None
+            df (DataFrame): data to table. data type is pandas dataframe
+            items (list): items to add table
+            cell_width (list): cell width
+            cell_height (int): cell height
+            slide_width (int): slide width
+            slide_height (int): slide height
+            rename (dict): specify before/after name as dict like {"Frequency":"Freq(GHz)"} if rename table header.
 
         Returns:
             None
@@ -974,6 +1014,14 @@ class WaveData:
         )
 
     def wf_txt_data_to_csv(self, file):
+        """create csv file from osc output text file
+
+        Args:
+            file (str): file name
+
+        Returns:
+            None
+        """
         print(file)
         with open(file.replace(".txt", ".csv"), "w", encoding="utf-8") as fw:
             flg = 0
@@ -1262,7 +1310,7 @@ if __name__ == "__main__":
         ylabel="ps",
         yticks=PP_YTICKS,
     )
-    wave_data_histogram.add_osc_pictures_to_slide(file_list=OSC_IMAGE_LIST_OVERVIEW,)
-    wave_data_histogram.add_osc_pictures_to_slide(file_list=OSC_IMAGE_LIST_EYE,)
-    wave_data_histogram.add_osc_pictures_to_slide(file_list=OSC_IMAGE_LIST_HISTOGRAM,)
+    wave_data_histogram.add_pictures_to_pptx(file_list=OSC_IMAGE_LIST_OVERVIEW,)
+    wave_data_histogram.add_pictures_to_pptx(file_list=OSC_IMAGE_LIST_EYE,)
+    wave_data_histogram.add_pictures_to_pptx(file_list=OSC_IMAGE_LIST_HISTOGRAM,)
     wave_data_overview.save_pptx(file_name=PPTX_FILE_NAME, folder_name=FOLDER_PATH)
