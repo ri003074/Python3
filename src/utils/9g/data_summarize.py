@@ -198,9 +198,9 @@ class WaveData:
                 categories=categories,
                 chart_height=chart_height,
                 chart_width=chart_width,
-                chart_yaxis_titles=chart_yaxis_title,
-                chart_yaxis_scaling_mins=chart_yaxis_scaling[0],
-                chart_yaxis_scaling_maxes=chart_yaxis_scaling[1],
+                chart_yaxis_title=chart_yaxis_title,
+                chart_yaxis_scaling_min=chart_yaxis_scaling[0],
+                chart_yaxis_scaling_max=chart_yaxis_scaling[1],
                 chart_yaxis_major_unit=chart_yaxis_scaling[2],
             )
 
@@ -239,9 +239,9 @@ class WaveData:
                     categories=categories,
                     chart_height=chart_height,
                     chart_width=chart_width,
-                    chart_yaxis_titles=chart_yaxis_titles[i],
-                    chart_yaxis_scaling_mins=chart_yaxis_scaling_mins[i],
-                    chart_yaxis_scaling_maxes=chart_yaxis_scaling_maxes[i],
+                    chart_yaxis_title=chart_yaxis_titles[i],
+                    chart_yaxis_scaling_min=chart_yaxis_scaling_mins[i],
+                    chart_yaxis_scaling_max=chart_yaxis_scaling_maxes[i],
                     chart_yaxis_major_unit=chart_yaxis_major_unit[i],
                 )
 
@@ -254,12 +254,27 @@ class WaveData:
         categories,
         chart_height,
         chart_width,
-        chart_yaxis_titles,
-        chart_yaxis_scaling_mins,
-        chart_yaxis_scaling_maxes,
+        chart_yaxis_title,
+        chart_yaxis_scaling_min,
+        chart_yaxis_scaling_max,
         chart_yaxis_major_unit,
     ):
-        """excel chart setup"""
+        """excel chart setup
+
+            Args:
+                values (list): values for excel graph.
+                categories (list): index values for excel graph.
+                chart_height (float): chart height
+                chart_width (float): chart width
+                chart_yaxis_title (str): chart yaxis title
+                chart_yaxis_scaling_min (float): chart yaxis min value
+                chart_yaxis_scaling_max (float): chart yaxis max value
+                chart_yaxis_major_unit (float): chart yaxis major unit
+
+            Returns:
+                None
+
+        """
 
         self.chart = LineChart()
         self.chart.add_data(values, titles_from_data=True)
@@ -267,9 +282,9 @@ class WaveData:
         self.chart.set_categories(categories)
         self.chart.height = chart_height
         self.chart.width = chart_width
-        self.chart.y_axis.title = chart_yaxis_titles
-        self.chart.y_axis.scaling.min = chart_yaxis_scaling_mins
-        self.chart.y_axis.scaling.max = chart_yaxis_scaling_maxes
+        self.chart.y_axis.title = chart_yaxis_title
+        self.chart.y_axis.scaling.min = chart_yaxis_scaling_min
+        self.chart.y_axis.scaling.max = chart_yaxis_scaling_max
         self.chart.y_axis.majorUnit = chart_yaxis_major_unit
         self.chart.y_axis.numFmt = "0.0"
         self.chart.x_axis.tickLblPos = "low"
@@ -310,13 +325,14 @@ class WaveData:
         ylabel=None,
     ):
         """make specified graph from dataframe using matplotlib
+
         Args:
             df_columns_list (list): dataframe columns list to make graph
             yticks (list): yticks
             figsize (list): figure size
             file_name (str): filename
             fontsize (int): font size
-            format (str): axis format settin
+            format (str): axis format setting
             rotation (int): rotation
             style (list): marker style
             axline (int): yaxis line
@@ -327,6 +343,7 @@ class WaveData:
 
         Returns:
             None
+
         """
         global image_count
 
@@ -512,6 +529,7 @@ class WaveData:
         ylabel=None,
     ):
         """make vix graph from posi/nega wave data file using matplotlib
+
         Args:
             item_name (str): item name (Vix)
             nega_pin_file (str): csv nega pin file name
@@ -523,8 +541,10 @@ class WaveData:
             rotation (int): xlabel rotation value
             xlabel (str): xlabel
             ylabel (str): ylabel
+
         Returns:
             None
+
         """
         global image_count
 
@@ -745,6 +765,7 @@ class WaveData:
 
         Returns:
             nearest value of num from list
+
         """
         idx = np.abs(np.asarray(list) - num).argmin()
         return list[idx]
@@ -760,6 +781,7 @@ class WaveData:
 
         Returns:
             None
+
         """
         self.fig = plt.figure(figsize=figsize)  # create figure object
         self.ax = self.fig.add_subplot(1, 1, 1, xmargin=xmargin)  # create axes object
@@ -794,6 +816,7 @@ class WaveData:
 
         Returns:
             None
+
         """
         plt.xticks(rotation=rotation)
         self.ax.set_ylabel(ylabel, fontsize=fontsize)
@@ -829,6 +852,7 @@ class WaveData:
 
             Returns:
                 None
+
         """
         vix_data_list_to_table_df = pd.DataFrame(self.data_vix)
         print(vix_data_list_to_table_df)
@@ -870,6 +894,7 @@ class WaveData:
 
             Returns:
                 None
+
         """
 
         self.add_slide_to_pptx(title=title, slide_count=self.slide_count, layout=4)
@@ -919,6 +944,7 @@ class WaveData:
 
         Returns:
             None
+
         """
         for file in file_list:
             title = file.replace("\\", "xyz").replace(".png", "")
@@ -939,6 +965,7 @@ class WaveData:
 
         Returns:
             None
+
         """
         global image_count
         image = self.active_presentation.Slides(self.slide_count).Shapes.AddPicture(
@@ -964,6 +991,7 @@ class WaveData:
 
         Returns:
             None
+
         """
         self.slide = self.active_presentation.Slides.Add(
             Index=slide_count + 1, Layout=layout
@@ -989,6 +1017,7 @@ class WaveData:
 
         Returns:
             None
+
         """
         df = df.loc[:, items]
         print(df)
@@ -1043,6 +1072,7 @@ class WaveData:
 
         Returns:
             None
+
         """
         self.active_presentation.SaveAs(
             FileName=folder_name + str(date_now) + "_" + file_name
@@ -1056,6 +1086,7 @@ class WaveData:
 
         Returns:
             None
+
         """
         print(file)
         with open(file.replace(".txt", ".csv"), "w", encoding="utf-8") as fw:
@@ -1082,6 +1113,7 @@ class WaveData:
             pin_kind, pin_order
             pin_kind: "IO", "WCK", "CK", "CA", "CS",
             pin_order: "IO"->1, "WCK"->2, "CK"->3, "CA"->4, "CS"->5
+
         """
         match_pin_name = re.match(r"P(\d*).*", pin_name)
         pin_num = int(match_pin_name.group(1))
@@ -1117,13 +1149,14 @@ class WaveData:
         return x * 1e-9
 
     def adjust_unit(self):
-        """
+        """adjust unit of data
 
         Args:
             None
 
         Returns:
             None
+
         """
         if "Eheight" in self.data_df.columns:
             self.data_df["Eheight"] = self.data_df["Eheight"].apply(self.mul3)
