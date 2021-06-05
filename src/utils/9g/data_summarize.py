@@ -20,7 +20,7 @@ from openpyxl.chart.shapes import GraphicalProperties
 
 from glob import glob
 
-image_count = 0
+picture_counter = 0
 
 now = datetime.datetime.now()
 date_now = now.strftime("%Y%m%d%H%M")
@@ -28,7 +28,6 @@ date_now = now.strftime("%Y%m%d%H%M")
 
 """
 TODO
-image->picture
 
 """
 
@@ -345,7 +344,7 @@ class WaveData:
             None
 
         """
-        global image_count
+        global picture_counter
 
         # for excel graph
         os.makedirs(self.folder_path + "excel_graph_data", exist_ok=True)
@@ -397,7 +396,7 @@ class WaveData:
                     grid=True,
                 )
 
-                num = f"{image_count:03}_"
+                num = f"{picture_counter:03}_"
 
                 # for excel graph
                 excel_file_name = (
@@ -455,7 +454,7 @@ class WaveData:
                 legends=legends,
             )
 
-            num = f"{image_count:03}_"
+            num = f"{picture_counter:03}_"
             file_name_full = self.folder_path + num + file_name + ".png"
             plt.savefig(self.folder_path + num + file_name + ".png")
             plt.close("all")
@@ -501,7 +500,7 @@ class WaveData:
         #     num_of_index=[],
         #     legends=[positive_pin_name, negative_pin_name],
         # )
-        num = f"{image_count:03}_"
+        num = f"{picture_counter:03}_"
         pkind = self.check_pin_kind(pin_name)
         file_name_full = (
             self.folder_path + num + pkind[0] + "_" + vi + "_" + item_name + ".png"
@@ -546,7 +545,7 @@ class WaveData:
             None
 
         """
-        global image_count
+        global picture_counter
 
         self.setup_fig_and_ax(figsize=figsize, xmargin=0.01)
 
@@ -700,7 +699,6 @@ class WaveData:
         )
 
         # reference level line
-        # TODO needs to clean up
         self.ax.hlines(
             y=reference_level,
             xmin=df_posi_nega.index[0],
@@ -723,7 +721,7 @@ class WaveData:
             # num_of_index=[],
             legends=[positive_pin_name, negative_pin_name],
         )
-        num = f"{image_count:03}_"
+        num = f"{picture_counter:03}_"
         pkind = self.check_pin_kind(positive_pin_name)
         file_name_full = (
             self.folder_path + num + pkind[0] + "_" + vi + "_" + item_name + ".png"
@@ -743,17 +741,17 @@ class WaveData:
                 title="Vix", slide_count=self.slide_count, layout=11,
             )
             self.add_picture_to_pptx(
-                file_name_full=os.getcwd() + "/images/Vix.png",
+                file_name_full=os.getcwd() + "/pictures/Vix.png",
                 resize=True,
-                count_image=False,
+                count_picture=False,
             )
             self.add_slide_to_pptx(
                 title="Min(f(t)), Max(f(t))", slide_count=self.slide_count, layout=11,
             )
             self.add_picture_to_pptx(
-                file_name_full=os.getcwd() + "/images/ft.png",
+                file_name_full=os.getcwd() + "/pictures/ft.png",
                 resize=True,
-                count_image=False,
+                count_picture=False,
             )
 
     def getNearestValue(self, list, num):
@@ -940,7 +938,7 @@ class WaveData:
         """add pictures to pptx
 
         Args:
-            file_list (list): image list
+            file_list (list): picture list
 
         Returns:
             None
@@ -952,34 +950,34 @@ class WaveData:
 
             self.add_slide_to_pptx(title=title, slide_count=self.slide_count, layout=11)
             self.add_picture_to_pptx(
-                file_name_full=file, resize=True, count_image=False
+                file_name_full=file, resize=True, count_picture=False
             )
 
-    def add_picture_to_pptx(self, file_name_full, resize=False, count_image=True):
+    def add_picture_to_pptx(self, file_name_full, resize=False, count_picture=True):
         """add picture to pptx
 
         Args:
             file_name_full (str): file name full path
-            resize (bool): set True if resize image
-            count_image (bool): image counter
+            resize (bool): set True if resize picture
+            count_picture (bool): picture counter
 
         Returns:
             None
 
         """
-        global image_count
-        image = self.active_presentation.Slides(self.slide_count).Shapes.AddPicture(
+        global picture_counter
+        picture = self.active_presentation.Slides(self.slide_count).Shapes.AddPicture(
             FileName=file_name_full, LinkToFile=-1, SaveWithDocument=-1, Left=0, Top=0,
         )
 
         if resize:
-            image.Height = 400
+            picture.Height = 400
 
-        image.Left = self.slide_width / 2 - image.Width / 2
-        image.Top = self.slide_height / 2 - image.Height / 2
+        picture.Left = self.slide_width / 2 - picture.Width / 2
+        picture.Top = self.slide_height / 2 - picture.Height / 2
 
-        if count_image:
-            image_count += 1
+        if count_picture:
+            picture_counter += 1
 
     def add_slide_to_pptx(self, title, slide_count, layout):
         """add slide to pptx
@@ -1201,9 +1199,9 @@ if __name__ == "__main__":
     OVERVIEW_FILE_NAME = "result_overview.csv"
     EYE_FILE_NAME = "result_eye.csv"
     HISTOGRAM_FILE_NAME = "result_histogram.csv"
-    OSC_IMAGE_LIST_OVERVIEW = glob(FOLDER_PATH + "/*overview/*.png")
-    OSC_IMAGE_LIST_EYE = glob(FOLDER_PATH + "/*eye/*.png")
-    OSC_IMAGE_LIST_HISTOGRAM = glob(FOLDER_PATH + "/*histogram/*.png")
+    OSC_PICTURE_LIST_OVERVIEW = glob(FOLDER_PATH + "/*overview/*.png")
+    OSC_PICTURE_LIST_EYE = glob(FOLDER_PATH + "/*eye/*.png")
+    OSC_PICTURE_LIST_HISTOGRAM = glob(FOLDER_PATH + "/*histogram/*.png")
     DATA_GROUP = "Pkind_Vi"
     DATA_INDEX = "Pin_Rate"
     PE = "8GPE_"
@@ -1378,7 +1376,7 @@ if __name__ == "__main__":
         ylabel="ps",
         yticks=PP_YTICKS,
     )
-    wave_data_histogram.add_pictures_to_pptx(file_list=OSC_IMAGE_LIST_OVERVIEW,)
-    wave_data_histogram.add_pictures_to_pptx(file_list=OSC_IMAGE_LIST_EYE,)
-    wave_data_histogram.add_pictures_to_pptx(file_list=OSC_IMAGE_LIST_HISTOGRAM,)
+    wave_data_histogram.add_pictures_to_pptx(file_list=OSC_PICTURE_LIST_OVERVIEW,)
+    wave_data_histogram.add_pictures_to_pptx(file_list=OSC_PICTURE_LIST_EYE,)
+    wave_data_histogram.add_pictures_to_pptx(file_list=OSC_PICTURE_LIST_HISTOGRAM,)
     wave_data_overview.save_pptx(file_name=PPTX_FILE_NAME, folder_name=FOLDER_PATH)
