@@ -322,7 +322,8 @@ class WaveData:
         format="%.1f",
         rotation=45,
         style=["o", "o", "o", "o"],
-        axhline=None,
+        axhline=[],
+        spec=False,
         legends=None,
         pkind=None,
         xlabel=None,
@@ -339,7 +340,8 @@ class WaveData:
             format (str): axis format setting
             rotation (int): rotation
             style (list): marker style
-            axline (int): yaxis line
+            axline (list): yaxis line
+            spec (bool): set true if spec condition
             legends (list): legend
             pkind (str): pin kind
             xlabel (str): xlabel
@@ -398,6 +400,7 @@ class WaveData:
                     fontsize=fontsize,
                     axhline=axhline,
                     # num_of_index=num_of_index,
+                    spec=spec,
                     grid=True,
                 )
 
@@ -481,7 +484,7 @@ class WaveData:
         self.wf_txt_data_to_csv(file)
 
         df = pd.read_csv(file.replace(".txt", ".csv"), header=None)
-        df = df.set_axis(["t", pin_name], axis=1)  # TODO change name
+        df = df.set_axis(["t", pin_name], axis=1)
         df = df.set_index("t")
 
         x = np.array(df.index.tolist())
@@ -799,9 +802,10 @@ class WaveData:
         # num_of_index=0,
         rotation=0,
         group_name="",
+        axhline=[],
         xlabel=None,
         ylabel=None,
-        axhline=None,
+        spec=False,
         grid=False,
     ):
         """adjust graph parameters
@@ -812,9 +816,10 @@ class WaveData:
             fontsize (int): font size
             rotation (int): rotation
             group_name (str): group name
+            axline (list): axhline
             xlabel (str): xlabel
             ylabel (str): ylabel
-            axline (float): axhline
+            spec (bool): set true if spec condition
             grid (bool): grid
 
         Returns:
@@ -835,13 +840,16 @@ class WaveData:
 
         # add limit line in case AT condition Vih/Vil=1V/0V
         match_at_condition = re.match(r".*Vih1r0V_Vil0r0V", group_name)
-        if match_at_condition and axhline:
+        if spec and match_at_condition:
+            linestyle = "-"
+            alpha = 0.8
+        else:
+            linestyle = "--"
+            alpha = 0.5
+
+        for val in axhline:
             self.ax.axhline(
-                y=axhline,
-                # xmin=0,
-                # xmax=num_of_index - 1,
-                # linestyle={"dashed"},
-                color="gray",
+                y=val, linestyle=linestyle, alpha=alpha, color="gray",
             )
 
     def add_vix_table_to_pptx(self, title, items, cell_width, cell_height=20):
@@ -1311,7 +1319,8 @@ if __name__ == "__main__":
     DATA_INDEX = "Pin_Rate"
     PE = "8GPE_"
     FREQ_YTICKS = [3.0, 5.0, 0.25]
-    DUTY_YTICKS = [40.0, 60.0, 2.5]
+    # DUTY_YTICKS = [40.0, 60.0, 2.5]
+    DUTY_YTICKS = [41.0, 59.0, 3.0]
     TRTF_YTICKS = [30.0, 70.0, 5]
     EHEIGHT_YTICS = [300, 400, 20]
     EWIDTH_YTICKS = [60, 120, 10]
@@ -1387,6 +1396,7 @@ if __name__ == "__main__":
         # pkind="IO",
     )
     wave_data_overview.make_graph(
+        axhline=[47, 53],  # reference line
         df_columns_list=["Dutycycle"],
         file_name=PE + "Duty",
         legends=["Duty(%)"],
@@ -1394,10 +1404,11 @@ if __name__ == "__main__":
         ylabel="%",
     )
     wave_data_overview.make_graph(
-        axhline=60,  # limit reference line
+        axhline=[60],  # spec line
         df_columns_list=["Risetime", "Falltime"],
         file_name=PE + "Risetime_Falltime",
         legends=["Tr(ps)", "Tf(ps)"],
+        spec=True,
         yticks=TRTF_YTICKS,
         ylabel="ps",
     )
