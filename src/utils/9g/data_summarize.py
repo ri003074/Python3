@@ -26,6 +26,27 @@ now = datetime.datetime.now()
 date_now = now.strftime("%Y%m%d%H%M")
 
 
+"""
+TODO
+image->picture
+
+"""
+
+"""docstring smaple. function simple explanation is written in this line.
+
+    if function detail explanation is necessary, write to here.
+
+    Args:
+        param1 (int): The first parameter
+        param2 (str): The second parameter
+
+    Returns:
+        bool: The return value. True for success, False otherwise
+
+    https://google.github.io/styleguide/pyguide.html
+"""
+
+
 class WaveData:
     def __init__(
         self,
@@ -62,13 +83,14 @@ class WaveData:
         self.make_df_and_xlsx()
 
     def make_df_and_xlsx(self):
-        """Make pandas dataframe and xlsx data from csv data
+        """Make pandas dataframe and xlsx data from csv file
 
         Args:
             None
 
         Returns:
             None
+
         """
         with open(self.input_file, mode="r", encoding="utf-8-sig") as csvfile:
             reader = csv.reader(csvfile)
@@ -145,7 +167,20 @@ class WaveData:
         chart_position="C2",
         chart_yaxis_title=None,
     ):
-        """make specified excel graph using xlsx data"""
+        """make specified excel graph using xlsx data
+
+            Args:
+                file_name (str): input excel file name
+                chart_yaxis_scaling (list): values for yaxis scale.
+                chart_height (float): chart height.
+                chart_width (float): chart width.
+                chart_position (str): chart position at excel.
+                chart_yaxis_title: chart yaxis title
+
+            Returns:
+                None
+
+        """
 
         wb = load_workbook(file_name)
         for i in range(len(wb.worksheets)):
