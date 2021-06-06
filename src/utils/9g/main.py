@@ -33,8 +33,8 @@ if __name__ == "__main__":
     PE = "8GPE_"
     PKINDS = ["IO", "WCK", "CK", "CA", "CS"]
     pkind = "IO"
-    # PPTX_LIB = "win32com"
-    PPTX_LIB = "python-pptx"
+    PPTX_LIB = "win32com"
+    # PPTX_LIB = "python-pptx"
 
     if PPTX_LIB == "win32com":
         pptx = win32com.client.Dispatch("PowerPoint.Application")
@@ -54,47 +54,6 @@ if __name__ == "__main__":
         index=DATA_INDEX,
         pptx_lib=PPTX_LIB,
     )
-    # wave_data_overview.make_overshoot_graph(
-    #     file=FOLDER_PATH
-    #     + "20210602_101849_P111A1_overview/P111A1_overview_Vih0r500V_Vil0r000V_Vt0r000V_Rate0r286ns_Duty0r500.txt"
-    # )
-    # wave_data_overview.make_vix_graph(
-    #     posi_pin_file="./sample_log/P1859A2_RZX_Vih0r916V_Vil0r000V_Rate0r362ns_Speed2r759GHz_TopBase_Meas.txt",
-    #     nega_pin_file="./sample_log/P1860A2_RZX_Vih0r916V_Vil0r000V_Rate0r362ns_Speed2r759GHz_TopBase_Meas.txt",
-    #     description=True,
-    #     item_name=PE + "Vix",
-    #     reference_level=0.2,
-    #     ylabel="mV",
-    # )
-    # wave_data_overview.make_vix_graph(
-    #     posi_pin_file="./sample_log/P1859A2_RZX_Vih0r916V_Vil0r000V_Rate0r362ns_Speed2r759GHz_TopBase_Meas.txt",
-    #     nega_pin_file="./sample_log/P1860A2_RZX_Vih0r916V_Vil0r000V_Rate0r362ns_Speed2r759GHz_TopBase_Meas.txt",
-    #     description=False,
-    #     item_name=PE + "Vix",
-    #     reference_level=0.229,
-    #     ylabel="mV",
-    # )
-    # wave_data_overview.add_vix_table_to_pptx(
-    #     title="Vix",
-    #     items=[
-    #         "Positive Pin",
-    #         "Negative Pin",
-    #         "Vi",
-    #         "rate",
-    #         "Vix_WCK_FR/|Min(f(t))| (%)",
-    #         "Vix_WCK_Rf/Max(f(t)) (%)",
-    #     ],
-    #     cell_width=[
-    #         CELL_WIDTH_BASE * 1.1,
-    #         CELL_WIDTH_BASE * 1.1,
-    #         CELL_WIDTH_BASE * 2.0,
-    #         CELL_WIDTH_BASE * 1.1,
-    #         CELL_WIDTH_BASE * 2.0,
-    #         CELL_WIDTH_BASE * 2.0,
-    #     ],
-    #     cell_height=20,
-    # )
-    # for pkind in PKINDS:
     wave_data_overview.make_graph(
         df_columns_list=["Frequency"],
         file_name=PE + "Frequency",
@@ -104,6 +63,70 @@ if __name__ == "__main__":
         pkind=pkind,
         yticks=FREQ_YTICKS,
         ylabel="GHz",
+    )
+    wave_data_eye = WaveData(
+        active_presentation=active_presentation,
+        file_name=EYE_FILE_NAME,
+        folder_path=FOLDER_PATH,
+        groupby=DATA_GROUP,
+        index=DATA_INDEX,
+        pptx_lib=PPTX_LIB,
+    )
+    wave_data_eye.make_graph(
+        df_columns_list=["Eheight"],
+        file_name=PE + "Eheight",
+        legends=["Eye Height(mV)"],
+        ylabel="mV",
+        yticks=EHEIGHT_YTICS,
+    )
+    wave_data_overview.add_pictures_to_pptx(
+        glob(os.getcwd() + "/20210602_debug_8gpe/*.png"),
+        glob(os.getcwd() + "/20210602_debug_8gpe/*.png"),
+        resize=True,
+    )
+    wave_data_overview.save_pptx(file_name=PPTX_FILE_NAME, folder_name=FOLDER_PATH)
+    sys.exit()
+    wave_data_overview.add_summary_table_to_pptx(
+        title="overview",
+        cell_width=[
+            CELL_WIDTH_BASE * 1.1,
+            CELL_WIDTH_BASE * 2,
+            CELL_WIDTH_BASE * 1.2,
+            CELL_WIDTH_BASE * 1.2,
+            CELL_WIDTH_BASE * 1.2,
+            CELL_WIDTH_BASE * 1.2,
+            CELL_WIDTH_BASE * 1.2,
+            CELL_WIDTH_BASE * 1.2,
+            CELL_WIDTH_BASE * 1.2,
+            CELL_WIDTH_BASE * 1.2,
+            CELL_WIDTH_BASE * 1.2,
+            CELL_WIDTH_BASE * 1.2,
+        ],
+        items=[
+            "Pin",
+            "Vi",
+            "Rate",
+            "Frequency",
+            "Dutycycle",
+            "Risetime",
+            "Falltime",
+            "Overshoot",
+            "Preshoot",
+            "Pwidth",
+        ],
+        groupby_table="Vi",
+        rename={
+            "Risetime": "Tr(ps)",
+            "Frequency": "Freq(GHz)",
+            "Dutycycle": "Duty(%)",
+            "Falltime": "Tf(ps)",
+            "Overshoot": "Overshoot(%)",
+            "Preshoot": "Preshoot(%)",
+            "Pwidth": "Pwidth(ps)",
+            "nan": "-",
+        },
+        # sort="Order"
+        pkind=pkind,
     )
     wave_data_overview.make_graph(
         axhline=[47, 53],  # reference line

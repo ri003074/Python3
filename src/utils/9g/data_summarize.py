@@ -88,6 +88,13 @@ class WaveData:
 
         self.make_df_and_xlsx()
 
+    def update_slide_count(self):
+        if self.pptx_lib == "win32com":
+            self.slide_count = self.active_presentation.Slides.Count
+
+        elif self.pptx_lib == "python-pptx":
+            self.slide_count = 0
+
     def make_df_and_xlsx(self):
         """Make pandas dataframe and xlsx data from csv file
 
@@ -439,9 +446,7 @@ class WaveData:
                 plt.close("all")
 
                 self.add_slide_to_pptx(
-                    title=num + name + "_" + file_name,
-                    slide_count=self.slide_count,
-                    layout=11,
+                    title=num + name + "_" + file_name, layout=11,
                 )
 
                 self.add_picture_to_pptx(file_name_full=file_name_full)
@@ -472,7 +477,7 @@ class WaveData:
             plt.savefig(self.folder_path + num + file_name + ".png")
             plt.close("all")
             self.add_slide_to_pptx(
-                title=num + file_name, slide_count=self.slide_count, layout=11,
+                title=num + file_name, layout=11,
             )
 
             self.add_picture_to_pptx(file_name_full=file_name_full)
@@ -521,9 +526,7 @@ class WaveData:
         plt.savefig(file_name_full)
         plt.close("all")
         self.add_slide_to_pptx(
-            title=num + pkind[0] + "_" + vi + "_" + item_name,
-            slide_count=self.slide_count,
-            layout=11,
+            title=num + pkind[0] + "_" + vi + "_" + item_name, layout=11,
         )
         self.add_picture_to_pptx(file_name_full=file_name_full)
 
@@ -742,16 +745,14 @@ class WaveData:
         plt.savefig(file_name_full)
         plt.close("all")
         self.add_slide_to_pptx(
-            title=num + pkind[0] + "_" + vi + "_" + item_name,
-            slide_count=self.slide_count,
-            layout=11,
+            title=num + pkind[0] + "_" + vi + "_" + item_name, layout=11,
         )
         self.add_picture_to_pptx(file_name_full=file_name_full)
 
         # insert Min(f(t)), Max(f(t)), Vix example pic from spec sheet
         if description:
             self.add_slide_to_pptx(
-                title="Vix", slide_count=self.slide_count, layout=11,
+                title="Vix", layout=11,
             )
             self.add_picture_to_pptx(
                 file_name_full=os.getcwd() + "/pictures/Vix.png",
@@ -759,7 +760,7 @@ class WaveData:
                 count_picture=False,
             )
             self.add_slide_to_pptx(
-                title="Min(f(t)), Max(f(t))", slide_count=self.slide_count, layout=11,
+                title="Min(f(t)), Max(f(t))", layout=11,
             )
             self.add_picture_to_pptx(
                 file_name_full=os.getcwd() + "/pictures/ft.png",
@@ -781,12 +782,22 @@ class WaveData:
         idx = np.abs(np.asarray(list) - num).argmin()
         return list[idx]
 
-    def setup_fig_and_ax(self, figsize=(16, 9), bottom=0.2, xmargin=0.1, format="%.1f"):
+    def setup_fig_and_ax(
+        self,
+        figsize=(16, 9),
+        top=0.95,
+        left=0.1,
+        bottom=0.2,
+        right=0.9,
+        xmargin=0.1,
+        format="%.1f",
+    ):
         """set up matploblib fix and ax object
 
         Args:
             figsize (tuple): fig size
             bottom (float): bottom margin
+            top (float): top margin
             xmargin (float): xmargin
             format (str): yaxis format setting
 
@@ -797,7 +808,7 @@ class WaveData:
         self.fig = plt.figure(figsize=figsize)  # create figure object
         self.ax = self.fig.add_subplot(1, 1, 1, xmargin=xmargin)  # create axes object
         self.ax.yaxis.set_major_formatter(plt.FormatStrFormatter(format))
-        self.fig.subplots_adjust(bottom=bottom)
+        self.fig.subplots_adjust(top=top, left=left, bottom=bottom, right=right)
 
     def adjust_graph_params(
         self,
@@ -880,7 +891,7 @@ class WaveData:
         """
         vix_data_list_to_table_df = pd.DataFrame(self.data_vix)
         print(vix_data_list_to_table_df)
-        self.add_slide_to_pptx(title=title, slide_count=self.slide_count, layout=4)
+        self.add_slide_to_pptx(title=title, layout=4)
         self.add_table(
             df=vix_data_list_to_table_df,
             items=items,
@@ -921,7 +932,7 @@ class WaveData:
 
         """
 
-        self.add_slide_to_pptx(title=title, slide_count=self.slide_count, layout=4)
+        self.add_slide_to_pptx(title=title, layout=4)
 
         # if needs to separate result per pin kind
         if pkind:
@@ -947,13 +958,8 @@ class WaveData:
 
         if groupby_table:
             for name, group in data_list_to_table_df.groupby(groupby_table):
-                if self.pptx_lib == "win32com":
-                    slide_count = self.active_presentation.Slides.Count
 
-                elif self.pptx_lib == "python-pptx":
-                    slide_count = 0
-
-                self.add_slide_to_pptx(title=name, slide_count=slide_count, layout=4)
+                self.add_slide_to_pptx(title=name, layout=4)
 
                 data_list_to_table_df = group.reset_index()
                 self.add_table(
@@ -995,9 +1001,7 @@ class WaveData:
                 title = file.replace("\\", "xyz").replace(".png", "")
                 title = re.sub(".*xyz", "", title)
 
-                self.add_slide_to_pptx(
-                    title=title, slide_count=self.slide_count, layout=11
-                )
+                self.add_slide_to_pptx(title=title, layout=11)
                 self.add_picture_to_pptx(
                     file_name_full=file,
                     resize=resize,
@@ -1013,9 +1017,7 @@ class WaveData:
                     .replace("8GPE_Frequency", "")  # TODO need to fix title
                 )
                 title = re.sub(".*xyz", "", title)
-                self.add_slide_to_pptx(
-                    title=title, slide_count=self.slide_count, layout=11
-                )
+                self.add_slide_to_pptx(title=title, layout=11)
 
                 title1 = file1.replace("\\", "xyz").replace(".png", "")
                 title1 = re.sub(".*xyz", "", title1)
@@ -1159,21 +1161,23 @@ class WaveData:
             pg.alignment = PP_ALIGN.CENTER
             text_frame.vertical_anchor = MSO_ANCHOR.BOTTOM
 
-    def add_slide_to_pptx(self, title, slide_count, layout, font_size=20):
+    def add_slide_to_pptx(self, title, layout, font_size=20):
         """add slide to pptx
 
         Args:
             title (str): slide title
-            slide_count (int): slide count
             layout (int): slide layout
+            font_size (int): font size
 
         Returns:
             None
 
         """
+        self.update_slide_count()
+
         if self.pptx_lib == "win32com":
             self.slide = self.active_presentation.Slides.Add(
-                Index=slide_count + 1, Layout=layout
+                Index=self.slide_count + 1, Layout=layout
             )
             self.slide.Select()
             self.slide.Shapes(1).TextFrame.TextRange.Text = title
