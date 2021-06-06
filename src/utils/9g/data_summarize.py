@@ -1141,9 +1141,12 @@ class WaveData:
                 1, Top=top, Left=left, Width=width, Height=height,
             )
             text_box.TextFrame.TextRange.Text = title
-            text_box.TextFrame.TextRange.ParagraphFormat.Alignment = 2  # 中央ぞろえ
+            text_box.TextFrame.TextRange.ParagraphFormat.Alignment = 2  # center
+            text_box.TextFrame.VerticalAnchor = 4  # bottom
             text_box.TextFrame.TextRange.Font.Size = font_size
             text_box.Top = text_box.Top - text_box.Height
+            text_box.Height = height
+            text_box.Top = top - height
 
         elif self.pptx_lib == "python-pptx":
             text_box = self.slide.shapes.add_textbox(
