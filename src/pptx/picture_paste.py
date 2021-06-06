@@ -4,8 +4,8 @@ from PIL import Image
 
 # from glob import glob
 
-file_path = "./pictures/"
-file_names = ["e.jpg", "e.jpg", "e.jpg", "e.jpg"]
+file_path = "./imgs/"
+file_names = ["sample1.PNG", "sample2.PNG"]
 # file_names = glob('*.png')
 
 IMG_DISPLAY_HEIGHT = Inches(3.5)
@@ -13,7 +13,7 @@ PIC_PER_PAGE = 2
 SLIDES = 2
 OUTPUT_FILE_NAME = "output.pptx"
 
-prs = Presentation("sample_slide.pptx")
+prs = Presentation("sample.pptx")
 SLIDE_WIDTH = prs.slide_width
 SLIDE_HEIGHT = prs.slide_height
 

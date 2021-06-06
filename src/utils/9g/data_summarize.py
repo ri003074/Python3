@@ -17,6 +17,8 @@ from openpyxl.chart.layout import Layout, ManualLayout
 from openpyxl.chart.shapes import GraphicalProperties
 from pptx import Presentation
 from pptx.enum.text import PP_ALIGN
+
+from pptx.enum.text import MSO_ANCHOR
 from pptx.util import Pt
 from PIL import Image
 
@@ -964,26 +966,113 @@ class WaveData:
                     rename=rename,
                 )
 
-    def add_pictures_to_pptx(self, file_list):
+    def add_pictures_to_pptx(self, *file_list, resize=False, picture_width=400):
         """add pictures to pptx
 
         Args:
-            file_list (list): picture list
+            *file_list (list): picture list
 
         Returns:
             None
 
         """
-        for file in file_list:
-            title = file.replace("\\", "xyz").replace(".png", "")
-            title = re.sub(".*xyz", "", title)
 
-            self.add_slide_to_pptx(title=title, slide_count=self.slide_count, layout=11)
-            self.add_picture_to_pptx(
-                file_name_full=file, resize=True, count_picture=False,
-            )
+        picture_per_slide = len(file_list)
 
-    def add_picture_to_pptx(self, file_name_full, resize=False, count_picture=True):
+        if self.pptx_lib == "win32com":
+            picture_width = picture_width
+
+        elif self.pptx_lib == "python-pptx":
+            picture_width = Pt(picture_width)
+
+        top = self.slide_height * 0.3
+        left_1 = self.slide_width / 4 - picture_width / 2
+        left_2 = self.slide_width * 3 / 4 - picture_width / 2
+        text_box_height = 40
+
+        if picture_per_slide == 1:
+            for file in file_list[0]:
+                title = file.replace("\\", "xyz").replace(".png", "")
+                title = re.sub(".*xyz", "", title)
+
+                self.add_slide_to_pptx(
+                    title=title, slide_count=self.slide_count, layout=11
+                )
+                self.add_picture_to_pptx(
+                    file_name_full=file,
+                    resize=resize,
+                    picture_width=picture_width,
+                    count_picture=False,
+                )
+
+        elif picture_per_slide == 2:
+            for (file1, file2) in zip(file_list[0], file_list[1]):
+                title = (
+                    file1.replace("\\", "xyz")
+                    .replace(".png", "")
+                    .replace("8GPE_Frequency", "")  # TODO need to fix title
+                )
+                title = re.sub(".*xyz", "", title)
+                self.add_slide_to_pptx(
+                    title=title, slide_count=self.slide_count, layout=11
+                )
+
+                title1 = file1.replace("\\", "xyz").replace(".png", "")
+                title1 = re.sub(".*xyz", "", title1)
+
+                # 1st picture
+                self.add_picture_to_pptx(
+                    file_name_full=file1,
+                    count_picture=False,
+                    picture_width=picture_width,
+                    resize=resize,
+                    reposition=True,
+                    top=top,
+                    left=left_1,
+                )
+                # 1st text box
+                self.add_textbox(
+                    title=title1,
+                    slide_num=self.slide_count,
+                    left=left_1,
+                    top=top,
+                    width=picture_width,
+                    height=text_box_height,
+                )
+
+                title2 = file2.replace("\\", "xyz").replace(".png", "")
+                title2 = re.sub(".*xyz", "", title2)
+
+                # 2nd picture
+                self.add_picture_to_pptx(
+                    file_name_full=file2,
+                    count_picture=False,
+                    picture_width=picture_width,
+                    resize=resize,
+                    reposition=True,
+                    top=top,
+                    left=left_2,
+                )
+                # 2nd text box
+                self.add_textbox(
+                    title=title2,
+                    slide_num=self.slide_count,
+                    left=left_2,
+                    top=top,
+                    width=picture_width,
+                    height=text_box_height,
+                )
+
+    def add_picture_to_pptx(
+        self,
+        file_name_full,
+        count_picture=True,
+        picture_width=400,
+        left=0,
+        resize=False,
+        reposition=False,
+        top=0,
+    ):
         """add picture to pptx
 
         Args:
@@ -1012,28 +1101,62 @@ class WaveData:
             im = Image.open(file_name_full)
             im_width, im_height = im.size
 
-            picture = self.slide.shapes.add_picture(
-                image_file=file_name_full, left=0, top=0
-            )
+            if resize:
+                picture = self.slide.shapes.add_picture(
+                    image_file=file_name_full, left=0, top=0, width=Pt(400)
+                )
+            else:
+                picture = self.slide.shapes.add_picture(
+                    image_file=file_name_full, left=0, top=0
+                )
 
         if self.pptx_lib == "win32com":
             if resize:
-                picture.Height = 400
+                picture.Width = picture_width
 
-            picture.Top = self.slide_height / 2 - picture.Height / 2
-            picture.Left = self.slide_width / 2 - picture.Width / 2
+            if reposition:
+                picture.Top = top
+                picture.Left = left
+
+            else:
+                picture.Top = self.slide_height / 2 - picture.Height / 2
+                picture.Left = self.slide_width / 2 - picture.Width / 2
 
         elif self.pptx_lib == "python-pptx":
-            if resize:
-                picture.height = Pt(400)
 
-            picture.top = int(self.slide_height / 2 - picture.height / 2)
-            picture.left = int(self.slide_width / 2 - picture.width / 2)
+            if reposition:
+                picture.top = int(top)
+                picture.left = int(left)
+
+            else:
+                picture.top = int(self.slide_height / 2 - picture.height / 2)
+                picture.left = int(self.slide_width / 2 - picture.width / 2)
 
         if count_picture:
             picture_counter += 1
 
-    def add_slide_to_pptx(self, title, slide_count, layout):
+    def add_textbox(self, title, slide_num, top, left, width, height, font_size=14):
+        if self.pptx_lib == "win32com":
+            text_box = self.active_presentation.Slides(slide_num).Shapes.AddTextbox(
+                1, Top=top, Left=left, Width=width, Height=height,
+            )
+            text_box.TextFrame.TextRange.Text = title
+            text_box.TextFrame.TextRange.ParagraphFormat.Alignment = 2  # 中央ぞろえ
+            text_box.TextFrame.TextRange.Font.Size = font_size
+            text_box.Top = text_box.Top - text_box.Height
+
+        elif self.pptx_lib == "python-pptx":
+            text_box = self.slide.shapes.add_textbox(
+                left=left, top=top - Pt(height), width=width, height=Pt(height)
+            )
+            text_frame = text_box.text_frame
+            text_frame.paragraphs[0].font.size = Pt(font_size)
+            pg = text_frame.paragraphs[0]
+            pg.text = title.replace(".png", "").replace(".PNG", "")
+            pg.alignment = PP_ALIGN.CENTER
+            text_frame.vertical_anchor = MSO_ANCHOR.BOTTOM
+
+    def add_slide_to_pptx(self, title, slide_count, layout, font_size=20):
         """add slide to pptx
 
         Args:
@@ -1051,7 +1174,7 @@ class WaveData:
             )
             self.slide.Select()
             self.slide.Shapes(1).TextFrame.TextRange.Text = title
-            self.slide.Shapes(1).TextFrame.TextRange.Font.Size = 20
+            self.slide.Shapes(1).TextFrame.TextRange.Font.Size = font_size
             self.slide_count += 1
 
         elif self.pptx_lib == "python-pptx":
@@ -1060,7 +1183,7 @@ class WaveData:
                 self.active_presentation.slide_layouts[5]
             )
             self.slide.shapes[0].text = title
-            self.slide.shapes[0].text_frame.paragraphs[0].font.size = Pt(20)
+            self.slide.shapes[0].text_frame.paragraphs[0].font.size = Pt(font_size)
 
     def add_table(
         self, df, items, cell_width, cell_height, slide_width, slide_height, rename,

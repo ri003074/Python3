@@ -26,7 +26,8 @@ class PowerPoint:
         self.pic_top_offset = util.Inches(pic_top_offset / 2.54)
         self.image_display_width = 0
         self.aspect_ratio = 0
-        self.presentaition = Presentation(self.slide_template)
+        # self.presentaition = Presentation(self.slide_template)
+        self.presentaition = Presentation()
         self.slide_width = self.presentaition.slide_width
         self.slide_height = self.presentaition.slide_height
         self.slide_layout = self.presentaition.slide_layouts[5]
@@ -44,10 +45,7 @@ class PowerPoint:
     def add_picture(self, slide, file_name, left, top):
         """ add picture to slide """
         slide.shapes.add_picture(
-            self.file_path + file_name,
-            left,
-            top,
-            height=self.image_display_height,
+            self.file_path + file_name, left, top, height=self.image_display_height,
         )
 
     def add_title(self, slide, text):
@@ -232,6 +230,7 @@ class PowerPoint:
                 height_cm = 1
                 height = util.Inches(height_cm / 2.54)
                 width = self.image_display_width
+                print(height)
                 txBox = slide.shapes.add_textbox(left, top - height, width, height)
                 tf = txBox.text_frame
                 pg = tf.paragraphs[0]
