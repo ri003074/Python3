@@ -125,4 +125,4 @@ class InsertImages:
 
 
 aa = InsertImages()
-aa.insert_image(images)
+aa.insert_image(images, images)

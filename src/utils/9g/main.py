@@ -33,8 +33,8 @@ if __name__ == "__main__":
     PE = "8GPE_"
     PKINDS = ["IO", "WCK", "CK", "CA", "CS"]
     pkind = "IO"
-    PPTX_LIB = "win32com"
-    # PPTX_LIB = "python-pptx"
+    # PPTX_LIB = "win32com"
+    PPTX_LIB = "python-pptx"
 
     if PPTX_LIB == "win32com":
         pptx = win32com.client.Dispatch("PowerPoint.Application")
@@ -101,30 +101,29 @@ if __name__ == "__main__":
         format="%.2f",
         legends=["Freq(GHz)"],
         legend_loc="lower right",
+        pkind=pkind,
         yticks=FREQ_YTICKS,
         ylabel="GHz",
-        pkind=pkind,
     )
     wave_data_overview.make_graph(
         axhline=[47, 53],  # reference line
         df_columns_list=["Dutycycle"],
         file_name=PE + "Duty",
         legends=["Duty(%)"],
+        pkind=pkind,
         yticks=DUTY_YTICKS,
         ylabel="%",
-        pkind=pkind,
     )
     wave_data_overview.make_graph(
         axhline=[60],  # spec line
         df_columns_list=["Risetime", "Falltime"],
         file_name=PE + "Risetime_Falltime",
         legends=["Tr(ps)", "Tf(ps)"],
+        pkind=pkind,
         spec=True,
         yticks=TRTF_YTICKS,
         ylabel="ps",
     )
-    wave_data_overview.save_pptx(file_name=PPTX_FILE_NAME, folder_name=FOLDER_PATH)
-    sys.exit()
     wave_data_overview.add_summary_table_to_pptx(
         title="overview",
         cell_width=[
@@ -165,8 +164,12 @@ if __name__ == "__main__":
             "nan": "-",
         },
         # sort="Order"
-        # pkind="IO"
+        pkind=pkind,
     )
+    wave_data_overview.save_pptx(file_name=PPTX_FILE_NAME, folder_name=FOLDER_PATH)
+    elapsed_time = time.time() - start
+    print(f"elapsed_time:{elapsed_time:.1f}[sec]")
+    sys.exit()
     wave_data_eye = WaveData(
         active_presentation=active_presentation,
         file_name=EYE_FILE_NAME,

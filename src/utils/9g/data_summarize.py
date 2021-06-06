@@ -980,7 +980,7 @@ class WaveData:
 
             self.add_slide_to_pptx(title=title, slide_count=self.slide_count, layout=11)
             self.add_picture_to_pptx(
-                file_name_full=file, resize=True, count_picture=False
+                file_name_full=file, resize=True, count_picture=False,
             )
 
     def add_picture_to_pptx(self, file_name_full, resize=False, count_picture=True):
@@ -1013,24 +1013,22 @@ class WaveData:
             im_width, im_height = im.size
 
             picture = self.slide.shapes.add_picture(
-                image_file=file_name_full,
-                left=self.slide_width / 2 - im_width / 2,
-                top=0,
+                image_file=file_name_full, left=0, top=0
             )
 
         if self.pptx_lib == "win32com":
             if resize:
                 picture.Height = 400
 
-            picture.Left = self.slide_width / 2 - picture.Width / 2
             picture.Top = self.slide_height / 2 - picture.Height / 2
+            picture.Left = self.slide_width / 2 - picture.Width / 2
 
         elif self.pptx_lib == "python-pptx":
             if resize:
                 picture.height = Pt(400)
 
-            picture.left = int(self.slide_width / 2 - picture.width / 2)
             picture.top = int(self.slide_height / 2 - picture.height / 2)
+            picture.left = int(self.slide_width / 2 - picture.width / 2)
 
         if count_picture:
             picture_counter += 1
