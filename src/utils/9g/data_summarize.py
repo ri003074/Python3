@@ -320,6 +320,7 @@ class WaveData:
         file_name="default",
         fontsize=14,
         format="%.1f",
+        legend_loc="upper right",
         rotation=45,
         style=["o", "o", "o", "o"],
         axhline=[],
@@ -338,6 +339,7 @@ class WaveData:
             file_name (str): filename
             fontsize (int): font size
             format (str): axis format setting
+            legend_loc (str): legend location
             rotation (int): rotation
             style (list): marker style
             axline (list): yaxis line
@@ -399,6 +401,7 @@ class WaveData:
                     yticks=yticks,
                     fontsize=fontsize,
                     axhline=axhline,
+                    legend_loc=legend_loc,
                     # num_of_index=num_of_index,
                     spec=spec,
                     grid=True,
@@ -799,6 +802,7 @@ class WaveData:
         legends,
         yticks,
         fontsize=14,
+        legend_loc="upper right",
         # num_of_index=0,
         rotation=0,
         group_name="",
@@ -814,6 +818,7 @@ class WaveData:
             legends (list): legend list
             yticks (list): yticks min, max, resolution
             fontsize (int): font size
+            legend_loc (str): legend location
             rotation (int): rotation
             group_name (str): group name
             axline (list): axhline
@@ -829,7 +834,13 @@ class WaveData:
         plt.xticks(rotation=rotation)
         self.ax.set_ylabel(ylabel, fontsize=fontsize)
         self.ax.set_xlabel(xlabel, fontsize=fontsize)
-        self.ax.legend(labels=legends, fontsize=fontsize, loc="upper right")
+        self.ax.legend(
+            labels=legends,
+            fontsize=fontsize,
+            loc=legend_loc,
+            frameon=True,
+            framealpha=1.0,
+        )
 
         # set grid
         if grid:
@@ -849,7 +860,7 @@ class WaveData:
 
         for val in axhline:
             self.ax.axhline(
-                y=val, linestyle=linestyle, alpha=alpha, color="gray",
+                y=val, linestyle=linestyle, alpha=alpha, color="gray", linewidth=1
             )
 
     def add_vix_table_to_pptx(self, title, items, cell_width, cell_height=20):
