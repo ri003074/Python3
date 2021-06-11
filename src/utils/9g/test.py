@@ -62,27 +62,46 @@
 # prs.save("test.pptx")
 
 
-def test(*file_list):
-    print(file_list)
-    for (file1, file2) in zip(file_list):
-        print(file1)
+# def test(*file_list):
+#     print(file_list)
+#     for (file1, file2) in zip(file_list):
+#         print(file1)
 
 
-lst1 = [1, 2, 3]
-lst2 = [1, 2, 3]
-test(lst1, lst2)
+# lst1 = [1, 2, 3]
+# lst2 = [1, 2, 3]
+# test(lst1, lst2)
 
 
-from pptx.util import Inches, Pt, Cm
+# from pptx.util import Inches, Pt, Cm
 
-print(Pt(1) * 72)
-print(Inches(1))
-print(Pt(10))
-print(Pt(28.34))
+# print(Pt(1) * 72)
+# print(Inches(1))
+# print(Pt(10))
+# print(Pt(28.34))
 
-lst1 = [1, 2, 3]
-lst2 = [1, 2, 3]
+# lst1 = [1, 2, 3]
+# lst2 = [1, 2, 3]
 
-for (a, b) in zip(lst1, lst2):
-    print(a)
-    print(b)
+# for (a, b) in zip(lst1, lst2):
+#     print(a)
+#     print(b)
+
+
+class A:
+    def __init__(self, moji):
+        self.str = moji
+
+    def add(self, moji):
+        self.str = self.str + moji
+
+    def show(self):
+        print(self.str)
+
+
+a = A("abc")
+a.add("def")
+a.show()
+
+
+print(a)

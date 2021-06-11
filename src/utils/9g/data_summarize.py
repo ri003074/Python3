@@ -27,6 +27,20 @@ from PIL import Image
 
 from glob import glob
 
+# from variables import FREQ_YTICKS
+# from variables import OVERSHOOT_YTICKS_1V_0V
+# from variables import OVERSHOOT_YTICKS_0r5V_0V
+# from variables import CELL_WIDTH_BASE
+# from variables import CROSSTALK_YTICKS
+
+# from variables import CROSSTALK_FILE_NAME
+# from variables import HISTOGRAM_FILE_NAME
+from variables import OVERVIEW_FILE_NAME
+from variables import DATA_GROUP
+from variables import DATA_INDEX
+# from variables import PP_YTICKS
+from variables import FREQ_YTICKS
+
 picture_counter = 0
 
 now = datetime.datetime.now()
@@ -64,7 +78,8 @@ class WaveData:
         groupby=None,
         header=None,
     ):
-        self.data_df = ""
+        self.data_df = pd.DataFrame()
+        self.data_vns = []
         self.data_vix = []
         self.data_overshoot = []
         self.file_name = file_name
@@ -110,7 +125,7 @@ class WaveData:
             data = []
 
             for rows in reader:
-                match = re.match(r"(P(\d*).*?)_.*?_(.*?_.*?_.*?)_(.*?)_", rows[0])
+                match = re.match(r"(P(\d*).*?)_.*?_(.*?_.*?_.*?)_(.*?)_.*", rows[0])
                 if match:
                     rows.insert(0, "Condition")
                     rows.insert(2, "Pin")
@@ -128,6 +143,8 @@ class WaveData:
                     )
                     rows.insert(10, "Order")
                     rows.insert(11, pin_order)
+                    rows.insert(12, "Condition_all")
+                    rows.insert(13, match.group(0))
 
                 dic = OrderedDict()
                 for i in range(0, len(rows) - 1, 2):
@@ -182,16 +199,16 @@ class WaveData:
     ):
         """make specified excel graph using xlsx data
 
-            Args:
-                file_name (str): input excel file name
-                chart_yaxis_scaling (list): values for yaxis scale.
-                chart_height (float): chart height.
-                chart_width (float): chart width.
-                chart_position (str): chart position at excel.
-                chart_yaxis_title: chart yaxis title
+        Args:
+            file_name (str): input excel file name
+            chart_yaxis_scaling (list): values for yaxis scale.
+            chart_height (float): chart height.
+            chart_width (float): chart width.
+            chart_position (str): chart position at excel.
+            chart_yaxis_title: chart yaxis title
 
-            Returns:
-                None
+        Returns:
+            None
 
         """
 
@@ -274,18 +291,18 @@ class WaveData:
     ):
         """excel chart setup
 
-            Args:
-                values (list): values for excel graph.
-                categories (list): index values for excel graph.
-                chart_height (float): chart height
-                chart_width (float): chart width
-                chart_yaxis_title (str): chart yaxis title
-                chart_yaxis_scaling_min (float): chart yaxis min value
-                chart_yaxis_scaling_max (float): chart yaxis max value
-                chart_yaxis_major_unit (float): chart yaxis major unit
+        Args:
+            values (list): values for excel graph.
+            categories (list): index values for excel graph.
+            chart_height (float): chart height
+            chart_width (float): chart width
+            chart_yaxis_title (str): chart yaxis title
+            chart_yaxis_scaling_min (float): chart yaxis min value
+            chart_yaxis_scaling_max (float): chart yaxis max value
+            chart_yaxis_major_unit (float): chart yaxis major unit
 
-            Returns:
-                None
+        Returns:
+            None
 
         """
 
@@ -375,7 +392,17 @@ class WaveData:
 
         if self.groupby:
             for name, group in df.groupby(self.groupby):
-                df_plot = group[df_columns_list].dropna(how="all")
+                print(group)
+                df_plot = group[df_columns_list]
+                print(df_plot)
+                # df_plot = group[df_columns_list].dropna(how="all")
+                # skip if dataframe has missing value
+                if df_plot.isnull().values.sum() != 0:
+                    df_plot = group[df_columns_list].dropna(how="all")
+                    print(df_plot)
+
+                    if df_plot.empty:
+                        continue
 
                 num_of_index = len(df_plot.index)
 
@@ -439,17 +466,15 @@ class WaveData:
                     chart_yaxis_title=ylabel,
                 )
 
-                file_name_full = (
-                    self.folder_path + num + name + "_" + file_name + ".png"
-                )
-                plt.savefig(file_name_full)
+                file_path = self.folder_path + num + name + "_" + file_name + ".png"
+                plt.savefig(file_path)
                 plt.close("all")
 
                 self.add_slide_to_pptx(
                     title=num + name + "_" + file_name, layout=11,
                 )
 
-                self.add_picture_to_pptx(file_name_full=file_name_full)
+                self.add_picture_to_pptx(file_path=file_path)
 
         else:
             self.setup_fig_and_ax(figsize, bottom=0.3)
@@ -473,23 +498,61 @@ class WaveData:
             )
 
             num = f"{picture_counter:03}_"
-            file_name_full = self.folder_path + num + file_name + ".png"
+            file_path = self.folder_path + num + file_name + ".png"
             plt.savefig(self.folder_path + num + file_name + ".png")
             plt.close("all")
             self.add_slide_to_pptx(
                 title=num + file_name, layout=11,
             )
 
-            self.add_picture_to_pptx(file_name_full=file_name_full)
+            self.add_picture_to_pptx(file_path=file_path)
 
-    def make_overshoot_graph(self, file, figsize=(10, 5.5), item_name="Overshoot"):
-        self.setup_fig_and_ax(figsize=figsize, xmargin=0.01)
+    def make_overshoot_graph(
+        self, file, yticks, figsize=(10, 5.5), item_name="Overshoot"
+    ):
+        self.setup_fig_and_ax(figsize=figsize, xmargin=0.01, format="%.3f")
 
-        match_pin_file = re.match(r".*(P.*?)_.*(Vih.*)_Rate0r(.*ns).*", file)
+        match_pin_file = re.match(r".*((P.*?)_.*(Vih.*)_Rate0r(.*ns).*).txt", file)
+        condition_all = match_pin_file.group(1)
+        print(self.data_df)
+        print(
+            self.data_df[
+                (self.data_df["Condition_all"] == condition_all)
+                & self.data_df[item_name].notna()
+            ]
+        )
+        df_tmp = self.data_df[
+            (self.data_df["Condition_all"] == condition_all)
+            & self.data_df[item_name].notna()
+        ]
+        reference_level = 0
+        vmaximum = 0
+        if (
+            item_name == "Overshoot"
+            and df_tmp["Vtop"].size == 1
+            and df_tmp["Vmaximum"].size == 1
+        ):
+            reference_level = df_tmp["Vtop"][0] * 1e-3
+            vmaximum = df_tmp["Vmaximum"][0] * 1e-3
+        elif (
+            item_name == "Undershoot"
+            and df_tmp["Vbase"].size == 1
+            and df_tmp["Vminimum"].size == 1
+        ):
+            reference_level = df_tmp["Vbase"][0] * 1e-3
+            vmaximum = df_tmp["Vminimum"][0] * 1e-3
+        else:
+            print(
+                "Over 2 results/No result in result file for overshoot/undershoot graph"
+            )
+            sys.exit()
 
-        pin_name = match_pin_file.group(1)
-        test_rate = match_pin_file.group(3)
-        vi = match_pin_file.group(2).replace("00V", "V")
+        print(reference_level)
+        print(vmaximum)
+
+        pin_name = match_pin_file.group(2)
+        test_rate = match_pin_file.group(4)
+        vi = match_pin_file.group(3).replace("00V", "V")
 
         self.wf_txt_data_to_csv(file)
 
@@ -499,36 +562,93 @@ class WaveData:
 
         x = np.array(df.index.tolist())
         y = np.array(df[pin_name].tolist())
-        self.ax.fill_between(x, y, 0.25, where=y > 0.25, color="C0", alpha=0.2)
 
-        df.plot(ax=self.ax)
+        graph_x_middle = int(x.size / 2)
+        print(x[graph_x_middle])
+
+        area = 0
+        x_end = 0
+        x_start_counter = 0
+        x_start = 0
+        y_label_position_offset = 0
+        if item_name == "Overshoot":
+            y_label_position_offset = 0.075
+            self.ax.fill_between(
+                x,
+                y,
+                reference_level,
+                where=(y > reference_level) & (x < x[graph_x_middle]),
+                color="C0",
+                alpha=0.2,
+            )
+            for i in range(int(x.size / 2)):
+                if y[i] > reference_level:
+                    if x_start_counter == 0:
+                        x_start = x[i]
+                        x_start_counter += 1
+
+                    area += y[i] - reference_level
+                    x_end = x[i]
+
+        elif item_name == "Undershoot":
+            y_label_position_offset = -0.075
+            self.ax.fill_between(
+                x,
+                y,
+                reference_level,
+                where=(y < reference_level) & (x < x[graph_x_middle]),
+                color="C0",
+                alpha=0.2,
+            )
+            for i in range(int(x.size / 2)):
+                if y[i] < reference_level:
+                    if x_start_counter == 0:
+                        x_start = x[i]
+                        x_start_counter += 1
+
+                    area += y[i] - reference_level
+                    x_end = x[i]
+
+        print(f"{area:.1f}mV")
+        self.ax.text(
+            (x_start + x_end) / 2,
+            vmaximum + y_label_position_offset,
+            f"{area:.1f}[mV-ns]",
+            backgroundcolor="white",
+            zorder=11,
+            fontfamily="monospace",
+        )
+        vns_data = {"Condition": condition_all, "v-ns-" + item_name: area}
+        self.data_vns.append(vns_data)
+
+        df.plot(ax=self.ax, ylim=yticks[:2])
 
         # make data for table outpu
         self.data_overshoot.append(
             {"Vi": vi, "Pin": pin_name, "rate": test_rate, "overshoot(v-ns)": 0}
         )
 
-        # self.adjust_graph_params(
-        #     rotation=rotation,
-        #     xlabel=xlabel,
-        #     ylabel=ylabel,
-        #     fontsize=fontsize,
-        #     yticks=[],
-        #     axhline="",
-        #     num_of_index=[],
-        #     legends=[positive_pin_name, negative_pin_name],
-        # )
+        self.adjust_graph_params(
+            rotation=0,
+            xlabel=None,
+            ylabel="mV",
+            # fontsize=fontsize,
+            axhline=[reference_level, vmaximum],
+            yticks=yticks,
+            legends=[pin_name],
+        )
         num = f"{picture_counter:03}_"
         pkind = self.check_pin_kind(pin_name)
-        file_name_full = (
+        file_path = (
             self.folder_path + num + pkind[0] + "_" + vi + "_" + item_name + ".png"
         )
-        plt.savefig(file_name_full)
+        plt.savefig(file_path)
         plt.close("all")
         self.add_slide_to_pptx(
-            title=num + pkind[0] + "_" + vi + "_" + item_name, layout=11,
+            title=num + pkind[0] + "_" + vi + "_" + test_rate + "_" + item_name,
+            layout=11,
         )
-        self.add_picture_to_pptx(file_name_full=file_name_full)
+        self.add_picture_to_pptx(file_path=file_path)
 
     def make_vix_graph(
         self,
@@ -739,15 +859,15 @@ class WaveData:
         )
         num = f"{picture_counter:03}_"
         pkind = self.check_pin_kind(positive_pin_name)
-        file_name_full = (
+        file_path = (
             self.folder_path + num + pkind[0] + "_" + vi + "_" + item_name + ".png"
         )
-        plt.savefig(file_name_full)
+        plt.savefig(file_path)
         plt.close("all")
         self.add_slide_to_pptx(
             title=num + pkind[0] + "_" + vi + "_" + item_name, layout=11,
         )
-        self.add_picture_to_pptx(file_name_full=file_name_full)
+        self.add_picture_to_pptx(file_path=file_path)
 
         # insert Min(f(t)), Max(f(t)), Vix example pic from spec sheet
         if description:
@@ -755,7 +875,7 @@ class WaveData:
                 title="Vix", layout=11,
             )
             self.add_picture_to_pptx(
-                file_name_full=os.getcwd() + "/pictures/Vix.png",
+                file_path=os.getcwd() + "/pictures/Vix.png",
                 resize=True,
                 count_picture=False,
             )
@@ -763,7 +883,7 @@ class WaveData:
                 title="Min(f(t)), Max(f(t))", layout=11,
             )
             self.add_picture_to_pptx(
-                file_name_full=os.getcwd() + "/pictures/ft.png",
+                file_path=os.getcwd() + "/pictures/ft.png",
                 resize=True,
                 count_picture=False,
             )
@@ -879,14 +999,14 @@ class WaveData:
     def add_vix_table_to_pptx(self, title, items, cell_width, cell_height=20):
         """add vix table to pptx
 
-            Args:
-                title (str): slide title
-                items (list): items for table
-                cell_width (list): cell width
-                cell_height (int): cell height
+        Args:
+            title (str): slide title
+            items (list): items for table
+            cell_width (list): cell width
+            cell_height (int): cell height
 
-            Returns:
-                None
+        Returns:
+            None
 
         """
         vix_data_list_to_table_df = pd.DataFrame(self.data_vix)
@@ -912,6 +1032,7 @@ class WaveData:
         rename=None,
         pkind=None,
         sort=None,
+        merge=False,
     ):
         """add summary table to pptx
 
@@ -931,6 +1052,16 @@ class WaveData:
                 None
 
         """
+
+        # this routin works only for overshoot/undershoot
+        if merge:
+            new_data = []
+            for i in range(0, len(self.data_vns), 2):
+                new_dic = dict({**self.data_vns[i], **self.data_vns[i + 1]})
+                new_data.append(new_dic)
+
+            df_vns = pd.DataFrame(new_data)
+            self.data_df = pd.merge(self.data_df, df_vns, on="Condition", how="outer")
 
         self.add_slide_to_pptx(title=title, layout=4)
 
@@ -972,7 +1103,7 @@ class WaveData:
                     rename=rename,
                 )
 
-    def add_pictures_to_pptx(self, *file_list, resize=False, picture_width=400):
+    def add_pictures_to_pptx(self, *file_list, resize=False, picture_width=500):
         """add pictures to pptx
 
         Args:
@@ -1003,7 +1134,7 @@ class WaveData:
 
                 self.add_slide_to_pptx(title=title, layout=11)
                 self.add_picture_to_pptx(
-                    file_name_full=file,
+                    file_path=file,
                     resize=resize,
                     picture_width=picture_width,
                     count_picture=False,
@@ -1024,7 +1155,7 @@ class WaveData:
 
                 # 1st picture
                 self.add_picture_to_pptx(
-                    file_name_full=file1,
+                    file_path=file1,
                     count_picture=False,
                     picture_width=picture_width,
                     resize=resize,
@@ -1047,7 +1178,7 @@ class WaveData:
 
                 # 2nd picture
                 self.add_picture_to_pptx(
-                    file_name_full=file2,
+                    file_path=file2,
                     count_picture=False,
                     picture_width=picture_width,
                     resize=resize,
@@ -1067,7 +1198,7 @@ class WaveData:
 
     def add_picture_to_pptx(
         self,
-        file_name_full,
+        file_path,
         count_picture=True,
         picture_width=400,
         left=0,
@@ -1078,7 +1209,7 @@ class WaveData:
         """add picture to pptx
 
         Args:
-            file_name_full (str): file name full path
+            file_path (str): file name full path
             resize (bool): set True if resize picture
             count_picture (bool): picture counter
 
@@ -1092,24 +1223,20 @@ class WaveData:
             picture = self.active_presentation.Slides(
                 self.slide_count
             ).Shapes.AddPicture(
-                FileName=file_name_full,
-                LinkToFile=-1,
-                SaveWithDocument=-1,
-                Left=0,
-                Top=0,
+                FileName=file_path, LinkToFile=-1, SaveWithDocument=-1, Left=0, Top=0,
             )
 
         elif self.pptx_lib == "python-pptx":
-            im = Image.open(file_name_full)
+            im = Image.open(file_path)
             im_width, im_height = im.size
 
             if resize:
                 picture = self.slide.shapes.add_picture(
-                    image_file=file_name_full, left=0, top=0, width=Pt(400)
+                    image_file=file_path, left=0, top=0, width=picture_width
                 )
             else:
                 picture = self.slide.shapes.add_picture(
-                    image_file=file_name_full, left=0, top=0
+                    image_file=file_path, left=0, top=0
                 )
 
         if self.pptx_lib == "win32com":
@@ -1187,7 +1314,7 @@ class WaveData:
         elif self.pptx_lib == "python-pptx":
             # TODO check slide layout for table
             self.slide = self.active_presentation.slides.add_slide(
-                self.active_presentation.slide_layouts[5]
+                self.active_presentation.slide_layouts[6]
             )
             self.slide.shapes[0].text = title
             self.slide.shapes[0].text_frame.paragraphs[0].font.size = Pt(font_size)
@@ -1321,12 +1448,12 @@ class WaveData:
             None
 
         """
-        file_name_full = folder_name + str(date_now) + "_" + file_name
+        file_path = folder_name + str(date_now) + "_" + file_name
         if self.pptx_lib == "win32com":
-            self.active_presentation.SaveAs(FileName=file_name_full)
+            self.active_presentation.SaveAs(FileName=file_path)
 
         elif self.pptx_lib == "python-pptx":
-            self.active_presentation.save(file=file_name_full)
+            self.active_presentation.save(file=file_path)
 
     def wf_txt_data_to_csv(self, file):
         """create csv file from osc output text file
@@ -1435,6 +1562,12 @@ class WaveData:
         if "Vminimum" in self.data_df.columns:
             self.data_df["Vminimum"] = self.data_df["Vminimum"].apply(self.mul3)
 
+        if "Vtop" in self.data_df.columns:
+            self.data_df["Vtop"] = self.data_df["Vtop"].apply(self.mul3)
+
+        if "Vbase" in self.data_df.columns:
+            self.data_df["Vbase"] = self.data_df["Vbase"].apply(self.mul3)
+
         if "Pwidth" in self.data_df.columns:
             self.data_df["Pwidth"] = self.data_df["Pwidth"].apply(self.mul12)
 
@@ -1444,25 +1577,10 @@ class WaveData:
 
 if __name__ == "__main__":
     start = time.time()
-    CELL_WIDTH_BASE = 72
     DATA_START_COLUMNS = 10
-    FOLDER_PATH = os.getcwd() + "/20210602_debug_8gpe/"
+    FOLDER_PATH = os.getcwd() + "/20210609_debug_8gpe/"
     PPTX_FILE_NAME = "8GPE_TEST.pptx"
-    OVERVIEW_FILE_NAME = "result_overview.csv"
-    EYE_FILE_NAME = "result_eye.csv"
-    HISTOGRAM_FILE_NAME = "result_histogram.csv"
-    OSC_PICTURE_LIST_OVERVIEW = glob(FOLDER_PATH + "/*overview/*.png")
-    OSC_PICTURE_LIST_EYE = glob(FOLDER_PATH + "/*eye/*.png")
-    OSC_PICTURE_LIST_HISTOGRAM = glob(FOLDER_PATH + "/*histogram/*.png")
-    DATA_GROUP = "Pkind_Vi"
-    DATA_INDEX = "Pin_Rate"
-    FREQ_YTICKS = [1.0, 5.0, 0.5]
-    # DUTY_YTICKS = [40.0, 60.0, 2.5]
-    DUTY_YTICKS = [41.0, 59.0, 3.0]
-    TRTF_YTICKS = [30.0, 70.0, 5]
-    EHEIGHT_YTICS = [300, 400, 20]
-    EWIDTH_YTICKS = [60, 120, 10]
-    PP_YTICKS = [00, 50, 10]
+    OSC_PICTURE_LIST_CROSSTALK = glob(FOLDER_PATH + "/*crosstalk/*.png")
 
     PE = "8GPE_"
     PKINDS = ["IO", "WCK", "CK", "CA", "CS"]
@@ -1488,172 +1606,16 @@ if __name__ == "__main__":
         index=DATA_INDEX,
         pptx_lib=PPTX_LIB,
     )
-    wave_data_overview.make_overshoot_graph(
-        file=FOLDER_PATH
-        + "20210602_101849_P111A1_overview/P111A1_overview_Vih0r500V_Vil0r000V_Vt0r000V_Rate0r286ns_Duty0r500.txt"
-    )
-    wave_data_overview.make_vix_graph(
-        posi_pin_file="./sample_log/P1859A2_RZX_Vih0r916V_Vil0r000V_Rate0r362ns_Speed2r759GHz_TopBase_Meas.txt",
-        nega_pin_file="./sample_log/P1860A2_RZX_Vih0r916V_Vil0r000V_Rate0r362ns_Speed2r759GHz_TopBase_Meas.txt",
-        description=True,
-        item_name=PE + "Vix",
-        reference_level=0.2,
-        ylabel="mV",
-    )
-    wave_data_overview.make_vix_graph(
-        posi_pin_file="./sample_log/P1859A2_RZX_Vih0r916V_Vil0r000V_Rate0r362ns_Speed2r759GHz_TopBase_Meas.txt",
-        nega_pin_file="./sample_log/P1860A2_RZX_Vih0r916V_Vil0r000V_Rate0r362ns_Speed2r759GHz_TopBase_Meas.txt",
-        description=False,
-        item_name=PE + "Vix",
-        reference_level=0.229,
-        ylabel="mV",
-    )
-    wave_data_overview.add_vix_table_to_pptx(
-        title="Vix",
-        items=[
-            "Positive Pin",
-            "Negative Pin",
-            "Vi",
-            "rate",
-            "Vix_WCK_FR/|Min(f(t))| (%)",
-            "Vix_WCK_Rf/Max(f(t)) (%)",
-        ],
-        cell_width=[
-            CELL_WIDTH_BASE * 1.1,
-            CELL_WIDTH_BASE * 1.1,
-            CELL_WIDTH_BASE * 2.0,
-            CELL_WIDTH_BASE * 1.1,
-            CELL_WIDTH_BASE * 2.0,
-            CELL_WIDTH_BASE * 2.0,
-        ],
-        cell_height=20,
-    )
-    # for pkind in PKINDS:
-    wave_data_overview.make_graph(
-        df_columns_list=["Frequency"],
-        file_name=PE + "Frequency",
-        format="%.2f",
-        legends=["Freq(GHz)"],
-        yticks=FREQ_YTICKS,
-        ylabel="GHz",
-        pkind=pkind,
-    )
-    wave_data_overview.make_graph(
-        axhline=[47, 53],  # reference line
-        df_columns_list=["Dutycycle"],
-        file_name=PE + "Duty",
-        legends=["Duty(%)"],
-        yticks=DUTY_YTICKS,
-        ylabel="%",
-        pkind=pkind,
-    )
-    wave_data_overview.make_graph(
-        axhline=[60],  # spec line
-        df_columns_list=["Risetime", "Falltime"],
-        file_name=PE + "Risetime_Falltime",
-        legends=["Tr(ps)", "Tf(ps)"],
-        spec=True,
-        yticks=TRTF_YTICKS,
-        ylabel="ps",
-    )
-    wave_data_overview.add_summary_table_to_pptx(
-        title="overview",
-        cell_width=[
-            CELL_WIDTH_BASE * 1.1,
-            CELL_WIDTH_BASE * 2,
-            CELL_WIDTH_BASE * 1.2,
-            CELL_WIDTH_BASE * 1.2,
-            CELL_WIDTH_BASE * 1.2,
-            CELL_WIDTH_BASE * 1.2,
-            CELL_WIDTH_BASE * 1.2,
-            CELL_WIDTH_BASE * 1.2,
-            CELL_WIDTH_BASE * 1.2,
-            CELL_WIDTH_BASE * 1.2,
-            CELL_WIDTH_BASE * 1.2,
-            CELL_WIDTH_BASE * 1.2,
-        ],
-        items=[
-            "Pin",
-            "Vi",
-            "Rate",
-            "Frequency",
-            "Dutycycle",
-            "Risetime",
-            "Falltime",
-            "Overshoot",
-            "Preshoot",
-            "Pwidth",
-        ],
-        groupby_table="Vi",
-        rename={
-            "Risetime": "Tr(ps)",
-            "Frequency": "Freq(GHz)",
-            "Dutycycle": "Duty(%)",
-            "Falltime": "Tf(ps)",
-            "Overshoot": "Overshoot(%)",
-            "Preshoot": "Preshoot(%)",
-            "Pwidth": "Pwidth(ps)",
-            "nan": "-",
-        },
-        # sort="Order"
-        # pkind="IO"
-    )
-    wave_data_eye = WaveData(
-        active_presentation=active_presentation,
-        file_name=EYE_FILE_NAME,
-        folder_path=FOLDER_PATH,
-        groupby=DATA_GROUP,
-        index=DATA_INDEX,
-        pptx_lib=PPTX_LIB,
-    )
-    wave_data_eye.make_graph(
-        df_columns_list=["Eheight"],
-        file_name=PE + "Eheight",
-        legends=["Eye Height(mV)"],
-        ylabel="mV",
-        yticks=EHEIGHT_YTICS,
-    )
-    wave_data_eye.add_summary_table_to_pptx(
-        title="eye",
-        cell_width=[
-            # CELL_WIDTH_BASE * 5,
-            CELL_WIDTH_BASE * 2,
-            CELL_WIDTH_BASE * 2,
-            CELL_WIDTH_BASE * 2,
-            CELL_WIDTH_BASE * 2,
-            CELL_WIDTH_BASE * 2,
-            CELL_WIDTH_BASE * 2,
-            CELL_WIDTH_BASE * 2,
-        ],
-        items=["Pin", "Vi", "Rate", "Eheight"],
-        rename={"Eheight": "Eye Height(mV)"},
-        groupby_table="Vi",
-    )
-    # wave_data_eye.make_excel_graphs(
-    #     data_start_column=DATA_START_COLUMNS,
-    #     chart_yaxis_titles=["ps", "mV"],
-    #     chart_yaxis_scaling_mins=[300, 0],
-    #     chart_yaxis_scaling_maxes=[400, 10],
-    #     chart_yaxis_major_unit=[20, 2],
-    # )
-    wave_data_histogram = WaveData(
-        active_presentation=active_presentation,
-        file_name=HISTOGRAM_FILE_NAME,
-        folder_path=FOLDER_PATH,
-        groupby=DATA_GROUP,
-        index=DATA_INDEX,
-        pptx_lib=PPTX_LIB,
-    )
-    wave_data_histogram.make_graph(
-        df_columns_list=["Pp"],
-        file_name=PE + "Jitter",
-        legends=["PP(ps)"],
-        ylabel="ps",
-        yticks=PP_YTICKS,
-    )
-    wave_data_histogram.add_pictures_to_pptx(file_list=OSC_PICTURE_LIST_OVERVIEW,)
-    wave_data_histogram.add_pictures_to_pptx(file_list=OSC_PICTURE_LIST_EYE,)
-    wave_data_histogram.add_pictures_to_pptx(file_list=OSC_PICTURE_LIST_HISTOGRAM,)
+    for pkind in PKINDS:
+        wave_data_overview.make_graph(
+            df_columns_list=["Frequency"],
+            file_name=PE + "Frequency",
+            format="%.2f",
+            legends=["Freq(GHz)"],
+            yticks=FREQ_YTICKS,
+            ylabel="GHz",
+            pkind=pkind,
+        )
     wave_data_overview.save_pptx(file_name=PPTX_FILE_NAME, folder_name=FOLDER_PATH)
     elapsed_time = time.time() - start
-    print(f"elapsed_time:{elapsed_time:.1f}[sec]")
+    print(f"exec time:{elapsed_time:.1f}[sec]")
