@@ -596,9 +596,9 @@ class WaveData:
         if item_name == "Overshoot":
             y_label_position_offset = 0.075
             self.ax.fill_between(
-                x,
-                y,
-                reference_level,
+                x=x,
+                y1=y,
+                y2=reference_level,
                 where=(y > reference_level) & (x < x[graph_x_middle]),
                 color="C0",
                 alpha=0.2,
@@ -615,9 +615,9 @@ class WaveData:
         elif item_name == "Undershoot":
             y_label_position_offset = -0.075
             self.ax.fill_between(
-                x,
-                y,
-                reference_level,
+                x=x,
+                y1=y,
+                y2=reference_level,
                 where=(y < reference_level) & (x < x[graph_x_middle]),
                 color="C0",
                 alpha=0.2,
@@ -632,11 +632,11 @@ class WaveData:
                     x_end = x[i]
 
         print(f"{area:.1f}mV")
-        self.ax.text(
-            (x_start + x_end) / 2,
-            vmaximum + y_label_position_offset,
-            f"{area:.1f}[mV-ns]",
-            backgroundcolor="white",
+        self.add_ax_text(
+            x=(x_start + x_end) / 2,
+            y=vmaximum + y_label_position_offset,
+            s=f"{area:.1f}[mV-ns]",
+            transform=self.ax.transData,
             zorder=11,
             fontfamily="monospace",
         )
