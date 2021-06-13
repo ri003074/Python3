@@ -358,6 +358,7 @@ class WaveData:
         pin_kind=None,
         xlabel=None,
         ylabel=None,
+        yticks_per_condition=None,
     ):
         """make specified graph from dataframe using matplotlib
 
@@ -395,6 +396,7 @@ class WaveData:
 
         if self.groupby:
             for name, group in df.groupby(self.groupby):
+                print(f"\ncondition_name = {name}")
                 print(group)
                 df_plot = group[df_columns_list]
                 print(df_plot)
@@ -421,6 +423,9 @@ class WaveData:
 
                 # set number of label
                 self.ax.set_xticks([i for i in range(group.shape[0])])
+
+                if yticks_per_condition and (name in yticks_per_condition):
+                    yticks = yticks_per_condition[name]
 
                 print(df_plot)
                 df_plot.plot(
@@ -1677,6 +1682,7 @@ if __name__ == "__main__":
             yticks=FREQ_YTICKS,
             ylabel="GHz",
             pin_kind=pkind,
+            yticks_per_condition={"CS_Vih1r0V_Vil0r0V_Vt0r5V": [0, 2, 0.2]},
         )
         wave_data_overview.add_summary_table_to_pptx(
             title="overview_" + pkind,
