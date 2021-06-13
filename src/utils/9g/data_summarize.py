@@ -1441,21 +1441,19 @@ class WaveData:
 
                 except ValueError:
                     if rename:
-                        for key, value in rename.items():
-                            if key == data_list_to_table[i][j]:
-                                if self.pptx_lib == "win32com":
-                                    tr.Text = value
+                        if data_list_to_table[i][j] in rename:
+                            if self.pptx_lib == "win32com":
+                                tr.Text = rename[data_list_to_table[i][j]]
 
-                                elif self.pptx_lib == "python-pptx":
-                                    tr.text = value
+                            elif self.pptx_lib == "python-pptx":
+                                tr.text = rename[data_list_to_table[i][j]]
 
-                                break
-                            else:
-                                if self.pptx_lib == "win32com":
-                                    tr.Text = data_list_to_table[i][j]
+                        else:
+                            if self.pptx_lib == "win32com":
+                                tr.Text = data_list_to_table[i][j]
 
-                                elif self.pptx_lib == "python-pptx":
-                                    tr.text = data_list_to_table[i][j]
+                            elif self.pptx_lib == "python-pptx":
+                                tr.text = data_list_to_table[i][j]
 
                     else:
                         if self.pptx_lib == "win32com":
