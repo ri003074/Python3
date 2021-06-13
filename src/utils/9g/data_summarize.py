@@ -38,8 +38,10 @@ from glob import glob
 from variables import OVERVIEW_FILE_NAME
 from variables import DATA_GROUP
 from variables import DATA_INDEX
+
 # from variables import PP_YTICKS
 from variables import FREQ_YTICKS
+from variables import CELL_WIDTH_BASE
 
 picture_counter = 0
 
@@ -49,6 +51,7 @@ date_now = now.strftime("%Y%m%d%H%M")
 
 """
 TODO
+num->number
 
 """
 
@@ -443,13 +446,13 @@ class WaveData:
                     grid=True,
                 )
 
-                num = f"{picture_counter:03}_"
+                picture_number = f"{picture_counter:03}_"
 
                 # for excel graph
                 excel_file_name = (
                     self.folder_path
                     + "/excel_graph_data/"
-                    + num
+                    + picture_number
                     + self.file_name.replace(".csv", "")
                     + "_"
                     + name
@@ -466,12 +469,14 @@ class WaveData:
                     chart_yaxis_title=ylabel,
                 )
 
-                file_path = self.folder_path + num + name + "_" + file_name + ".png"
+                file_path = (
+                    self.folder_path + picture_number + name + "_" + file_name + ".png"
+                )
                 plt.savefig(file_path)
                 plt.close("all")
 
                 self.add_slide_to_pptx(
-                    title=num + name + "_" + file_name, layout=11,
+                    title=picture_number + name + "_" + file_name, layout=11,
                 )
 
                 self.add_picture_to_pptx(file_path=file_path)
@@ -497,12 +502,12 @@ class WaveData:
                 legends=legends,
             )
 
-            num = f"{picture_counter:03}_"
-            file_path = self.folder_path + num + file_name + ".png"
-            plt.savefig(self.folder_path + num + file_name + ".png")
+            picture_number = f"{picture_counter:03}_"
+            file_path = self.folder_path + picture_number + file_name + ".png"
+            plt.savefig(file_path)
             plt.close("all")
             self.add_slide_to_pptx(
-                title=num + file_name, layout=11,
+                title=picture_number + file_name, layout=11,
             )
 
             self.add_picture_to_pptx(file_path=file_path)
@@ -510,6 +515,18 @@ class WaveData:
     def make_overshoot_graph(
         self, file, yticks, figsize=(10, 5.5), item_name="Overshoot"
     ):
+        """make overshoot graph
+
+        Args:
+            file (list): waveform text data to make graph
+            yticks (list): yticks
+            figsize (list): figure size
+            item_name (str): item name. Overshoot or Undershoot
+
+        Returns:
+            None
+
+        """
         self.setup_fig_and_ax(figsize=figsize, xmargin=0.01, format="%.3f")
 
         match_pin_file = re.match(r".*((P.*?)_.*(Vih.*)_Rate0r(.*ns).*).txt", file)
@@ -637,15 +654,29 @@ class WaveData:
             yticks=yticks,
             legends=[pin_name],
         )
-        num = f"{picture_counter:03}_"
+        picture_number = f"{picture_counter:03}_"
         pkind = self.check_pin_kind(pin_name)
         file_path = (
-            self.folder_path + num + pkind[0] + "_" + vi + "_" + item_name + ".png"
+            self.folder_path
+            + picture_number
+            + pkind[0]
+            + "_"
+            + vi
+            + "_"
+            + item_name
+            + ".png"
         )
         plt.savefig(file_path)
         plt.close("all")
         self.add_slide_to_pptx(
-            title=num + pkind[0] + "_" + vi + "_" + test_rate + "_" + item_name,
+            title=picture_number
+            + pkind[0]
+            + "_"
+            + vi
+            + "_"
+            + test_rate
+            + "_"
+            + item_name,
             layout=11,
         )
         self.add_picture_to_pptx(file_path=file_path)
@@ -709,15 +740,18 @@ class WaveData:
 
         # make diff column
         df_posi_nega["f(t)"] = df_posi_nega["wck_t"] - df_posi_nega["wck_c"]
+
+        # get 1 cycle waveform
         df_posi_nega = df_posi_nega.iloc[
             int(len(df_posi_nega) * 0.23) : int(len(df_posi_nega) * 0.73), :
         ]
 
-        # make dataframe df_vix. df_vix has 4 data which wck_t - wck_c is close to 0
+        # make dataframe df_vix. df_vix has 2 data which wck_t - wck_c is close to 0
         # close to 0 or 0 means cross point
         df_tmp = df_posi_nega.copy()
         df_vix = pd.DataFrame()
-        for i in range(2):
+        cross_point_count = 2
+        for _ in range(cross_point_count):
             val = self.getNearestValue(df_tmp["f(t)"].values.tolist(), 0)
             min_row1 = df_tmp[df_tmp["f(t)"] == val]
             df_vix = pd.concat([df_vix, min_row1])
@@ -745,20 +779,19 @@ class WaveData:
             x_position_offset = 0.0005e-8
             y_position_offset = 0.05
 
-            self.ax.text(
-                x_position + x_position_offset,
-                (y_position + reference_level) / 2,
-                f"{label}={y_position-reference_level:.2f}mV",
-                backgroundcolor="white",
+            self.add_ax_text(
+                x=x_position + x_position_offset,
+                y=(y_position + reference_level) / 2,
+                s=f"{label}={y_position-reference_level:.2f}mV",
+                transform=self.ax.transData,
                 zorder=11,
-                fontfamily="monospace",
             )
-            self.ax.annotate(
-                "",
+            self.add_ax_annotate(
+                text="",
                 xy=[x_position, y_position],
                 xytext=[x_position, reference_level],
-                arrowprops=dict(arrowstyle="<->"),
-                size=5,
+                arrowstyle="<->",
+                zorder=10,
             )
 
         # for Min(f(t)), Max(f(t))
@@ -768,61 +801,58 @@ class WaveData:
         min_index_values = df_posi_nega.loc[min_index]
 
         # Max(f(t))
-        self.ax.annotate(
-            "",
+        self.add_ax_annotate(
+            text="",
             xy=[max_index_values.name, max_index_values["wck_t"]],
             xytext=[max_index_values.name, max_index_values["wck_c"]],
-            arrowprops=dict(arrowstyle="->"),
-            zorder=10,
+            arrowstyle="->",
         )
+
         max_ft = max_index_values["wck_t"] - max_index_values["wck_c"]
-        self.ax.text(
-            max_index_values.name + x_position_offset,  # includes offset
-            (max_index_values["wck_t"] + max_index_values["wck_c"]) / 2
+        self.add_ax_text(
+            x=max_index_values.name + x_position_offset,  # includes offset
+            y=(max_index_values["wck_t"] + max_index_values["wck_c"]) / 2
             + y_position_offset,
-            f"Max(f(t))={max_ft:.2f}mV",
-            backgroundcolor="white",
-            fontfamily="monospace",
+            s=f"Max(f(t))={max_ft:.2f}mV",
+            transform=self.ax.transData,
         )
 
         # Min(f(t))
-        self.ax.annotate(
-            "",
+        self.add_ax_annotate(
+            text="",
             xy=[min_index_values.name, min_index_values["wck_t"]],
             xytext=[min_index_values.name, min_index_values["wck_c"]],
-            arrowprops=dict(arrowstyle="->"),
-            zorder=10,
+            arrowstyle="->",
         )
+
         min_ft = min_index_values["wck_t"] - min_index_values["wck_c"]
-        self.ax.text(
-            min_index_values.name + x_position_offset,  # includes offset
-            (min_index_values["wck_t"] + min_index_values["wck_c"]) / 2
+        self.add_ax_text(
+            x=min_index_values.name + x_position_offset,  # includes offset
+            y=(min_index_values["wck_t"] + min_index_values["wck_c"]) / 2
             + y_position_offset,
-            f"Min(f(t))={min_ft:.2f}mV",
-            backgroundcolor="white",
-            fontfamily="monospace",
+            s=f"Min(f(t))={min_ft:.2f}mV",
+            transform=self.ax.transData,
+            zorder=11,
         )
 
         # Vix_WCK_Ratio Calculation result
         x_position_vix_ratio_result = 0.35
         vix_wck_ratio_fr_min_t = (vix_wck_rf / abs(max_ft)) * 100
         vix_wck_ratio_rf_max_t = (vix_wck_fr / abs(min_ft)) * 100
-        self.ax.text(
-            x_position_vix_ratio_result,
-            -0.2,
-            f"Vix_WCK_Ratio = Vix_WCK_FR/|Min(f(t))| = {vix_wck_fr:.2f}/|{min_ft:5.2f}| = {vix_wck_ratio_rf_max_t:4.1f}%",
+        self.add_ax_text(
+            x=x_position_vix_ratio_result,
+            y=-0.2,
+            s=f"Vix_WCK_Ratio = Vix_WCK_FR/|Min(f(t))| = {vix_wck_fr:.2f}/|{min_ft:5.2f}| = {vix_wck_ratio_rf_max_t:4.1f}%",
             transform=self.ax.transAxes,
-            fontfamily="monospace",
         )
-        self.ax.text(
-            x_position_vix_ratio_result,
-            -0.25,
-            f"Vix_WCK_Ratio = Vix_WCK_Rf/ Max(f(t))  = {vix_wck_rf:.2f}/ {max_ft:5.2f}  = {vix_wck_ratio_fr_min_t:4.1f}%",
+        self.add_ax_text(
+            x=x_position_vix_ratio_result,
+            y=-0.25,
+            s=f"Vix_WCK_Ratio = Vix_WCK_Rf/ Max(f(t))  = {vix_wck_rf:.2f}/ {max_ft:5.2f}  = {vix_wck_ratio_fr_min_t:4.1f}%",
             transform=self.ax.transAxes,
-            fontfamily="monospace",
         )
 
-        # make data for table outpu
+        # make data for table output
         self.data_vix.append(
             {
                 "Vi": vi,
@@ -854,18 +884,24 @@ class WaveData:
             fontsize=fontsize,
             yticks=[],
             axhline="",
-            # num_of_index=[],
             legends=[positive_pin_name, negative_pin_name],
         )
-        num = f"{picture_counter:03}_"
+        picture_number = f"{picture_counter:03}_"
         pkind = self.check_pin_kind(positive_pin_name)
         file_path = (
-            self.folder_path + num + pkind[0] + "_" + vi + "_" + item_name + ".png"
+            self.folder_path
+            + picture_number
+            + pkind[0]
+            + "_"
+            + vi
+            + "_"
+            + item_name
+            + ".png"
         )
         plt.savefig(file_path)
         plt.close("all")
         self.add_slide_to_pptx(
-            title=num + pkind[0] + "_" + vi + "_" + item_name, layout=11,
+            title=picture_number + pkind[0] + "_" + vi + "_" + item_name, layout=11,
         )
         self.add_picture_to_pptx(file_path=file_path)
 
@@ -887,6 +923,27 @@ class WaveData:
                 resize=True,
                 count_picture=False,
             )
+
+    def add_ax_annotate(self, text, xy, xytext, arrowstyle="<->", zorder=10):
+        self.ax.annotate(
+            text=text,
+            xy=xy,
+            xytext=xytext,
+            arrowprops=dict(arrowstyle=arrowstyle),
+            zorder=zorder,
+            size=5,
+        )
+
+    def add_ax_text(self, x, y, s, transform, zorder=10):
+        self.ax.text(
+            x=x,
+            y=y,
+            s=s,
+            transform=transform,
+            backgroundcolor="white",
+            fontfamily="monospace",
+            zorder=zorder,
+        )
 
     def getNearestValue(self, list, num):
         """return nearest value of num from list
@@ -1606,6 +1663,13 @@ if __name__ == "__main__":
         index=DATA_INDEX,
         pptx_lib=PPTX_LIB,
     )
+    wave_data_overview.make_vix_graph(
+        item_name="vix",
+        posi_pin_file=FOLDER_PATH
+        + "P1857A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
+        nega_pin_file=FOLDER_PATH
+        + "P1858A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
+    )
     for pkind in PKINDS:
         wave_data_overview.make_graph(
             df_columns_list=["Frequency"],
@@ -1614,6 +1678,19 @@ if __name__ == "__main__":
             legends=["Freq(GHz)"],
             yticks=FREQ_YTICKS,
             ylabel="GHz",
+            pkind=pkind,
+        )
+        wave_data_overview.add_summary_table_to_pptx(
+            title="overview_" + pkind,
+            cell_width=[
+                CELL_WIDTH_BASE * 1.1,
+                CELL_WIDTH_BASE * 2.0,
+                CELL_WIDTH_BASE * 1.1,
+                CELL_WIDTH_BASE * 1.1,
+            ],
+            items=["Pin", "Vi", "Rate", "Frequency"],
+            rename={"Vih1r0V_Vil0r0V_Vt0r5V": "Vih=1.0V, Vil=0.0V"},
+            # rename={"Vih1r0V_": "Vih=1.0V,"},
             pkind=pkind,
         )
     wave_data_overview.save_pptx(file_name=PPTX_FILE_NAME, folder_name=FOLDER_PATH)
