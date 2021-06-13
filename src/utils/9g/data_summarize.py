@@ -133,7 +133,7 @@ class WaveData:
                     rows.insert(0, "Condition")
                     rows.insert(2, "Pin")
                     rows.insert(3, match.group(1))
-                    rows.insert(4, "Pkind")
+                    rows.insert(4, "Pin_kind")
 
                     pin_kind, pin_order = self.check_pin_kind(match.group(1))
 
@@ -173,7 +173,7 @@ class WaveData:
                 2, "Pin_Vi", self.data_df["Pin"] + "_" + self.data_df["Vi"]
             )
             self.data_df.insert(
-                3, "Pkind_Vi", self.data_df["Pkind"] + "_" + self.data_df["Vi"]
+                3, "Pin_kind_Vi", self.data_df["Pin_kind"] + "_" + self.data_df["Vi"]
             )
 
             # adjust unit of dataframe
@@ -355,7 +355,7 @@ class WaveData:
         axhline=[],
         spec=False,
         legends=None,
-        pkind=None,
+        pin_kind=None,
         xlabel=None,
         ylabel=None,
     ):
@@ -374,7 +374,7 @@ class WaveData:
             axline (list): yaxis line
             spec (bool): set true if spec condition
             legends (list): legend
-            pkind (str): pin kind
+            pin_kind (str): pin kind
             xlabel (str): xlabel
             ylabel (str): ylabel
 
@@ -388,8 +388,8 @@ class WaveData:
         os.makedirs(self.folder_path + "excel_graph_data", exist_ok=True)
 
         # if needs to separate result per pin kind
-        if pkind:
-            df = self.data_df[self.data_df["Pkind"] == pkind].copy()
+        if pin_kind:
+            df = self.data_df[self.data_df["Pin_kind"] == pin_kind].copy()
         else:
             df = self.data_df.copy()
 
@@ -584,9 +584,9 @@ class WaveData:
         print(x[graph_x_middle])
 
         area = 0
-        x_end = 0
-        x_start_counter = 0
         x_start = 0
+        x_start_counter = 0
+        x_end = 0
         y_label_position_offset = 0
         if item_name == "Overshoot":
             y_label_position_offset = 0.075
@@ -655,11 +655,11 @@ class WaveData:
             legends=[pin_name],
         )
         picture_number = f"{picture_counter:03}_"
-        pkind = self.check_pin_kind(pin_name)
+        pin_kind = self.check_pin_kind(pin_name)
         file_path = (
             self.folder_path
             + picture_number
-            + pkind[0]
+            + pin_kind[0]
             + "_"
             + vi
             + "_"
@@ -670,7 +670,7 @@ class WaveData:
         plt.close("all")
         self.add_slide_to_pptx(
             title=picture_number
-            + pkind[0]
+            + pin_kind[0]
             + "_"
             + vi
             + "_"
@@ -887,11 +887,11 @@ class WaveData:
             legends=[positive_pin_name, negative_pin_name],
         )
         picture_number = f"{picture_counter:03}_"
-        pkind = self.check_pin_kind(positive_pin_name)
+        pin_kind = self.check_pin_kind(positive_pin_name)
         file_path = (
             self.folder_path
             + picture_number
-            + pkind[0]
+            + pin_kind[0]
             + "_"
             + vi
             + "_"
@@ -901,7 +901,7 @@ class WaveData:
         plt.savefig(file_path)
         plt.close("all")
         self.add_slide_to_pptx(
-            title=picture_number + pkind[0] + "_" + vi + "_" + item_name, layout=11,
+            title=picture_number + pin_kind[0] + "_" + vi + "_" + item_name, layout=11,
         )
         self.add_picture_to_pptx(file_path=file_path)
 
@@ -1087,7 +1087,7 @@ class WaveData:
         cell_height=20,
         groupby_table=None,
         rename=None,
-        pkind=None,
+        pin_kind=None,
         sort=None,
         merge=False,
     ):
@@ -1102,7 +1102,7 @@ class WaveData:
                 cell_height (int): cell height
                 groupby_table (str): group name of table in case separate table by group
                 rename (dict): specify header original and after name in case rename
-                pkind (str): pin kind
+                pin_kind (str): pin kind
                 sort (bool): if sort data by one of data frame column, specify df column name.
 
             Returns:
@@ -1123,9 +1123,9 @@ class WaveData:
         self.add_slide_to_pptx(title=title, layout=4)
 
         # if needs to separate result per pin kind
-        if pkind:
+        if pin_kind:
             data_list_to_table_df = (
-                self.data_df[self.data_df["Pkind"] == pkind].copy().reset_index()
+                self.data_df[self.data_df["Pin_kind"] == pin_kind].copy().reset_index()
             )
         else:
             data_list_to_table_df = self.data_df.reset_index()
@@ -1568,7 +1568,7 @@ class WaveData:
             pin_kind = "CS"
             pin_order = 5
         else:
-            print("Pkind Error")
+            print("Pin_kind Error")
             sys.exit()
 
         return pin_kind, pin_order
@@ -1678,7 +1678,7 @@ if __name__ == "__main__":
             legends=["Freq(GHz)"],
             yticks=FREQ_YTICKS,
             ylabel="GHz",
-            pkind=pkind,
+            pin_kind=pkind,
         )
         wave_data_overview.add_summary_table_to_pptx(
             title="overview_" + pkind,
@@ -1691,7 +1691,7 @@ if __name__ == "__main__":
             items=["Pin", "Vi", "Rate", "Frequency"],
             rename={"Vih1r0V_Vil0r0V_Vt0r5V": "Vih=1.0V, Vil=0.0V"},
             # rename={"Vih1r0V_": "Vih=1.0V,"},
-            pkind=pkind,
+            pin_kind=pkind,
         )
     wave_data_overview.save_pptx(file_name=PPTX_FILE_NAME, folder_name=FOLDER_PATH)
     elapsed_time = time.time() - start
