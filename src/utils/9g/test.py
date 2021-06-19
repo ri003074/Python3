@@ -103,9 +103,16 @@ a = A("abc")
 a.add("def")
 a.show()
 
-
 print(a)
-
 
 lst = [1, 2, 3]
 print(sum(lst))
+
+
+def append_print(item, list_=[]):
+    list_.append(item)
+    print(list_)
+
+
+x: int = 10
+y: int = 1

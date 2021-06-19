@@ -4,58 +4,51 @@ import os
 import re
 import sys
 import time
+from collections import OrderedDict
+from glob import glob
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import win32com.client
-
-from collections import OrderedDict
 from openpyxl import load_workbook
 from openpyxl.chart import LineChart, Reference
 from openpyxl.chart.layout import Layout, ManualLayout
 from openpyxl.chart.shapes import GraphicalProperties
 from pptx import Presentation
-from pptx.enum.text import PP_ALIGN
-
 from pptx.enum.text import MSO_ANCHOR
+from pptx.enum.text import PP_ALIGN
 from pptx.util import Pt
-from PIL import Image
 
-# from openpyxl.drawing.line import LineProperties
-
-
-from glob import glob
-
-# from variables import FREQ_YTICKS
-# from variables import OVERSHOOT_YTICKS_1V_0V
-# from variables import OVERSHOOT_YTICKS_0r5V_0V
-# from variables import CELL_WIDTH_BASE
-# from variables import CROSSTALK_YTICKS
-
+from variables import CELL_WIDTH_BASE
+from variables import CELL_WIDTH_BASE_PIN
+from variables import CELL_WIDTH_BASE_RATE
+from variables import CELL_WIDTH_BASE_VI
+from variables import DATA_GROUP
+from variables import DATA_INDEX
+from variables import FREQ_YTICKS
 # from variables import CROSSTALK_FILE_NAME
 # from variables import HISTOGRAM_FILE_NAME
 from variables import OVERVIEW_FILE_NAME
-from variables import DATA_GROUP
-from variables import DATA_INDEX
+# from variables import OVERVIEW_FILE_NAME
+from variables import RENAME_CONDITIONS
 
-# from variables import PP_YTICKS
-from variables import FREQ_YTICKS
-from variables import CELL_WIDTH_BASE
+# from openpyxl.drawing.line import LineProperties
 
 picture_counter = 0
 
 now = datetime.datetime.now()
 date_now = now.strftime("%Y%m%d%H%M")
 
-
 """
 TODO
-num->number
+# TODO fix this code, change to easy to read file name
+title = file.replace("\\", "xyz").replace(".png", "")
+title = re.sub(".*xyz", "", title)
 
 """
 
-"""docstring smaple. function simple explanation is written in this line.
+"""docstring sample. function simple explanation is written in this line.
 
     if function detail explanation is necessary, write to here.
 
@@ -70,16 +63,106 @@ num->number
 """
 
 
+def check_pin_kind(pin_name):
+    """check pin kind and return pin kind and order for sort
+
+    Args:
+        pin_name(str): pin name like P1857A1
+
+    Returns:
+        pin_kind_for_pptx, pin_order
+        pin_kind_for_pptx: "IO", "WCK", "CK", "CA", "CS",
+        pin_order: "IO"->1, "WCK"->2, "CK"->3, "CA"->4, "CS"->5
+
+    """
+    match_pin_name = re.match(r"P(\d*).*", pin_name)
+    pin_num = int(match_pin_name.group(1))
+
+    if pin_num < 1857:
+        pin_kind = "IO"
+        pin_order = 1
+    elif 1857 <= pin_num <= 1888:
+        pin_kind = "WCK"
+        pin_order = 2
+    elif 1889 <= pin_num <= 1890:
+        pin_kind = "CK"
+        pin_order = 3
+    elif 1921 <= pin_num <= 1933:
+        pin_kind = "CA"
+        pin_order = 4
+    elif 1953 <= pin_num <= 1959:
+        pin_kind = "CS"
+        pin_order = 5
+    else:
+        print("Pin_kind Error")
+        sys.exit()
+
+    return pin_kind, pin_order
+
+
+def mul3(x):
+    return x * 1e3
+
+
+def mul12(x):
+    return x * 1e12
+
+
+def mul_m9(x):
+    return x * 1e-9
+
+
+def get_nearest_value(lst, num):
+    """return nearest value of num from list
+
+    Args:
+        lst (list): list of num
+        num (int): num of value
+
+    Returns:
+        nearest value of num from list
+
+    """
+    idx = np.abs(np.asarray(lst) - num).argmin()
+    return lst[idx]
+
+
+def wf_txt_data_to_csv(file):
+    """create csv file from osc output text file
+
+    Args:
+        file (str): file name
+
+    Returns:
+        None
+
+    """
+    print(file)
+    with open(file.replace(".txt", ".csv"), "w", encoding="utf-8") as fw:
+        flg = 0
+        with open(file, encoding="utf-8") as fr:
+            for line in fr.read().splitlines():
+                match_data = re.match(r"Data", line)
+
+                if line != "":
+                    if flg:
+                        fw.write(line)
+                        fw.write("\n")
+
+                    if match_data:
+                        flg = 1
+
+
 class WaveData:
     def __init__(
-        self,
-        file_name,
-        folder_path,
-        active_presentation,
-        pptx_lib,
-        index="Pin_Rate",
-        groupby=None,
-        header=None,
+            self,
+            file_name,
+            folder_path,
+            active_presentation,
+            pptx_lib,
+            index="Pin_Rate",
+            group_by=None,
+            header=None,
     ):
         self.data_df = pd.DataFrame()
         self.data_vns = []
@@ -87,12 +170,16 @@ class WaveData:
         self.data_overshoot = []
         self.file_name = file_name
         self.folder_path = folder_path
-        self.groupby = groupby
+        self.group_by = group_by
         self.header = header
         self.index = index
         self.input_file = self.folder_path + self.file_name
         self.pptx_lib = pptx_lib
         self.active_presentation = active_presentation
+        self.chart = None
+        self.fig = None
+        self.ax = None
+        self.slide = None
 
         if self.pptx_lib == "win32com":
             self.slide_width = self.active_presentation.PageSetup.SlideWidth
@@ -117,35 +204,36 @@ class WaveData:
         """Make pandas dataframe and xlsx data from csv file
 
         Args:
-            None
 
         Returns:
             None
 
         """
-        with open(self.input_file, mode="r", encoding="utf-8-sig") as csvfile:
-            reader = csv.reader(csvfile)
+        with open(self.input_file, mode="r", encoding="utf-8-sig") as csv_file:
+            reader = csv.reader(csv_file)
             data = []
 
             for rows in reader:
-                match = re.match(r"(P(\d*).*?)_.*?_(.*?_.*?_.*?)_(.*?)_.*", rows[0])
+                match = re.match(r"(P(\d*).*?)_.*?(Vih.*?_.*?_.*?)_(.*?)_.*",
+                                 rows[0])
                 if match:
                     rows.insert(0, "Condition")
                     rows.insert(2, "Pin")
                     rows.insert(3, match.group(1))
                     rows.insert(4, "Pin_kind")
 
-                    pin_kind, pin_order = self.check_pin_kind(match.group(1))
+                    pin_kind, pin_order = check_pin_kind(match.group(1))
 
                     rows.insert(5, pin_kind)
                     rows.insert(6, "Vi")
                     rows.insert(7, match.group(3).replace("00V", "V"))
                     rows.insert(8, "Rate")
                     rows.insert(
-                        9, match.group(4).replace("Rate0r", "").replace("ns", "ps")
+                        9,
+                        match.group(4).replace("Rate0r", "").replace("ns", "ps")
                     )
                     rows.insert(10, "Order")
-                    rows.insert(11, pin_order)
+                    rows.insert(11, str(pin_order))
                     rows.insert(12, "Condition_all")
                     rows.insert(13, match.group(0))
 
@@ -158,7 +246,7 @@ class WaveData:
                     except ValueError:
                         dic[rows[i].replace(" ", "").capitalize()] = rows[
                             i + 1
-                        ].replace(" ", "")
+                            ].replace(" ", "")
                     except AttributeError:
                         dic[rows[i].replace(" ", "").capitalize()] = rows[i + 1]
 
@@ -173,32 +261,35 @@ class WaveData:
                 2, "Pin_Vi", self.data_df["Pin"] + "_" + self.data_df["Vi"]
             )
             self.data_df.insert(
-                3, "Pin_kind_Vi", self.data_df["Pin_kind"] + "_" + self.data_df["Vi"]
+                3, "Pin_kind_Vi",
+                self.data_df["Pin_kind"] + "_" + self.data_df["Vi"]
             )
 
             # adjust unit of dataframe
             self.adjust_unit()
 
             if self.header:
-                self.data_df = self.data_df.set_axis(self.header, axis="columns")
+                self.data_df = self.data_df.set_axis(self.header,
+                                                     axis="columns")
 
             self.data_df = self.data_df.set_index(self.index)
 
-            with pd.ExcelWriter(self.input_file.replace("csv", "xlsx")) as writer:
+            with pd.ExcelWriter(
+                    self.input_file.replace("csv", "xlsx")) as writer:
                 self.data_df.to_excel(writer, sheet_name="summary")
 
-                if self.groupby:
-                    for name, group in self.data_df.groupby(self.groupby):
+                if self.group_by:
+                    for name, group in self.data_df.groupby(self.group_by):
                         group.to_excel(writer, sheet_name=name)
 
     def make_excel_graph(
-        self,
-        file_name,
-        chart_yaxis_scaling,
-        chart_height=9,
-        chart_width=16,
-        chart_position="C2",
-        chart_yaxis_title=None,
+            self,
+            file_name,
+            chart_yaxis_scaling,
+            chart_height=9,
+            chart_width=16,
+            chart_position="C2",
+            chart_yaxis_title=None,
     ):
         """make specified excel graph using xlsx data
 
@@ -220,7 +311,8 @@ class WaveData:
             ws = wb.worksheets[i]
 
             values = Reference(
-                ws, min_row=1, min_col=2, max_row=ws.max_row, max_col=ws.max_column,
+                ws, min_row=1, min_col=2, max_row=ws.max_row,
+                max_col=ws.max_column,
             )
             categories = Reference(
                 ws, min_row=2, min_col=1, max_row=ws.max_row, max_col=1
@@ -241,14 +333,14 @@ class WaveData:
         wb.save(file_name)
 
     def make_excel_graphs(
-        self,
-        chart_height=9,
-        chart_width=16,
-        chart_yaxis_titles=[],
-        chart_yaxis_scaling_mins=[],
-        chart_yaxis_scaling_maxes=[],
-        chart_yaxis_major_unit=[],
-        data_start_column=0,
+            self,
+            chart_height=9,
+            chart_width=16,
+            chart_yaxis_titles=None,
+            chart_yaxis_scaling_mines=None,
+            chart_yaxis_scaling_maxes=None,
+            chart_yaxis_major_unit=None,
+            data_start_column=0,
     ):
         """make excel graphs using xlsx data"""
 
@@ -256,13 +348,13 @@ class WaveData:
         for i in range(len(wb.worksheets)):
             ws = wb.worksheets[i]
 
-            for i in range(ws.max_column + data_start_column * -1 + 1):
+            for j in range(ws.max_column + data_start_column * -1 + 1):
                 values = Reference(
                     ws,
                     min_row=1,
-                    min_col=data_start_column + i,
+                    min_col=data_start_column + j,
                     max_row=ws.max_row,
-                    max_col=data_start_column + i,
+                    max_col=data_start_column + j,
                 )
                 categories = Reference(
                     ws, min_row=2, min_col=1, max_row=ws.max_row, max_col=1
@@ -272,25 +364,25 @@ class WaveData:
                     categories=categories,
                     chart_height=chart_height,
                     chart_width=chart_width,
-                    chart_yaxis_title=chart_yaxis_titles[i],
-                    chart_yaxis_scaling_min=chart_yaxis_scaling_mins[i],
-                    chart_yaxis_scaling_max=chart_yaxis_scaling_maxes[i],
-                    chart_yaxis_major_unit=chart_yaxis_major_unit[i],
+                    chart_yaxis_title=chart_yaxis_titles[j],
+                    chart_yaxis_scaling_min=chart_yaxis_scaling_mines[j],
+                    chart_yaxis_scaling_max=chart_yaxis_scaling_maxes[j],
+                    chart_yaxis_major_unit=chart_yaxis_major_unit[j],
                 )
 
-                ws.add_chart(self.chart, "B" + str(5 + 20 * i))
+                ws.add_chart(self.chart, "B" + str(5 + 20 * j))
         wb.save(self.input_file.replace("csv", "xlsx"))
 
     def setup_excel_chart(
-        self,
-        values,
-        categories,
-        chart_height,
-        chart_width,
-        chart_yaxis_title,
-        chart_yaxis_scaling_min,
-        chart_yaxis_scaling_max,
-        chart_yaxis_major_unit,
+            self,
+            values,
+            categories,
+            chart_height,
+            chart_width,
+            chart_yaxis_title,
+            chart_yaxis_scaling_min,
+            chart_yaxis_scaling_max,
+            chart_yaxis_major_unit,
     ):
         """excel chart setup
 
@@ -326,7 +418,8 @@ class WaveData:
         )
         # self.chart.legend.legendPos = "tr"
         self.chart.legend.layout = Layout(
-            manualLayout=ManualLayout(yMode="edge", xMode="edge", x=0.75, y=0.13)
+            manualLayout=ManualLayout(yMode="edge", xMode="edge", x=0.75,
+                                      y=0.13)
         )
         self.chart.legend.spPr = GraphicalProperties()
         self.chart.legend.spPr.solidFill = "FFFFFF"
@@ -342,42 +435,49 @@ class WaveData:
             series.graphicalProperties.line.noFill = True
 
     def make_graph(
-        self,
-        df_columns_list,
-        yticks,
-        figsize=(10, 5.5),
-        file_name="default",
-        fontsize=14,
-        format="%.1f",
-        legend_loc="upper right",
-        rotation=45,
-        style=["o", "o", "o", "o"],
-        axhline=[],
-        spec=False,
-        legends=None,
-        pin_kind=None,
-        xlabel=None,
-        ylabel=None,
-        yticks_per_condition=None,
+            self,
+            df_columns_list,
+            y_ticks,
+            figure_size=(10, 5.5),
+            file_name="default",
+            font_size=14,
+            digit_format="%.1f",
+            legend_loc="upper right",
+            rotation=45,
+            styles=None,
+            ax_h_lines=None,
+            spec=False,
+            legends=None,
+            pin_kind=None,
+            x_label=None,
+            y_label=None,
+            y_ticks_per_condition=None,
+            ax_h_lines_per_condition=None,
+            additional_information=False,
+            info=None,
     ):
         """make specified graph from dataframe using matplotlib
 
         Args:
             df_columns_list (list): dataframe columns list to make graph
-            yticks (list): yticks
-            figsize (list): figure size
+            y_ticks (list): y_ticks
+            figure_size (tuple): figure size
             file_name (str): filename
-            fontsize (int): font size
-            format (str): axis format setting
+            font_size (int): font size
+            digit_format (str): axis digit_format setting
             legend_loc (str): legend location
             rotation (int): rotation
-            style (list): marker style
-            axline (list): yaxis line
+            styles (list): marker style
+            ax_h_lines (list): yaxis reference line
             spec (bool): set true if spec condition
             legends (list): legend
             pin_kind (str): pin kind
-            xlabel (str): xlabel
-            ylabel (str): ylabel
+            x_label (str): x_label
+            y_label (str): y_label
+            y_ticks_per_condition (dict):
+            ax_h_lines_per_condition:
+            additional_information:
+            info:
 
         Returns:
             None
@@ -394,13 +494,14 @@ class WaveData:
         else:
             df = self.data_df.copy()
 
-        if self.groupby:
-            for name, group in df.groupby(self.groupby):
+        y_ticks_tmp = y_ticks  # save original y_ticks setting
+        if self.group_by:
+            for name, group in df.groupby(self.group_by, sort=False):
                 print(f"\ncondition_name = {name}")
                 print(group)
                 df_plot = group[df_columns_list]
                 print(df_plot)
-                # df_plot = group[df_columns_list].dropna(how="all")
+
                 # skip if dataframe has missing value
                 if df_plot.isnull().values.sum() != 0:
                     df_plot = group[df_columns_list].dropna(how="all")
@@ -409,101 +510,132 @@ class WaveData:
                     if df_plot.empty:
                         continue
 
-                num_of_index = len(df_plot.index)
+                index_count = len(df_plot.index)
 
-                if num_of_index == 2:
-                    xmargin = 0.5
+                if index_count == 2:
+                    x_margin = 0.5
 
                 else:
-                    xmargin = 0.1
+                    x_margin = 0.1
 
                 self.setup_fig_and_ax(
-                    figsize, bottom=0.3, xmargin=xmargin, format=format
+                    figure_size=figure_size,
+                    bottom=0.3,
+                    x_margin=x_margin,
+                    digit_format=digit_format,
                 )
 
                 # set number of label
                 self.ax.set_xticks([i for i in range(group.shape[0])])
 
-                if yticks_per_condition and (name in yticks_per_condition):
-                    yticks = yticks_per_condition[name]
+                y_ticks = y_ticks_tmp
+                if y_ticks_per_condition and (name in y_ticks_per_condition):
+                    y_ticks = y_ticks_per_condition[name]
 
                 print(df_plot)
+
+                if styles is None:
+                    styles = ["o", "o", "o", "o"]
+
                 df_plot.plot(
                     ax=self.ax,
-                    ylim=yticks[:2],
-                    style=style,
+                    ylim=y_ticks[:2],
+                    style=styles,
                     legend=True,
-                    fontsize=fontsize,
+                    fontsize=font_size,
                 )
 
+                if additional_information:
+                    self.add_ax_text(
+                        x=0.99,
+                        y=0.05,
+                        s=info,
+                        transform=self.ax.transAxes,
+                        horizontal_alignment="right",
+                    )
+
                 self.adjust_graph_params(
-                    group_name=name,
+                    group_name=str(name),
                     legends=legends,
                     rotation=rotation,
-                    xlabel=xlabel,
-                    ylabel=ylabel,
-                    yticks=yticks,
-                    fontsize=fontsize,
-                    axhline=axhline,
+                    x_label=x_label,
+                    y_label=y_label,
+                    y_ticks=y_ticks,
+                    font_size=font_size,
+                    ax_h_lines=ax_h_lines,
                     legend_loc=legend_loc,
-                    # num_of_index=num_of_index,
                     spec=spec,
                     grid=True,
+                    ax_h_lines_per_condition=ax_h_lines_per_condition,
                 )
 
                 picture_number = f"{picture_counter:03}_"
 
                 # for excel graph
                 excel_file_name = (
-                    self.folder_path
-                    + "/excel_graph_data/"
-                    + picture_number
-                    + self.file_name.replace(".csv", "")
-                    + "_"
-                    + name
-                    + "_"
-                    + "_".join(df_columns_list)
-                    + ".xlsx"
+                        self.folder_path
+                        + "/excel_graph_data/"
+                        + picture_number
+                        + self.file_name.replace(".csv", "")
+                        + "_"
+                        + name
+                        + "_"
+                        + "_".join(df_columns_list)
+                        + ".xlsx"
                 )
 
                 df_to_excel = df_plot.set_axis(legends, axis=1)
                 df_to_excel.to_excel(excel_file_name)
                 self.make_excel_graph(
                     file_name=excel_file_name,
-                    chart_yaxis_scaling=yticks,
-                    chart_yaxis_title=ylabel,
+                    chart_yaxis_scaling=y_ticks,
+                    chart_yaxis_title=y_label,
                 )
 
                 file_path = (
-                    self.folder_path + picture_number + name + "_" + file_name + ".png"
+                        self.folder_path + picture_number + name + "_" + file_name + ".png"
                 )
                 plt.savefig(file_path)
                 plt.close("all")
 
+                print(name)
+
+                for key, value in RENAME_CONDITIONS.items():
+                    name = name.replace(key, value)
+
+                file_name = file_name.replace("_", " ")
+                print(file_name)
+                # self.add_slide_to_pptx(
+                #     title=picture_number + name + " " + file_name,
+                #     layout=11,
+                # )
                 self.add_slide_to_pptx(
-                    title=picture_number + name + "_" + file_name, layout=11,
+                    title=file_name + " " + name, layout=11,
                 )
 
                 self.add_picture_to_pptx(file_path=file_path)
 
         else:
-            self.setup_fig_and_ax(figsize, bottom=0.3)
+            self.setup_fig_and_ax(figure_size, bottom=0.3)
 
             # set number of label
             self.ax.set_xticks([i for i in range(self.data_df.shape[0])])
 
             self.data_df[df_columns_list].plot(
-                ax=self.ax, ylim=yticks[:2], style=style, legend=True, fontsize=fontsize
+                ax=self.ax,
+                ylim=y_ticks[:2],
+                style=styles,
+                legend=True,
+                fontsize=font_size,
             )
 
             self.adjust_graph_params(
                 rotation=rotation,
-                xlabel=xlabel,
-                ylabel=ylabel,
-                fontsize=fontsize,
-                yticks=yticks,
-                axhline=axhline,
-                # num_of_index=len(self.data_df.index),
+                x_label=x_label,
+                y_label=y_label,
+                font_size=font_size,
+                y_ticks=y_ticks,
+                ax_h_lines=ax_h_lines,
                 legends=legends,
             )
 
@@ -518,50 +650,64 @@ class WaveData:
             self.add_picture_to_pptx(file_path=file_path)
 
     def make_overshoot_graph(
-        self, file, yticks, figsize=(10, 5.5), item_name="Overshoot"
+            self,
+            file,
+            y_ticks,
+            figure_size=(10, 5.5),
+            item_name="Overshoot",
+            additional_information=False,
+            info=None,
     ):
         """make overshoot graph
 
         Args:
-            file (list): waveform text data to make graph
-            yticks (list): yticks
-            figsize (list): figure size
+            file (str): waveform text data to make graph
+            figure_size (tuple): figure size
             item_name (str): item name. Overshoot or Undershoot
+            additional_information (bool):  additional information flag
+            info (str): additional information
 
         Returns:
             None
+            :param info:
+            :param additional_information:
+            :param item_name:
+            :param figure_size:
+            :param file:
+            :param y_ticks:
 
         """
-        self.setup_fig_and_ax(figsize=figsize, xmargin=0.01, format="%.3f")
+        self.setup_fig_and_ax(
+            figure_size=figure_size, x_margin=0.01, digit_format="%.3f"
+        )
 
-        match_pin_file = re.match(r".*((P.*?)_.*(Vih.*)_Rate0r(.*ns).*).txt", file)
+        match_pin_file = re.match(r".*((P.*?)_.*(Vih.*)_(Rate0r.*ns).*).txt",
+                                  file)
         condition_all = match_pin_file.group(1)
         print(self.data_df)
         print(
             self.data_df[
                 (self.data_df["Condition_all"] == condition_all)
                 & self.data_df[item_name].notna()
-            ]
+                ]
         )
         df_tmp = self.data_df[
             (self.data_df["Condition_all"] == condition_all)
             & self.data_df[item_name].notna()
-        ]
-        reference_level = 0
-        vmaximum = 0
+            ]
         if (
-            item_name == "Overshoot"
-            and df_tmp["Vtop"].size == 1
-            and df_tmp["Vmaximum"].size == 1
+                item_name == "Overshoot"
+                and df_tmp["Top"].size == 1
+                and df_tmp["Vmaximum"].size == 1
         ):
-            reference_level = df_tmp["Vtop"][0] * 1e-3
+            reference_level = df_tmp["Top"][0] * 1e-3
             vmaximum = df_tmp["Vmaximum"][0] * 1e-3
         elif (
-            item_name == "Undershoot"
-            and df_tmp["Vbase"].size == 1
-            and df_tmp["Vminimum"].size == 1
+                item_name == "Undershoot"
+                and df_tmp["Base"].size == 1
+                and df_tmp["Vminimum"].size == 1
         ):
-            reference_level = df_tmp["Vbase"][0] * 1e-3
+            reference_level = df_tmp["Base"][0] * 1e-3
             vmaximum = df_tmp["Vminimum"][0] * 1e-3
         else:
             print(
@@ -576,7 +722,7 @@ class WaveData:
         test_rate = match_pin_file.group(4)
         vi = match_pin_file.group(3).replace("00V", "V")
 
-        self.wf_txt_data_to_csv(file)
+        wf_txt_data_to_csv(file)
 
         df = pd.read_csv(file.replace(".txt", ".csv"), header=None)
         df = df.set_axis(["t", pin_name], axis=1)
@@ -586,15 +732,17 @@ class WaveData:
         y = np.array(df[pin_name].tolist())
 
         graph_x_middle = int(x.size / 2)
-        print(x[graph_x_middle])
 
-        area = 0
+        sum_of_voltage = 0
         x_start = 0
-        x_start_counter = 0
+        x_start_flag = 0
         x_end = 0
-        y_label_position_offset = 0
+        area_label_y_position = 0
+        overshoot_label_y_position = 0
         if item_name == "Overshoot":
             y_label_position_offset = 0.075
+            area_label_y_position = vmaximum + y_label_position_offset
+            overshoot_label_y_position = vmaximum + y_label_position_offset * 2
             self.ax.fill_between(
                 x=x,
                 y1=y,
@@ -605,15 +753,17 @@ class WaveData:
             )
             for i in range(int(x.size / 2)):
                 if y[i] > reference_level:
-                    if x_start_counter == 0:
+                    if x_start_flag == 0:
                         x_start = x[i]
-                        x_start_counter += 1
+                        x_start_flag += 1
 
-                    area += y[i] - reference_level
+                    sum_of_voltage += y[i] - reference_level
                     x_end = x[i]
 
         elif item_name == "Undershoot":
             y_label_position_offset = -0.075
+            area_label_y_position = vmaximum + y_label_position_offset * 2
+            overshoot_label_y_position = vmaximum + y_label_position_offset
             self.ax.fill_between(
                 x=x,
                 y1=y,
@@ -624,94 +774,114 @@ class WaveData:
             )
             for i in range(int(x.size / 2)):
                 if y[i] < reference_level:
-                    if x_start_counter == 0:
+                    if x_start_flag == 0:
                         x_start = x[i]
-                        x_start_counter += 1
+                        x_start_flag += 1
 
-                    area += y[i] - reference_level
+                    sum_of_voltage += y[i] - reference_level
                     x_end = x[i]
 
-        print(f"{area:.1f}mV")
+        ratio_of_area_per_1ns = (x[2047] - x[0] + (x[1] - x[0])) * 1e9 / x.size
+        area = abs(sum_of_voltage * ratio_of_area_per_1ns)
+        overshoot = abs(vmaximum - reference_level) * 1e3
+        s = "area"
         self.add_ax_text(
             x=(x_start + x_end) / 2,
-            y=vmaximum + y_label_position_offset,
-            s=f"{area:.1f}[mV-ns]",
+            y=area_label_y_position,
+            s=f"{s:10} = {area:.6f}[V-ns]",
             transform=self.ax.transData,
-            zorder=11,
-            fontfamily="monospace",
+            z_order=11,
+            horizontal_alignment="left",
         )
-        vns_data = {"Condition": condition_all, "v-ns-" + item_name: area}
+        self.add_ax_text(
+            x=(x_start + x_end) / 2,
+            y=overshoot_label_y_position,
+            s=f"{item_name:10} = {overshoot:.6f}[mV]",
+            transform=self.ax.transData,
+            z_order=12,
+            horizontal_alignment="left",
+        )
+        vns_data = {
+            "Condition": condition_all,
+            "v-ns-" + item_name: area,
+            item_name + "_mV": overshoot,
+        }
         self.data_vns.append(vns_data)
 
-        df.plot(ax=self.ax, ylim=yticks[:2])
+        df.plot(ax=self.ax, ylim=y_ticks[:2])
 
-        # make data for table outpu
+        if additional_information:
+            self.add_ax_text(
+                x=0.99,
+                y=0.05,
+                s=info,
+                transform=self.ax.transAxes,
+                horizontal_alignment="right",
+            )
+
+        # make data for table output
         self.data_overshoot.append(
             {"Vi": vi, "Pin": pin_name, "rate": test_rate, "overshoot(v-ns)": 0}
         )
 
         self.adjust_graph_params(
             rotation=0,
-            xlabel=None,
-            ylabel="mV",
-            # fontsize=fontsize,
-            axhline=[reference_level, vmaximum],
-            yticks=yticks,
+            x_label="",
+            y_label="mV",
+            # font_size=font_size,
+            ax_h_lines=[reference_level, vmaximum],
+            y_ticks=y_ticks,
             legends=[pin_name],
         )
         picture_number = f"{picture_counter:03}_"
-        pin_kind = self.check_pin_kind(pin_name)
+        pin_kind = check_pin_kind(pin_name)
         file_path = (
-            self.folder_path
-            + picture_number
-            + pin_kind[0]
-            + "_"
-            + vi
-            + "_"
-            + item_name
-            + ".png"
+                self.folder_path
+                + picture_number
+                + pin_kind[0]
+                + "_"
+                + vi
+                + "_"
+                + item_name
+                + ".png"
         )
         plt.savefig(file_path)
         plt.close("all")
+        title = item_name + "_ " + pin_kind[0] + "_" + vi + "_" + test_rate
+        for key, value in RENAME_CONDITIONS.items():
+            title = title.replace(key, value)
+
         self.add_slide_to_pptx(
-            title=picture_number
-            + pin_kind[0]
-            + "_"
-            + vi
-            + "_"
-            + test_rate
-            + "_"
-            + item_name,
-            layout=11,
+            title=title, layout=11,
         )
         self.add_picture_to_pptx(file_path=file_path)
 
     def make_vix_graph(
-        self,
-        item_name,
-        nega_pin_file,
-        posi_pin_file,
-        description=False,
-        fontsize=14,
-        figsize=(10, 5.5),
-        reference_level=0,
-        rotation=0,
-        xlabel=None,
-        ylabel=None,
+            self,
+            item_name,
+            negative_pin_file,
+            positive_pin_file,
+            description=False,
+            font_size=14,
+            figure_size=(10, 5.5),
+            reference_level=0,
+            rotation=0,
+            x_label=None,
+            y_label=None,
     ):
-        """make vix graph from posi/nega wave data file using matplotlib
+        """make vix graph from positive/negative wave data file using matplotlib
 
         Args:
             item_name (str): item name (Vix)
-            nega_pin_file (str): csv nega pin file name
-            posi_pin_file (str): csv posi pin file name
+            negative_pin_file (str): csv negative pin file name
+            positive_pin_file (str): csv positive pin file name
             description (bool): if put vix min/max ft description
-            fontsize (int): fontsize
-            figsize (list): figure size
+            font_size (int): font_size
+            figure_size (tuple): figure size
             reference_level (float): reference level
-            rotation (int): xlabel rotation value
-            xlabel (str): xlabel
-            ylabel (str): ylabel
+            rotation (int): x_label rotation value
+            x_label (str): x_label
+            y_label (str): y_label
 
         Returns:
             None
@@ -719,45 +889,58 @@ class WaveData:
         """
         global picture_counter
 
-        self.setup_fig_and_ax(figsize=figsize, xmargin=0.01)
+        self.setup_fig_and_ax(figure_size=figure_size, x_margin=0.01)
 
-        match_posi_pin = re.match(r".*(P.*?)_.*(Vih.*)_Rate0r(.*ns).*", posi_pin_file)
-        match_nega_pin = re.match(r".*(P.*?)_.*(Vih.*)_Rate0r(.*ns).*", nega_pin_file)
+        match_positive_pin = re.match(
+            r".*(P.*?)_.*(Vih.*)_Rate0r(.*ns).*", positive_pin_file
+        )
+        match_negative_pin = re.match(
+            r".*(P.*?)_.*(Vih.*)_Rate0r(.*ns).*", negative_pin_file
+        )
 
-        positive_pin_name = match_posi_pin.group(1)
-        negative_pin_name = match_nega_pin.group(1)
-        test_rate = match_posi_pin.group(3)
-        vi = match_posi_pin.group(2).replace("00V", "V")
+        positive_pin_name = match_positive_pin.group(1)
+        negative_pin_name = match_negative_pin.group(1)
+        test_rate = match_positive_pin.group(3)
+        vi = match_positive_pin.group(2).replace("00V", "V")
 
-        self.wf_txt_data_to_csv(posi_pin_file)
-        self.wf_txt_data_to_csv(nega_pin_file)
+        wf_txt_data_to_csv(positive_pin_file)
+        wf_txt_data_to_csv(negative_pin_file)
 
-        df_posi = pd.read_csv(posi_pin_file.replace(".txt", ".csv"), header=None)
-        df_nega = pd.read_csv(nega_pin_file.replace(".txt", ".csv"), header=None)
+        df_positive = pd.read_csv(
+            positive_pin_file.replace(".txt", ".csv"), header=None
+        )
+        df_negative = pd.read_csv(
+            negative_pin_file.replace(".txt", ".csv"), header=None
+        )
 
-        df_posi = df_posi.set_axis(["t", "wck_t"], axis=1)
-        df_nega = df_nega.set_axis(["t", "wck_c"], axis=1)
+        df_positive = df_positive.set_axis(["t", "wck_t"], axis=1)
+        df_negative = df_negative.set_axis(["t", "wck_c"], axis=1)
 
-        df_posi = df_posi.set_index("t")
-        df_nega = df_nega.set_index("t")
+        df_positive = df_positive.set_index("t")
+        df_negative = df_negative.set_index("t")
 
-        df_posi_nega = pd.concat([df_posi, df_nega], axis=1)
+        df_positive_negative = pd.concat([df_positive, df_negative], axis=1)
 
         # make diff column
-        df_posi_nega["f(t)"] = df_posi_nega["wck_t"] - df_posi_nega["wck_c"]
+        df_positive_negative["f(t)"] = (
+                df_positive_negative["wck_t"] - df_positive_negative["wck_c"]
+        )
 
         # get 1 cycle waveform
-        df_posi_nega = df_posi_nega.iloc[
-            int(len(df_posi_nega) * 0.23) : int(len(df_posi_nega) * 0.73), :
-        ]
+        df_positive_negative = df_positive_negative.iloc[
+                               int(len(df_positive_negative) * 0.23): int(
+                                   len(df_positive_negative) * 0.73
+                               ),
+                               :,
+                               ]
 
         # make dataframe df_vix. df_vix has 2 data which wck_t - wck_c is close to 0
         # close to 0 or 0 means cross point
-        df_tmp = df_posi_nega.copy()
+        df_tmp = df_positive_negative.copy()
         df_vix = pd.DataFrame()
         cross_point_count = 2
         for _ in range(cross_point_count):
-            val = self.getNearestValue(df_tmp["f(t)"].values.tolist(), 0)
+            val = get_nearest_value(df_tmp["f(t)"].values.tolist(), 0)
             min_row1 = df_tmp[df_tmp["f(t)"] == val]
             df_vix = pd.concat([df_vix, min_row1])
             df_tmp = df_tmp.drop(min_row1.index)
@@ -769,12 +952,20 @@ class WaveData:
         df_vix = df_vix.reset_index()
         df_vix_list = df_vix.values.tolist()
 
-        # add x, y cordinates of differeential input cross point voltage to graph
+        # add x, y coordinates of differential input cross point voltage to graph
+        x_position_offset = 0
+        y_position_offset = 0
+        vix_wck_rf = 0
+        vix_wck_fr = 0
         for df_vix_p in df_vix_list:
             x_position = df_vix_p[0]
             y_position = df_vix_p[1]
 
-            if x_position < df_posi_nega.index[int(len(df_posi_nega) / 2)]:
+            if (
+                    x_position
+                    < df_positive_negative.index[
+                int(len(df_positive_negative) / 2)]
+            ):
                 label = "Vix_WCK_FR"
                 vix_wck_fr = y_position - reference_level
             else:
@@ -787,37 +978,37 @@ class WaveData:
             self.add_ax_text(
                 x=x_position + x_position_offset,
                 y=(y_position + reference_level) / 2,
-                s=f"{label}={y_position-reference_level:.2f}mV",
+                s=f"{label}={y_position - reference_level:.2f}mV",
                 transform=self.ax.transData,
-                zorder=11,
+                z_order=11,
             )
             self.add_ax_annotate(
                 text="",
                 xy=[x_position, y_position],
-                xytext=[x_position, reference_level],
-                arrowstyle="<->",
-                zorder=10,
+                xy_text=[x_position, reference_level],
+                arrow_style="<->",
+                z_order=10,
             )
 
         # for Min(f(t)), Max(f(t))
-        max_index = df_posi_nega["f(t)"].idxmax()
-        min_index = df_posi_nega["f(t)"].idxmin()
-        max_index_values = df_posi_nega.loc[max_index]
-        min_index_values = df_posi_nega.loc[min_index]
+        max_index = df_positive_negative["f(t)"].idxmax()
+        min_index = df_positive_negative["f(t)"].idxmin()
+        max_index_values = df_positive_negative.loc[max_index]
+        min_index_values = df_positive_negative.loc[min_index]
 
         # Max(f(t))
         self.add_ax_annotate(
             text="",
             xy=[max_index_values.name, max_index_values["wck_t"]],
-            xytext=[max_index_values.name, max_index_values["wck_c"]],
-            arrowstyle="->",
+            xy_text=[max_index_values.name, max_index_values["wck_c"]],
+            arrow_style="->",
         )
 
         max_ft = max_index_values["wck_t"] - max_index_values["wck_c"]
         self.add_ax_text(
             x=max_index_values.name + x_position_offset,  # includes offset
             y=(max_index_values["wck_t"] + max_index_values["wck_c"]) / 2
-            + y_position_offset,
+              + y_position_offset,
             s=f"Max(f(t))={max_ft:.2f}mV",
             transform=self.ax.transData,
         )
@@ -826,18 +1017,18 @@ class WaveData:
         self.add_ax_annotate(
             text="",
             xy=[min_index_values.name, min_index_values["wck_t"]],
-            xytext=[min_index_values.name, min_index_values["wck_c"]],
-            arrowstyle="->",
+            xy_text=[min_index_values.name, min_index_values["wck_c"]],
+            arrow_style="->",
         )
 
         min_ft = min_index_values["wck_t"] - min_index_values["wck_c"]
         self.add_ax_text(
             x=min_index_values.name + x_position_offset,  # includes offset
             y=(min_index_values["wck_t"] + min_index_values["wck_c"]) / 2
-            + y_position_offset,
+              + y_position_offset,
             s=f"Min(f(t))={min_ft:.2f}mV",
             transform=self.ax.transData,
-            zorder=11,
+            z_order=11,
         )
 
         # Vix_WCK_Ratio Calculation result
@@ -872,41 +1063,42 @@ class WaveData:
         # reference level line
         self.ax.hlines(
             y=reference_level,
-            xmin=df_posi_nega.index[0],
-            xmax=df_posi_nega.index[len(df_posi_nega) - 1],
+            xmin=df_positive_negative.index[0],
+            xmax=df_positive_negative.index[len(df_positive_negative) - 1],
             color="black",
             linestyle="dashed",
             zorder=10,
         )
 
-        df_posi_nega = df_posi_nega.drop("f(t)", axis=1)
-        df_posi_nega.plot(ax=self.ax)
+        df_positive_negative = df_positive_negative.drop("f(t)", axis=1)
+        df_positive_negative.plot(ax=self.ax)
 
         self.adjust_graph_params(
             rotation=rotation,
-            xlabel=xlabel,
-            ylabel=ylabel,
-            fontsize=fontsize,
-            yticks=[],
-            axhline="",
+            x_label=x_label,
+            y_label=y_label,
+            font_size=font_size,
+            y_ticks=[],
+            ax_h_lines=[],
             legends=[positive_pin_name, negative_pin_name],
         )
         picture_number = f"{picture_counter:03}_"
-        pin_kind = self.check_pin_kind(positive_pin_name)
+        pin_kind = check_pin_kind(positive_pin_name)
         file_path = (
-            self.folder_path
-            + picture_number
-            + pin_kind[0]
-            + "_"
-            + vi
-            + "_"
-            + item_name
-            + ".png"
+                self.folder_path
+                + picture_number
+                + pin_kind[0]
+                + "_"
+                + vi
+                + "_"
+                + item_name
+                + ".png"
         )
         plt.savefig(file_path)
         plt.close("all")
         self.add_slide_to_pptx(
-            title=picture_number + pin_kind[0] + "_" + vi + "_" + item_name, layout=11,
+            title=picture_number + pin_kind[0] + "_" + vi + "_" + item_name,
+            layout=11,
         )
         self.add_picture_to_pptx(file_path=file_path)
 
@@ -929,17 +1121,19 @@ class WaveData:
                 count_picture=False,
             )
 
-    def add_ax_annotate(self, text, xy, xytext, arrowstyle="<->", zorder=10):
+    def add_ax_annotate(self, text, xy, xy_text, arrow_style="<->", z_order=10):
         self.ax.annotate(
             text=text,
             xy=xy,
-            xytext=xytext,
-            arrowprops=dict(arrowstyle=arrowstyle),
-            zorder=zorder,
+            xytext=xy_text,
+            arrowprops=dict(arrowstyle=arrow_style),
+            zorder=z_order,
             size=5,
         )
 
-    def add_ax_text(self, x, y, s, transform, zorder=10):
+    def add_ax_text(
+            self, x, y, s, transform, z_order=10, horizontal_alignment="center"
+    ):
         self.ax.text(
             x=x,
             y=y,
@@ -947,91 +1141,82 @@ class WaveData:
             transform=transform,
             backgroundcolor="white",
             fontfamily="monospace",
-            zorder=zorder,
+            zorder=z_order,
+            horizontalalignment=horizontal_alignment,
         )
 
-    def getNearestValue(self, list, num):
-        """return nearest value of num from list
-
-        Args:
-            list (list): list of num
-            num (int): num of value
-
-        Returns:
-            nearest value of num from list
-
-        """
-        idx = np.abs(np.asarray(list) - num).argmin()
-        return list[idx]
-
     def setup_fig_and_ax(
-        self,
-        figsize=(16, 9),
-        top=0.95,
-        left=0.1,
-        bottom=0.2,
-        right=0.9,
-        xmargin=0.1,
-        format="%.1f",
+            self,
+            figure_size=(16, 9),
+            top=0.95,
+            left=0.15,
+            bottom=0.2,
+            right=0.85,
+            x_margin=0.1,
+            digit_format="%.1f",
     ):
-        """set up matploblib fix and ax object
+        """set up matplotlib fix and ax object
 
         Args:
-            figsize (tuple): fig size
+            figure_size (tuple): fig size
             bottom (float): bottom margin
             top (float): top margin
-            xmargin (float): xmargin
-            format (str): yaxis format setting
+            left (float):  left margin
+            right (float):  1 - right margin
+            x_margin (float): x_margin
+            digit_format (str): yaxis digit_format setting
 
         Returns:
             None
 
         """
-        self.fig = plt.figure(figsize=figsize)  # create figure object
-        self.ax = self.fig.add_subplot(1, 1, 1, xmargin=xmargin)  # create axes object
-        self.ax.yaxis.set_major_formatter(plt.FormatStrFormatter(format))
+        self.fig = plt.figure(figsize=figure_size)  # create figure object
+        self.ax = self.fig.add_subplot(1, 1, 1,
+                                       xmargin=x_margin)  # create axes object
+        self.ax.yaxis.set_major_formatter(plt.FormatStrFormatter(digit_format))
         self.fig.subplots_adjust(top=top, left=left, bottom=bottom, right=right)
 
     def adjust_graph_params(
-        self,
-        legends,
-        yticks,
-        fontsize=14,
-        legend_loc="upper right",
-        # num_of_index=0,
-        rotation=0,
-        group_name="",
-        axhline=[],
-        xlabel=None,
-        ylabel=None,
-        spec=False,
-        grid=False,
+            self,
+            legends,
+            y_ticks,
+            font_size=14,
+            legend_loc="upper right",
+            rotation=0,
+            group_name="",
+            ax_h_lines=None,
+            x_label=None,
+            y_label=None,
+            spec=False,
+            grid=False,
+            ax_h_lines_per_condition=None,
     ):
         """adjust graph parameters
 
         Args:
             legends (list): legend list
-            yticks (list): yticks min, max, resolution
-            fontsize (int): font size
+            y_ticks (list): y_ticks min, max, resolution
+            font_size (int): font size
             legend_loc (str): legend location
             rotation (int): rotation
             group_name (str): group name
-            axline (list): axhline
-            xlabel (str): xlabel
-            ylabel (str): ylabel
+            ax_h_lines (list): ax_h_lines
+            x_label (str): x_label
+            y_label (str): y_label
             spec (bool): set true if spec condition
             grid (bool): grid
+            ax_h_lines_per_condition (dict): ax h line per condition
 
         Returns:
             None
 
         """
         plt.xticks(rotation=rotation)
-        self.ax.set_ylabel(ylabel, fontsize=fontsize)
-        self.ax.set_xlabel(xlabel, fontsize=fontsize)
+        self.ax.set_ylabel(y_label, fontsize=font_size)
+        self.ax.set_xlabel(x_label, fontsize=font_size)
         self.ax.legend(
             labels=legends,
-            fontsize=fontsize,
+            fontsize=font_size,
             loc=legend_loc,
             frameon=True,
             framealpha=1.0,
@@ -1039,23 +1224,36 @@ class WaveData:
 
         # set grid
         if grid:
-            self.ax.grid(axis="y", linestyle="-", color="black", linewidth=1, alpha=0.2)
+            self.ax.grid(axis="y", linestyle="-", color="black", linewidth=1,
+                         alpha=0.2)
 
-        if yticks:
-            self.ax.set_yticks(np.arange(yticks[0], yticks[1] + yticks[2], yticks[2]))
+        if y_ticks:
+            self.ax.set_yticks(
+                np.arange(y_ticks[0], y_ticks[1] + y_ticks[2], y_ticks[2])
+            )
 
         # add limit line in case AT condition Vih/Vil=1V/0V
         match_at_condition = re.match(r".*Vih1r0V_Vil0r0V", group_name)
         if spec and match_at_condition:
-            linestyle = "-"
+            line_style = "-"
             alpha = 0.8
         else:
-            linestyle = "--"
+            line_style = "--"
             alpha = 0.5
 
-        for val in axhline:
+        if (
+                ax_h_lines_per_condition is not None
+                and group_name in ax_h_lines_per_condition
+        ):
+            ax_h_lines = ax_h_lines_per_condition[group_name]
+
+        for ax_h_line in ax_h_lines:
             self.ax.axhline(
-                y=val, linestyle=linestyle, alpha=alpha, color="gray", linewidth=1
+                y=ax_h_line,
+                linestyle=line_style,
+                alpha=alpha,
+                color="gray",
+                linewidth=1,
             )
 
     def add_vix_table_to_pptx(self, title, items, cell_width, cell_height=20):
@@ -1085,16 +1283,16 @@ class WaveData:
         )
 
     def add_summary_table_to_pptx(
-        self,
-        title,
-        cell_width,
-        items,
-        cell_height=20,
-        groupby_table=None,
-        rename=None,
-        pin_kind=None,
-        sort=None,
-        merge=False,
+            self,
+            title,
+            cell_width,
+            items,
+            cell_height=20,
+            group_by_table=None,
+            rename=None,
+            pin_kind=None,
+            sort=None,
+            merge=False,
     ):
         """add summary table to pptx
 
@@ -1105,17 +1303,18 @@ class WaveData:
                 cell_width (list): cell width
                 items (list): items for table
                 cell_height (int): cell height
-                groupby_table (str): group name of table in case separate table by group
+                group_by_table (str): group name of table in case separate table by group
                 rename (dict): specify header original and after name in case rename
                 pin_kind (str): pin kind
                 sort (bool): if sort data by one of data frame column, specify df column name.
+                merge (bool): marge flag
 
             Returns:
                 None
 
         """
 
-        # this routin works only for overshoot/undershoot
+        # this code works only for overshoot/undershoot
         if merge:
             new_data = []
             for i in range(0, len(self.data_vns), 2):
@@ -1123,14 +1322,16 @@ class WaveData:
                 new_data.append(new_dic)
 
             df_vns = pd.DataFrame(new_data)
-            self.data_df = pd.merge(self.data_df, df_vns, on="Condition", how="outer")
+            self.data_df = pd.merge(self.data_df, df_vns, on="Condition",
+                                    how="outer")
 
         self.add_slide_to_pptx(title=title, layout=4)
 
         # if needs to separate result per pin kind
         if pin_kind:
             data_list_to_table_df = (
-                self.data_df[self.data_df["Pin_kind"] == pin_kind].copy().reset_index()
+                self.data_df[
+                    self.data_df["Pin_kind"] == pin_kind].copy().reset_index()
             )
         else:
             data_list_to_table_df = self.data_df.reset_index()
@@ -1149,10 +1350,9 @@ class WaveData:
             rename=rename,
         )
 
-        if groupby_table:
-            for name, group in data_list_to_table_df.groupby(groupby_table):
-
-                self.add_slide_to_pptx(title=name, layout=4)
+        if group_by_table:
+            for name, group in data_list_to_table_df.groupby(group_by_table):
+                self.add_slide_to_pptx(title=str(name), layout=4)
 
                 data_list_to_table_df = group.reset_index()
                 self.add_table(
@@ -1170,6 +1370,8 @@ class WaveData:
 
         Args:
             *file_list (list): picture list
+            resize (bool): resize flag
+            picture_width (int): picture width
 
         Returns:
             None
@@ -1191,8 +1393,10 @@ class WaveData:
 
         if picture_per_slide == 1:
             for file in file_list[0]:
-                title = file.replace("\\", "xyz").replace(".png", "")
-                title = re.sub(".*xyz", "", title)
+                # TODO change title
+                title = os.path.splitext(os.path.basename(file))[0]
+                for key, value in RENAME_CONDITIONS.items():
+                    title = title.replace(key, value)
 
                 self.add_slide_to_pptx(title=title, layout=11)
                 self.add_picture_to_pptx(
@@ -1206,8 +1410,8 @@ class WaveData:
             for (file1, file2) in zip(file_list[0], file_list[1]):
                 title = (
                     file1.replace("\\", "xyz")
-                    .replace(".png", "")
-                    .replace("8GPE_Frequency", "")  # TODO need to fix title
+                        .replace(".png", "")
+                        .replace("8GPE_Frequency", "")  # TODO need to fix title
                 )
                 title = re.sub(".*xyz", "", title)
                 self.add_slide_to_pptx(title=title, layout=11)
@@ -1259,21 +1463,25 @@ class WaveData:
                 )
 
     def add_picture_to_pptx(
-        self,
-        file_path,
-        count_picture=True,
-        picture_width=400,
-        left=0,
-        resize=False,
-        reposition=False,
-        top=0,
+            self,
+            file_path,
+            count_picture=True,
+            picture_width=400,
+            left=0,
+            resize=False,
+            reposition=False,
+            top=0,
     ):
         """add picture to pptx
 
         Args:
             file_path (str): file name full path
-            resize (bool): set True if resize picture
             count_picture (bool): picture counter
+            picture_width (float): picture width
+            resize (bool): set True if resize picture
+            reposition (bool): picture reposition flag
+            top (float): picture top position
+            left (float): picture left position
 
         Returns:
             None
@@ -1281,16 +1489,18 @@ class WaveData:
         """
         global picture_counter
 
+        picture = None
         if self.pptx_lib == "win32com":
             picture = self.active_presentation.Slides(
                 self.slide_count
             ).Shapes.AddPicture(
-                FileName=file_path, LinkToFile=-1, SaveWithDocument=-1, Left=0, Top=0,
+                FileName=file_path, LinkToFile=-1, SaveWithDocument=-1, Left=0,
+                Top=0,
             )
 
         elif self.pptx_lib == "python-pptx":
-            im = Image.open(file_path)
-            im_width, im_height = im.size
+            # im = Image.open(file_path)
+            # im_width, im_height = im.size
 
             if resize:
                 picture = self.slide.shapes.add_picture(
@@ -1326,9 +1536,11 @@ class WaveData:
         if count_picture:
             picture_counter += 1
 
-    def add_textbox(self, title, slide_num, top, left, width, height, font_size=14):
+    def add_textbox(self, title, slide_num, top, left, width, height,
+                    font_size=14):
         if self.pptx_lib == "win32com":
-            text_box = self.active_presentation.Slides(slide_num).Shapes.AddTextbox(
+            text_box = self.active_presentation.Slides(
+                slide_num).Shapes.AddTextbox(
                 1, Top=top, Left=left, Width=width, Height=height,
             )
             text_box.TextFrame.TextRange.Text = title
@@ -1379,10 +1591,12 @@ class WaveData:
                 self.active_presentation.slide_layouts[6]
             )
             self.slide.shapes[0].text = title
-            self.slide.shapes[0].text_frame.paragraphs[0].font.size = Pt(font_size)
+            self.slide.shapes[0].text_frame.paragraphs[0].font.size = Pt(
+                font_size)
 
     def add_table(
-        self, df, items, cell_width, cell_height, slide_width, slide_height, rename,
+            self, df, items, cell_width, cell_height, slide_width, slide_height,
+            rename,
     ):
         """add table to slide.
 
@@ -1407,7 +1621,9 @@ class WaveData:
 
         table_rows = len(data_list_to_table)
         table_columns = len(data_list_to_table[0])
-
+        table = None
+        tr = None
+        table_shape = None
         if self.pptx_lib == "win32com":
             table = self.slide.Shapes.AddTable(table_rows, table_columns).Table
 
@@ -1432,17 +1648,26 @@ class WaveData:
                     tr = table.cell(i, j)
 
                 try:
-                    if data_list_to_table[i][j] == 9.91e37:
-                        data_list_to_table[i][j] = "aquisition failure"
+                    if (
+                            data_list_to_table[i][j] == 9.91e37
+                            or data_list_to_table[i][j] == 9.91e40
+                    ):
+                        data_list_to_table[i][j] = "acquisition failure"
 
                     elif str(data_list_to_table[i][j]) == "nan":
                         data_list_to_table[i][j] = "-"
 
                     if self.pptx_lib == "win32com":
-                        tr.Text = f"{data_list_to_table[i][j]:.1f}"
+                        if "v-ns" in data_list_to_table[0][j]:
+                            tr.Text = f"{data_list_to_table[i][j]:.6f}"
+                        else:
+                            tr.Text = f"{data_list_to_table[i][j]:.1f}"
 
                     elif self.pptx_lib == "python-pptx":
-                        tr.text = f"{data_list_to_table[i][j]:.1f}"
+                        if "v-ns" in data_list_to_table[0][j]:
+                            tr.text = f"{data_list_to_table[i][j]:.6f}"
+                        else:
+                            tr.text = f"{data_list_to_table[i][j]:.1f}"
 
                 except ValueError:
                     if rename:
@@ -1457,29 +1682,54 @@ class WaveData:
                             if self.pptx_lib == "win32com":
                                 tr.Text = data_list_to_table[i][j]
 
+                                if data_list_to_table[0][j] == "Vi":
+                                    for key, value in RENAME_CONDITIONS.items():
+                                        tr.Text = tr.Text.replace(key, value)
+
                             elif self.pptx_lib == "python-pptx":
                                 tr.text = data_list_to_table[i][j]
+
+                                if data_list_to_table[0][j] == "Vi":
+                                    for key, value in RENAME_CONDITIONS.items():
+                                        tr.text = tr.Text.replace(key, value)
 
                     else:
                         if self.pptx_lib == "win32com":
                             tr.Text = data_list_to_table[i][j]
 
+                            if data_list_to_table[0][j] == "Vi":
+                                for key, value in RENAME_CONDITIONS.items():
+                                    tr.Text = tr.Text.replace(key, value)
+
                         elif self.pptx_lib == "python-pptx":
                             tr.text = data_list_to_table[i][j]
+
+                            if data_list_to_table[0][j] == "Vi":
+                                for key, value in RENAME_CONDITIONS.items():
+                                    tr.text = tr.Text.replace(key, value)
 
                 if self.pptx_lib == "win32com":
                     tr.Font.Size = 10
                     tr.ParagraphFormat.Alignment = 2  # centering
 
                 elif self.pptx_lib == "python-pptx":
+                    # TODO this doesn't work. why?
+                    # pf = tr.text_frame.paragraphs
+                    # for i in range(len(pf)):
+                    #     pf[i].font.size = Pt(10)
+
+                    # This works
                     tr.text_frame.paragraphs[0].font.size = Pt(10)
                     tr.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
+                    if len(tr.text_frame.paragraphs) == 2:
+                        tr.text_frame.paragraphs[1].font.size = Pt(10)
+                        tr.text_frame.paragraphs[1].alignment = PP_ALIGN.CENTER
 
         if self.pptx_lib == "win32com":
-            for i in range(1, table.Columns.Count + 1):
+            for i in range(1, table_columns + 1):
                 table.Columns(i).Width = cell_width[i - 1]
 
-            for i in range(1, table.Rows.Count + 1):
+            for i in range(1, table_rows + 1):
                 table.Rows(i).Height = cell_height
 
             # adjust table position
@@ -1503,6 +1753,7 @@ class WaveData:
 
         Args:
             file_name (str): file name
+            folder_name (str): folder name
 
         Returns:
             None
@@ -1515,188 +1766,327 @@ class WaveData:
         elif self.pptx_lib == "python-pptx":
             self.active_presentation.save(file=file_path)
 
-    def wf_txt_data_to_csv(self, file):
-        """create csv file from osc output text file
-
-        Args:
-            file (str): file name
-
-        Returns:
-            None
-
-        """
-        print(file)
-        with open(file.replace(".txt", ".csv"), "w", encoding="utf-8") as fw:
-            flg = 0
-            with open(file, encoding="utf-8") as fr:
-                for line in fr.read().splitlines():
-                    match_data = re.match(r"Data", line)
-
-                    if line != "":
-                        if flg:
-                            fw.write(line)
-                            fw.write("\n")
-
-                        if match_data:
-                            flg = 1
-
-    def check_pin_kind(self, pin_name):
-        """check pin kind and return pin kind and order for sort
-
-        Args:
-            pin_name(str): pin name like P1857A1
-
-        Returns:
-            pin_kind, pin_order
-            pin_kind: "IO", "WCK", "CK", "CA", "CS",
-            pin_order: "IO"->1, "WCK"->2, "CK"->3, "CA"->4, "CS"->5
-
-        """
-        match_pin_name = re.match(r"P(\d*).*", pin_name)
-        pin_num = int(match_pin_name.group(1))
-
-        if pin_num < 1857:
-            pin_kind = "IO"
-            pin_order = 1
-        elif pin_num >= 1857 and pin_num <= 1888:
-            pin_kind = "WCK"
-            pin_order = 2
-        elif pin_num >= 1889 and pin_num <= 1890:
-            pin_kind = "CK"
-            pin_order = 3
-        elif pin_num >= 1921 and pin_num <= 1933:
-            pin_kind = "CA"
-            pin_order = 4
-        elif pin_num >= 1953 and pin_num <= 1959:
-            pin_kind = "CS"
-            pin_order = 5
-        else:
-            print("Pin_kind Error")
-            sys.exit()
-
-        return pin_kind, pin_order
-
-    def mul3(self, x):
-        return x * 1e3
-
-    def mul12(self, x):
-        return x * 1e12
-
-    def mulm9(self, x):
-        return x * 1e-9
-
     def adjust_unit(self):
         """adjust unit of data
 
         Args:
-            None
 
         Returns:
             None
 
         """
         if "Eheight" in self.data_df.columns:
-            self.data_df["Eheight"] = self.data_df["Eheight"].apply(self.mul3)
+            self.data_df["Eheight"] = self.data_df["Eheight"].apply(mul3)
 
         if "Ewidth" in self.data_df.columns:
-            self.data_df["Ewidth"] = self.data_df["Ewidth"].apply(self.mul12)
+            self.data_df["Ewidth"] = self.data_df["Ewidth"].apply(mul12)
 
         if "Risetime" in self.data_df.columns:
-            self.data_df["Risetime"] = self.data_df["Risetime"].apply(self.mul12)
+            self.data_df["Risetime"] = self.data_df["Risetime"].apply(mul12)
 
         if "Falltime" in self.data_df.columns:
-            self.data_df["Falltime"] = self.data_df["Falltime"].apply(self.mul12)
+            self.data_df["Falltime"] = self.data_df["Falltime"].apply(mul12)
 
         if "Frequency" in self.data_df.columns:
-            self.data_df["Frequency"] = self.data_df["Frequency"].apply(self.mulm9)
+            self.data_df["Frequency"] = self.data_df["Frequency"].apply(mul_m9)
 
         if "Vamplitude" in self.data_df.columns:
-            self.data_df["Vamplitude"] = self.data_df["Vamplitude"].apply(self.mul3)
+            self.data_df["Vamplitude"] = self.data_df["Vamplitude"].apply(mul3)
 
         if "Vpp" in self.data_df.columns:
-            self.data_df["Vpp"] = self.data_df["Vpp"].apply(self.mul3)
+            self.data_df["Vpp"] = self.data_df["Vpp"].apply(mul3)
 
         if "Vmaximum" in self.data_df.columns:
-            self.data_df["Vmaximum"] = self.data_df["Vmaximum"].apply(self.mul3)
+            self.data_df["Vmaximum"] = self.data_df["Vmaximum"].apply(mul3)
 
         if "Vminimum" in self.data_df.columns:
-            self.data_df["Vminimum"] = self.data_df["Vminimum"].apply(self.mul3)
+            self.data_df["Vminimum"] = self.data_df["Vminimum"].apply(mul3)
 
         if "Vtop" in self.data_df.columns:
-            self.data_df["Vtop"] = self.data_df["Vtop"].apply(self.mul3)
+            self.data_df["Vtop"] = self.data_df["Vtop"].apply(mul3)
+
+        if "Top" in self.data_df.columns:
+            self.data_df["Top"] = self.data_df["Top"].apply(mul3)
 
         if "Vbase" in self.data_df.columns:
-            self.data_df["Vbase"] = self.data_df["Vbase"].apply(self.mul3)
+            self.data_df["Vbase"] = self.data_df["Vbase"].apply(mul3)
+
+        if "Base" in self.data_df.columns:
+            self.data_df["Base"] = self.data_df["Base"].apply(mul3)
 
         if "Pwidth" in self.data_df.columns:
-            self.data_df["Pwidth"] = self.data_df["Pwidth"].apply(self.mul12)
+            self.data_df["Pwidth"] = self.data_df["Pwidth"].apply(mul12)
 
         if "Pp" in self.data_df.columns:
-            self.data_df["Pp"] = self.data_df["Pp"].apply(self.mul12)
+            self.data_df["Pp"] = self.data_df["Pp"].apply(mul12)
 
 
 if __name__ == "__main__":
     start = time.time()
     DATA_START_COLUMNS = 10
-    FOLDER_PATH = os.getcwd() + "/20210609_debug_8gpe/"
+    FOLDER_PATH = os.getcwd() + "/202106172016_debug/"
     PPTX_FILE_NAME = "8GPE_TEST.pptx"
     OSC_PICTURE_LIST_CROSSTALK = glob(FOLDER_PATH + "/*crosstalk/*.png")
 
     PE = "8GPE_"
-    PKINDS = ["IO", "WCK", "CK", "CA", "CS"]
-    pkind = "IO"
+    # PIN_KINDS = ["IO", "WCK", "CK", "CA", "CS"]
+    PIN_KINDS = ["IO"]
+    pin_kind_for_pptx = "IO"
     PPTX_LIB = "win32com"
     # PPTX_LIB = "python-pptx"
 
     if PPTX_LIB == "win32com":
         pptx = win32com.client.Dispatch("PowerPoint.Application")
         pptx.Visible = True
-        active_presentation = pptx.Presentations.Open(
+        active_presentation_object = pptx.Presentations.Open(
             os.getcwd() + "/advtemplate_mini.pptx"
         )
 
-    elif PPTX_LIB == "python-pptx":
-        active_presentation = Presentation(os.getcwd() + "/advtemplate_mini.pptx")
+    else:
+        active_presentation_object = Presentation(
+            os.getcwd() + "/advtemplate_mini.pptx"
+        )
 
+    OVERSHOOT_FILE_LIST = glob(
+        FOLDER_PATH + pin_kind_for_pptx.lower() + "/*_overshoot/*.txt"
+    )
+    OSC_PICTURE_LIST_OVERSHOOT = glob(
+        FOLDER_PATH + pin_kind_for_pptx.lower() + "/*overshoot/*.png"
+    )
+    OSC_PICTURE_LIST_VIH_DC = glob(
+        FOLDER_PATH + pin_kind_for_pptx.lower() + "/*vih_dc/*.png"
+    )
+    OSC_PICTURE_LIST_VIL_DC = glob(
+        FOLDER_PATH + pin_kind_for_pptx.lower() + "/*vil_dc/*.png"
+    )
+    OSC_PICTURE_LIST_VIHL_AC = glob(
+        FOLDER_PATH + pin_kind_for_pptx.lower() + "/*vihl_ac/*.png"
+    )
+    # Overshoot/Undershoot
+    # wave_data_overshoot = WaveData(
+    #     active_presentation_object=active_presentation_object,
+    #     file_name=pin_kind_for_pptx.lower() + "_" + OVERSHOOT_FILE_NAME,
+    #     folder_path=FOLDER_PATH + pin_kind_for_pptx.lower() + "/",
+    #     group_by=DATA_GROUP,
+    #     index=DATA_INDEX,
+    #     pptx_lib=PPTX_LIB,
+    # )
+    # for i in range(len(OVERSHOOT_FILE_LIST)):
+    #     if i < 4:
+    #         y_ticks = OVERSHOOT_Y_TICKS_1V_0V
+    #     else:
+    #         y_ticks = OVERSHOOT_Y_TICKS_0r5V_0V
+
+    #     if i % 2 == 0:
+    #         item_name = "Overshoot"
+    #     else:
+    #         item_name = "Undershoot"
+
+    #     wave_data_overshoot.make_overshoot_graph(
+    #         file=OVERSHOOT_FILE_LIST[i],
+    #         y_ticks=y_ticks,
+    #         item_name=item_name,
+    #         additional_information=True,
+    #         info="Target: under 300mV, under 0.1 V-ns",
+    #     )
+    # wave_data_overshoot.add_summary_table_to_pptx(
+    #     title="Overshoot/Undershoot",
+    #     cell_width=[
+    #         CELL_WIDTH_BASE * 0.9,  # pin
+    #         CELL_WIDTH_BASE * 2,  # vi
+    #         CELL_WIDTH_BASE * 0.9,  # rate
+    #         CELL_WIDTH_BASE * 1.2,  # overshoot
+    #         CELL_WIDTH_BASE * 1.54,  # v-ns-overshoot
+    #         CELL_WIDTH_BASE * 0.9,  # Vmaximum
+    #         CELL_WIDTH_BASE * 0.9,  # vtop
+    #         CELL_WIDTH_BASE * 1.2,  # undershoot
+    #         CELL_WIDTH_BASE * 1.56,  # v-ns-undershoot
+    #         CELL_WIDTH_BASE * 0.9,  # Vminimum
+    #         CELL_WIDTH_BASE * 0.95,  # base
+    #     ],
+    #     items=[
+    #         "Pin",
+    #         "Vi",
+    #         "Rate",
+    #         "Overshoot_mV",
+    #         "v-ns-Overshoot",
+    #         "Vmaximum",
+    #         "Vtop",
+    #         "Undershoot_mV",
+    #         "v-ns-Undershoot",
+    #         "Vminimum",
+    #         "Vbase",
+    #     ],
+    #     group_by_table="Vi",
+    #     rename={
+    #         "Overshoot_mV": "Overshoot(mV)",
+    #         "Vmaximum": "Vmax(mV)",
+    #         "Vtop": "Vtop(mv)",
+    #         "Undershoot_mV": "Undershoot(mV)",
+    #         "Vminimum": "Vmin(mV)",
+    #         "Vbase": "Vbase(mV)",
+    #         "v-ns-Overshoot": "v-ns-Overshoot\n(V-ns)",
+    #         "v-ns-Undershoot": "v-ns-Undershoot\n(V-ns)",
+    #         "nan": "-",
+    #     },
+    #     merge=True,
+    #     # sort="Order"
+    #     # pin_kind_for_pptx="IO"
+    # )
+    # wave_data_overshoot.add_pictures_to_pptx(
+    #     OSC_PICTURE_LIST_OVERSHOOT,
+    #     resize=True,
+    # )
     wave_data_overview = WaveData(
-        active_presentation=active_presentation,
-        file_name=OVERVIEW_FILE_NAME,
-        folder_path=FOLDER_PATH,
-        groupby=DATA_GROUP,
+        active_presentation=active_presentation_object,
+        file_name=pin_kind_for_pptx.lower() + "_" + OVERVIEW_FILE_NAME,
+        folder_path=FOLDER_PATH + pin_kind_for_pptx.lower() + "/",
+        group_by=DATA_GROUP,
         index=DATA_INDEX,
         pptx_lib=PPTX_LIB,
     )
-    wave_data_overview.make_vix_graph(
-        item_name="vix",
-        posi_pin_file=FOLDER_PATH
-        + "P1857A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
-        nega_pin_file=FOLDER_PATH
-        + "P1858A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
-    )
-    for pkind in PKINDS:
+    # wave_data_overview.make_vix_graph(
+    #     item_name="vix",
+    #     positive_pin_file=FOLDER_PATH
+    #                       + "P1857A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
+    #     negative_pin_file=FOLDER_PATH
+    #                       + "P1858A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
+    # )
+    for pin_kind_for_pptx in PIN_KINDS:
         wave_data_overview.make_graph(
             df_columns_list=["Frequency"],
             file_name=PE + "Frequency",
-            format="%.2f",
+            digit_format="%.2f",
             legends=["Freq(GHz)"],
-            yticks=FREQ_YTICKS,
-            ylabel="GHz",
-            pin_kind=pkind,
-            yticks_per_condition={"CS_Vih1r0V_Vil0r0V_Vt0r5V": [0, 2, 0.2]},
+            ax_h_lines=[4.0],
+            y_ticks=FREQ_YTICKS,
+            y_label="GHz",
+            pin_kind=pin_kind_for_pptx,
+            ax_h_lines_per_condition={
+                "IO_Vih1r3V_Vil-0r50V_Vt-0r50V": [2.0, 3.0]},
+            y_ticks_per_condition={"CS_Vih1r0V_Vil0r0V_Vt0r5V": [0, 2, 0.2]},
+            additional_information=True,
+            info="Spec: less than 60ps (@1.0Vp-p/20% to 80%)",
         )
         wave_data_overview.add_summary_table_to_pptx(
-            title="overview_" + pkind,
+            title="overview_" + pin_kind_for_pptx,
             cell_width=[
-                CELL_WIDTH_BASE * 1.1,
-                CELL_WIDTH_BASE * 2.0,
-                CELL_WIDTH_BASE * 1.1,
+                CELL_WIDTH_BASE_PIN * 1.1,
+                CELL_WIDTH_BASE_VI * 2.0,
+                CELL_WIDTH_BASE_RATE * 1.1,
                 CELL_WIDTH_BASE * 1.1,
             ],
             items=["Pin", "Vi", "Rate", "Frequency"],
             rename={"Vih1r0V_Vil0r0V_Vt0r5V": "Vih=1.0V, Vil=0.0V"},
             # rename={"Vih1r0V_": "Vih=1.0V,"},
-            pin_kind=pkind,
+            pin_kind=pin_kind_for_pptx,
         )
-    wave_data_overview.save_pptx(file_name=PPTX_FILE_NAME, folder_name=FOLDER_PATH)
+    # wave_data_vih = WaveData(
+    #     active_presentation_object=active_presentation_object,
+    #     file_name=pin_kind_for_pptx.lower() + "_" + VIH_DC_FILE_NAME,
+    #     folder_path=FOLDER_PATH + pin_kind_for_pptx.lower() + "/",
+    #     group_by=DATA_GROUP,
+    #     index=DATA_INDEX,
+    #     pptx_lib=PPTX_LIB,
+    # )
+    # wave_data_vih.make_graph(
+    #     df_columns_list=["Vmaximum", "Vminimum"],
+    #     file_name=PE + "Vih_Dc",
+    #     digit_format="%.1f",
+    #     legends=["Vmax(mV)", "Vmin(mV)"],
+    #     # ax_h_lines=[4.0],
+    #     y_ticks=[100, 1100, 100],
+    #     y_label="mV",
+    #     pin_kind_for_pptx=pin_kind_for_pptx,
+    # )
+    # wave_data_vih.add_summary_table_to_pptx(
+    #     title="Vih Dc summary",
+    #     cell_width=[
+    #         CELL_WIDTH_BASE_PIN,
+    #         CELL_WIDTH_BASE_VI,
+    #         CELL_WIDTH_BASE_RATE,
+    #         CELL_WIDTH_BASE * 2,
+    #         CELL_WIDTH_BASE * 2,
+    #     ],
+    #     items=["Pin", "Vi", "Rate", "Vmaximum", "Vminimum"],
+    #     rename={"Vmaximum": "Vmax(mV)", "Vminimum": "Vmin(mV)"},
+    #     # rename={"Vih1r0V_": "Vih=1.0V,"},
+    #     pin_kind_for_pptx=pin_kind_for_pptx,
+    # )
+    # wave_data_vih.add_pictures_to_pptx(
+    #     OSC_PICTURE_LIST_VIH_DC, resize=True,
+    # )
+    # wave_data_vil = WaveData(
+    #     active_presentation_object=active_presentation_object,
+    #     file_name=pin_kind_for_pptx.lower() + "_" + VIL_DC_FILE_NAME,
+    #     folder_path=FOLDER_PATH + pin_kind_for_pptx.lower() + "/",
+    #     group_by=DATA_GROUP,
+    #     index=DATA_INDEX,
+    #     pptx_lib=PPTX_LIB,
+    # )
+    # wave_data_vil.make_graph(
+    #     df_columns_list=["Vmaximum", "Vminimum"],
+    #     file_name=PE + "vil_dc",
+    #     digit_format="%.1f",
+    #     legends=["Vmax(mV)", "Vmin(mV)"],
+    #     # ax_h_lines=[4.0],
+    #     y_ticks=[-300, 700, 100],
+    #     y_label="mV",
+    #     pin_kind_for_pptx=pin_kind_for_pptx,
+    # )
+    # wave_data_vil.add_summary_table_to_pptx(
+    #     title="VIL_DC summary",
+    #     cell_width=[
+    #         CELL_WIDTH_BASE_PIN,
+    #         CELL_WIDTH_BASE_VI,
+    #         CELL_WIDTH_BASE_RATE,
+    #         CELL_WIDTH_BASE * 2,
+    #         CELL_WIDTH_BASE * 2,
+    #     ],
+    #     items=["Pin", "Vi", "Rate", "Vmaximum", "Vminimum"],
+    #     rename={"Vmaximum": "Vmax(mV)", "Vminimum": "Vmin(mV)"},
+    #     # rename={"Vih1r0V_": "Vih=1.0V,"},
+    #     pin_kind_for_pptx=pin_kind_for_pptx,
+    # )
+    # wave_data_vil.add_pictures_to_pptx(
+    #     OSC_PICTURE_LIST_VIL_DC, resize=True,
+    # )
+    # wave_data_vihl_ac = WaveData(
+    #     active_presentation_object=active_presentation_object,
+    #     file_name=pin_kind_for_pptx.lower() + "_" + VIHL_AC_FILE_NAME,
+    #     folder_path=FOLDER_PATH + pin_kind_for_pptx.lower() + "/",
+    #     group_by=DATA_GROUP,
+    #     index=DATA_INDEX,
+    #     pptx_lib=PPTX_LIB,
+    # )
+    # wave_data_vihl_ac.make_graph(
+    #     df_columns_list=["Vmaximum", "Vminimum"],
+    #     file_name=PE + "vihl_ac",
+    #     digit_format="%.1f",
+    #     legends=["Vmax(mV)", "Vmin(mV)"],
+    #     # ax_h_lines=[4.0],
+    #     y_ticks=[-300, 1100, 100],
+    #     y_label="mV",
+    #     pin_kind_for_pptx=pin_kind_for_pptx,
+    # )
+    # wave_data_vihl_ac.add_summary_table_to_pptx(
+    #     title="VIHL_AC summary",
+    #     cell_width=[
+    #         CELL_WIDTH_BASE_PIN,
+    #         CELL_WIDTH_BASE_VI,
+    #         CELL_WIDTH_BASE_RATE,
+    #         CELL_WIDTH_BASE * 2,
+    #         CELL_WIDTH_BASE * 2,
+    #     ],
+    #     items=["Pin", "Vi", "Rate", "Vmaximum", "Vminimum"],
+    #     rename={"Vmaximum": "Vmax(mV)", "Vminimum": "Vmin(mV)"},
+    #     # rename={"Vih1r0V_": "Vih=1.0V,"},
+    #     pin_kind_for_pptx=pin_kind_for_pptx,
+    # )
+    # wave_data_vihl_ac.add_pictures_to_pptx(
+    #     OSC_PICTURE_LIST_VIHL_AC, resize=True,
+    # )
+    wave_data_overview.save_pptx(file_name=PPTX_FILE_NAME,
+                                 folder_name=FOLDER_PATH)
     elapsed_time = time.time() - start
     print(f"exec time:{elapsed_time:.1f}[sec]")
