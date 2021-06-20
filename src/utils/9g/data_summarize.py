@@ -28,9 +28,11 @@ from variables import CELL_WIDTH_BASE_VI
 from variables import DATA_GROUP
 from variables import DATA_INDEX
 from variables import FREQ_YTICKS
+
 # from variables import CROSSTALK_FILE_NAME
 # from variables import HISTOGRAM_FILE_NAME
 from variables import OVERVIEW_FILE_NAME
+
 # from variables import OVERVIEW_FILE_NAME
 from variables import RENAME_CONDITIONS
 
@@ -47,20 +49,6 @@ TODO
 title = file.replace("\\", "xyz").replace(".png", "")
 title = re.sub(".*xyz", "", title)
 
-"""
-
-"""docstring sample. function simple explanation is written in this line.
-
-    if function detail explanation is necessary, write to here.
-
-    Args:
-        param1 (int): The first parameter
-        param2 (str): The second parameter
-
-    Returns:
-        bool: The return value. True for success, False otherwise
-
-    https://google.github.io/styleguide/pyguide.html
 """
 
 
@@ -1552,9 +1540,9 @@ class WaveData:
             )
             text_frame = text_box.text_frame
             text_frame.paragraphs[0].font.size = Pt(font_size)
-            pg = text_frame.paragraphs[0]
-            pg.text = title.replace(".png", "").replace(".PNG", "")
-            pg.alignment = PP_ALIGN.CENTER
+            paragraph = text_frame.paragraphs[0]
+            paragraph.text = title.replace(".png", "").replace(".PNG", "")
+            paragraph.alignment = PP_ALIGN.CENTER
             text_frame.vertical_anchor = MSO_ANCHOR.BOTTOM
 
     def add_slide_to_pptx(self, title, layout, font_size=20):
@@ -1622,7 +1610,7 @@ class WaveData:
         table_rows = len(data_list_to_table)
         table_columns = len(data_list_to_table[0])
         table = None
-        tr = None
+        text_range = None
         table_shape = None
         if self.pptx_lib == "win32com":
             table = self.slide.Shapes.AddTable(table_rows, table_columns).Table
@@ -1642,10 +1630,10 @@ class WaveData:
         for i in tqdm(range(table_rows)):
             for j in range(table_columns):
                 if self.pptx_lib == "win32com":
-                    tr = table.Cell(i + 1, j + 1).Shape.TextFrame.TextRange
+                    text_range = table.Cell(i + 1, j + 1).Shape.TextFrame.TextRange
 
                 elif self.pptx_lib == "python-pptx":
-                    tr = table.cell(i, j)
+                    text_range = table.cell(i, j)
 
                 try:
                     if (
@@ -1659,71 +1647,79 @@ class WaveData:
 
                     if self.pptx_lib == "win32com":
                         if "v-ns" in data_list_to_table[0][j]:
-                            tr.Text = f"{data_list_to_table[i][j]:.6f}"
+                            text_range.Text = f"{data_list_to_table[i][j]:.6f}"
                         else:
-                            tr.Text = f"{data_list_to_table[i][j]:.1f}"
+                            text_range.Text = f"{data_list_to_table[i][j]:.1f}"
 
                     elif self.pptx_lib == "python-pptx":
                         if "v-ns" in data_list_to_table[0][j]:
-                            tr.text = f"{data_list_to_table[i][j]:.6f}"
+                            text_range.text = f"{data_list_to_table[i][j]:.6f}"
                         else:
-                            tr.text = f"{data_list_to_table[i][j]:.1f}"
+                            text_range.text = f"{data_list_to_table[i][j]:.1f}"
 
                 except ValueError:
                     if rename is not None:
                         if data_list_to_table[i][j] in rename:
                             if self.pptx_lib == "win32com":
-                                tr.Text = rename[data_list_to_table[i][j]]
+                                text_range.Text = rename[data_list_to_table[i][j]]
 
                             elif self.pptx_lib == "python-pptx":
-                                tr.text = rename[data_list_to_table[i][j]]
+                                text_range.text = rename[data_list_to_table[i][j]]
 
                         else:
                             if self.pptx_lib == "win32com":
-                                tr.Text = data_list_to_table[i][j]
+                                text_range.Text = data_list_to_table[i][j]
 
                                 if data_list_to_table[0][j] == "Vi":
                                     for key, value in RENAME_CONDITIONS.items():
-                                        tr.Text = tr.Text.replace(key, value)
+                                        text_range.Text = text_range.Text.replace(
+                                            key, value
+                                        )
 
                             elif self.pptx_lib == "python-pptx":
-                                tr.text = data_list_to_table[i][j]
+                                text_range.text = data_list_to_table[i][j]
 
                                 if data_list_to_table[0][j] == "Vi":
                                     for key, value in RENAME_CONDITIONS.items():
-                                        tr.text = tr.Text.replace(key, value)
+                                        text_range.text = text_range.Text.replace(
+                                            key, value
+                                        )
 
                     else:
                         if self.pptx_lib == "win32com":
-                            tr.Text = data_list_to_table[i][j]
+                            text_range.Text = data_list_to_table[i][j]
 
                             if data_list_to_table[0][j] == "Vi":
                                 for key, value in RENAME_CONDITIONS.items():
-                                    tr.Text = tr.Text.replace(key, value)
+                                    text_range.Text = text_range.Text.replace(
+                                        key, value
+                                    )
 
                         elif self.pptx_lib == "python-pptx":
-                            tr.text = data_list_to_table[i][j]
+                            text_range.text = data_list_to_table[i][j]
 
                             if data_list_to_table[0][j] == "Vi":
                                 for key, value in RENAME_CONDITIONS.items():
-                                    tr.text = tr.Text.replace(key, value)
+                                    text_range.text = text_range.Text.replace(
+                                        key, value
+                                    )
 
                 if self.pptx_lib == "win32com":
-                    tr.Font.Size = 10
-                    tr.ParagraphFormat.Alignment = 2  # centering
+                    text_range.Font.Size = 10
+                    text_range.ParagraphFormat.Alignment = 2  # centering
 
                 elif self.pptx_lib == "python-pptx":
                     # TODO this doesn't work. why?
-                    # pf = tr.text_frame.paragraphs
+                    # pf = text_range.text_frame.paragraphs
                     # for i in range(len(pf)):
                     #     pf[i].font.size = Pt(10)
 
                     # This works
-                    tr.text_frame.paragraphs[0].font.size = Pt(10)
-                    tr.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
-                    if len(tr.text_frame.paragraphs) == 2:
-                        tr.text_frame.paragraphs[1].font.size = Pt(10)
-                        tr.text_frame.paragraphs[1].alignment = PP_ALIGN.CENTER
+                    text_range.text_frame.paragraphs[0].font.size = Pt(10)
+                    text_range.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
+                    if len(text_range.text_frame.paragraphs) == 2:
+                        text_range.text_frame.paragraphs[1].font.size = Pt(10)
+                        text_range.text_frame.paragraphs[1].alignment = PP_ALIGN.CENTER
 
         if self.pptx_lib == "win32com":
             for i in range(1, table_columns + 1):
