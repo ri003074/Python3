@@ -470,7 +470,7 @@ class WaveData:
             styles (list): marker style
             ax_h_lines (list): yaxis reference line
             spec (bool): set true if spec condition
-            legends (list): legend
+            legends (dict): legend
             pin_kind (str): pin kind
             x_label (str): x_label
             y_label (str): y_label
@@ -534,6 +534,9 @@ class WaveData:
 
                 print(df_plot)
 
+                if legends is not None:
+                    df_plot = df_plot.rename(columns=legends, inplace=False)
+
                 if styles is None:
                     styles = ["o", "o", "o", "o"]
 
@@ -556,7 +559,6 @@ class WaveData:
 
                 self.adjust_graph_params(
                     group_name=str(name),
-                    legends=legends,
                     rotation=rotation,
                     x_label=x_label,
                     y_label=y_label,
@@ -636,7 +638,6 @@ class WaveData:
                 font_size=font_size,
                 y_ticks=y_ticks,
                 ax_h_lines=ax_h_lines,
-                legends=legends,
             )
 
             picture_number = f"{picture_counter:03}_"
@@ -831,7 +832,6 @@ class WaveData:
             # font_size=font_size,
             ax_h_lines=[reference_level, vmaximum],
             y_ticks=y_ticks,
-            legends=[pin_name],
         )
         picture_number = f"{picture_counter:03}_"
         pin_kind = check_pin_kind(pin_name)
@@ -961,11 +961,8 @@ class WaveData:
             x_position = df_vix_p[0]
             y_position = df_vix_p[1]
 
-            if (
-                    x_position
-                    < df_positive_negative.index[
-                int(len(df_positive_negative) / 2)]
-            ):
+            if (x_position < df_positive_negative.index[
+                int(len(df_positive_negative) / 2)]):
                 label = "Vix_WCK_FR"
                 vix_wck_fr = y_position - reference_level
             else:
@@ -981,6 +978,7 @@ class WaveData:
                 s=f"{label}={y_position - reference_level:.2f}mV",
                 transform=self.ax.transData,
                 z_order=11,
+                horizontal_alignment="left"
             )
             self.add_ax_annotate(
                 text="",
@@ -1011,6 +1009,7 @@ class WaveData:
               + y_position_offset,
             s=f"Max(f(t))={max_ft:.2f}mV",
             transform=self.ax.transData,
+            horizontal_alignment="left"
         )
 
         # Min(f(t))
@@ -1029,23 +1028,26 @@ class WaveData:
             s=f"Min(f(t))={min_ft:.2f}mV",
             transform=self.ax.transData,
             z_order=11,
+            horizontal_alignment="left"
         )
 
         # Vix_WCK_Ratio Calculation result
-        x_position_vix_ratio_result = 0.35
+        x_position_vix_ratio_result = 0.25
         vix_wck_ratio_fr_min_t = (vix_wck_rf / abs(max_ft)) * 100
         vix_wck_ratio_rf_max_t = (vix_wck_fr / abs(min_ft)) * 100
         self.add_ax_text(
             x=x_position_vix_ratio_result,
             y=-0.2,
-            s=f"Vix_WCK_Ratio = Vix_WCK_FR/|Min(f(t))| = {vix_wck_fr:.2f}/|{min_ft:5.2f}| = {vix_wck_ratio_rf_max_t:4.1f}%",
+            s=f"Vix_WCK_Ratio = Vix_WCK_FR/|Min(f(t))| = {vix_wck_fr:5.2f}/|{min_ft:5.2f}| = {vix_wck_ratio_rf_max_t:4.1f}%",
             transform=self.ax.transAxes,
+            horizontal_alignment="left"
         )
         self.add_ax_text(
             x=x_position_vix_ratio_result,
             y=-0.25,
             s=f"Vix_WCK_Ratio = Vix_WCK_Rf/ Max(f(t))  = {vix_wck_rf:.2f}/ {max_ft:5.2f}  = {vix_wck_ratio_fr_min_t:4.1f}%",
             transform=self.ax.transAxes,
+            horizontal_alignment="left"
         )
 
         # make data for table output
@@ -1071,6 +1073,10 @@ class WaveData:
         )
 
         df_positive_negative = df_positive_negative.drop("f(t)", axis=1)
+        df_positive_negative = df_positive_negative.rename(
+            columns={"wck_t": positive_pin_name, "wck_c": negative_pin_name},
+            inplace=False)
+
         df_positive_negative.plot(ax=self.ax)
 
         self.adjust_graph_params(
@@ -1080,7 +1086,6 @@ class WaveData:
             font_size=font_size,
             y_ticks=[],
             ax_h_lines=[],
-            legends=[positive_pin_name, negative_pin_name],
         )
         picture_number = f"{picture_counter:03}_"
         pin_kind = check_pin_kind(positive_pin_name)
@@ -1178,7 +1183,7 @@ class WaveData:
 
     def adjust_graph_params(
             self,
-            legends,
+            # legends,
             y_ticks,
             font_size=14,
             legend_loc="upper right",
@@ -1194,7 +1199,6 @@ class WaveData:
         """adjust graph parameters
 
         Args:
-            legends (list): legend list
             y_ticks (list): y_ticks min, max, resolution
             font_size (int): font size
             legend_loc (str): legend location
@@ -1215,7 +1219,7 @@ class WaveData:
         self.ax.set_ylabel(y_label, fontsize=font_size)
         self.ax.set_xlabel(x_label, fontsize=font_size)
         self.ax.legend(
-            labels=legends,
+            # labels=legends,
             fontsize=font_size,
             loc=legend_loc,
             frameon=True,
@@ -1945,19 +1949,19 @@ if __name__ == "__main__":
         index=DATA_INDEX,
         pptx_lib=PPTX_LIB,
     )
-    # wave_data_overview.make_vix_graph(
-    #     item_name="vix",
-    #     positive_pin_file=FOLDER_PATH
-    #                       + "P1857A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
-    #     negative_pin_file=FOLDER_PATH
-    #                       + "P1858A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
-    # )
+    wave_data_overview.make_vix_graph(
+        item_name="vix",
+        positive_pin_file=FOLDER_PATH
+                          + "P1857A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
+        negative_pin_file=FOLDER_PATH
+                          + "P1858A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
+    )
     for pin_kind_for_pptx in PIN_KINDS:
         wave_data_overview.make_graph(
             df_columns_list=["Frequency"],
             file_name=PE + "Frequency",
             digit_format="%.2f",
-            legends=["Freq(GHz)"],
+            legends={"Frequency": "Freq(GHz)"},
             ax_h_lines=[4.0],
             y_ticks=FREQ_YTICKS,
             y_label="GHz",
