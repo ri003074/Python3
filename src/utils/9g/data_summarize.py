@@ -19,6 +19,7 @@ from pptx import Presentation
 from pptx.enum.text import MSO_ANCHOR
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Pt
+from tqdm import tqdm
 
 from variables import CELL_WIDTH_BASE
 from variables import CELL_WIDTH_BASE_PIN
@@ -27,11 +28,9 @@ from variables import CELL_WIDTH_BASE_VI
 from variables import DATA_GROUP
 from variables import DATA_INDEX
 from variables import FREQ_YTICKS
-
 # from variables import CROSSTALK_FILE_NAME
 # from variables import HISTOGRAM_FILE_NAME
 from variables import OVERVIEW_FILE_NAME
-
 # from variables import OVERVIEW_FILE_NAME
 from variables import RENAME_CONDITIONS
 
@@ -656,6 +655,18 @@ class WaveData:
     ):
         """make overshoot graph
 
+        How to calculate overshoot area
+
+        number of data in waveform text data is 2048
+        time of waveform data is rate*2 (2 waveforms)
+        if rate=250ps, then 500ps
+
+        To calculate the overshoot area, needs to know the area per 1 data.
+        1 data is calculated by following equation.
+        voltage(over reference level) * 500ps/2048
+        sum of the above equations are the result of overshoot area
+
+
         Args:
             file (str): waveform text data to make graph
             y_ticks (list): y ticks value
@@ -771,8 +782,8 @@ class WaveData:
                     sum_of_voltage += y[i] - reference_level
                     x_end = x[i]
 
-        ratio_of_area_per_1ns = (x[2047] - x[0] + (x[1] - x[0])) * 1e9 / x.size
-        area = abs(sum_of_voltage * ratio_of_area_per_1ns)
+        ratio_of_area_per_1pt = (x[2047] - x[0] + (x[1] - x[0])) * 1e9 / x.size
+        area = abs(sum_of_voltage * ratio_of_area_per_1pt)
         overshoot = abs(vmaximum - reference_level) * 1e3
         s = "area"
         self.add_ax_text(
@@ -818,7 +829,6 @@ class WaveData:
             rotation=0,
             x_label="",
             y_label="mV",
-            # font_size=font_size,
             ax_h_lines=[reference_level, vmaximum],
             y_ticks=y_ticks,
         )
@@ -1271,7 +1281,6 @@ class WaveData:
             cell_height=cell_height,
             slide_width=self.slide_width,
             slide_height=self.slide_height,
-            rename={},
         )
 
     def add_summary_table_to_pptx(
@@ -1295,10 +1304,10 @@ class WaveData:
                 cell_width (list): cell width
                 items (list): items for table
                 cell_height (int): cell height
-                group_by_table (str): group name of table in case separate table by group
+                group_by_table (str): group name of table
                 rename (dict): specify header original and after name in case rename
                 pin_kind (str): pin kind
-                sort (bool): if sort data by one of data frame column, specify df column name.
+                sort (bool): if sort data by one of data frame column
                 merge (bool): marge flag
 
             Returns:
@@ -1340,7 +1349,7 @@ class WaveData:
             rename=rename,
         )
 
-        if group_by_table:
+        if group_by_table is not None:
             for name, group in data_list_to_table_df.groupby(group_by_table):
                 self.add_slide_to_pptx(title=str(name), layout=4)
 
@@ -1383,7 +1392,6 @@ class WaveData:
 
         if picture_per_slide == 1:
             for file in file_list[0]:
-                # TODO change title
                 title = os.path.splitext(os.path.basename(file))[0]
                 for key, value in RENAME_CONDITIONS.items():
                     title = title.replace(key, value)
@@ -1581,7 +1589,14 @@ class WaveData:
             self.slide.shapes[0].text_frame.paragraphs[0].font.size = Pt(font_size)
 
     def add_table(
-        self, df, items, cell_width, cell_height, slide_width, slide_height, rename,
+        self,
+        df,
+        items,
+        cell_width,
+        cell_height,
+        slide_width,
+        slide_height,
+        rename=None,
     ):
         """add table to slide.
 
@@ -1624,7 +1639,7 @@ class WaveData:
 
             table = table_shape.table
 
-        for i in range(table_rows):
+        for i in tqdm(range(table_rows)):
             for j in range(table_columns):
                 if self.pptx_lib == "win32com":
                     tr = table.Cell(i + 1, j + 1).Shape.TextFrame.TextRange
@@ -1655,7 +1670,7 @@ class WaveData:
                             tr.text = f"{data_list_to_table[i][j]:.1f}"
 
                 except ValueError:
-                    if rename:
+                    if rename is not None:
                         if data_list_to_table[i][j] in rename:
                             if self.pptx_lib == "win32com":
                                 tr.Text = rename[data_list_to_table[i][j]]
