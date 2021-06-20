@@ -658,6 +658,7 @@ class WaveData:
 
         Args:
             file (str): waveform text data to make graph
+            y_ticks (list): y ticks value
             figure_size (tuple): figure size
             item_name (str): item name. Overshoot or Undershoot
             additional_information (bool):  additional information flag
@@ -665,12 +666,6 @@ class WaveData:
 
         Returns:
             None
-            :param info:
-            :param additional_information:
-            :param item_name:
-            :param figure_size:
-            :param file:
-            :param y_ticks:
 
         """
         self.setup_fig_and_ax(
@@ -1178,7 +1173,6 @@ class WaveData:
 
     def adjust_graph_params(
         self,
-        # legends,
         y_ticks,
         font_size=14,
         legend_loc="upper right",
