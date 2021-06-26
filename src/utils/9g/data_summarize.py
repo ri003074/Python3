@@ -29,7 +29,20 @@ from variables import DATA_GROUP
 from variables import DATA_INDEX
 from variables import FREQ_YTICKS
 
-# from variables import CROSSTALK_FILE_NAME
+# from variables import VIX_FILE_NAME
+# from variables import CELL_WIDTH_BASE_VMAX
+# from variables import CELL_WIDTH_BASE_VMIN
+# from variables import CELL_WIDTH_BASE_TOP
+# from variables import CELL_WIDTH_BASE_BASE
+from variables import OVERSHOOT_FILE_NAME
+
+from variables import OVERSHOOT_Y_TICKS_1V_0V
+from variables import OVERSHOOT_Y_TICKS_0r5V_0V
+
+from variables import CROSSTALK_FILE_NAME
+
+# from variables import CROSSTALK_YTICKS
+
 # from variables import HISTOGRAM_FILE_NAME
 from variables import OVERVIEW_FILE_NAME
 
@@ -45,11 +58,36 @@ date_now = now.strftime("%Y%m%d%H%M")
 
 """
 TODO
-# TODO fix this code, change to easy to read file name
-title = file.replace("\\", "xyz").replace(".png", "")
-title = re.sub(".*xyz", "", title)
 
 """
+
+
+def merge_diff_pin_result(
+    folder_path, folder_path_positive, folder_path_negative, pin_kind
+):
+    positive_pin_file_list = glob(folder_path_positive + "/" + pin_kind + "_posi/*.csv")
+    negative_pin_file_list = glob(folder_path_negative + "/" + pin_kind + "_nega/*.csv")
+
+    os.makedirs(folder_path + pin_kind, exist_ok=True)
+    for positive_pin_file, negative_pin_file in zip(
+        positive_pin_file_list, negative_pin_file_list
+    ):
+        file_name = os.path.split(positive_pin_file)
+        print(file_name[1])
+        df_positive_pin = pd.read_csv(positive_pin_file, header=None)
+        df_negative_pin = pd.read_csv(negative_pin_file, header=None)
+        df_positive_pin["i"] = list(range(0, len(df_positive_pin.index) * 2, 2))
+        df_negative_pin["i"] = list(range(1, len(df_negative_pin.index) * 2, 2))
+        df_positive_negative_pin = pd.concat([df_positive_pin, df_negative_pin])
+        if "overshoot" not in positive_pin_file:
+            df_positive_negative_pin = (
+                df_positive_negative_pin.sort_values("i")
+                .reset_index(drop=True)
+                .drop("i", axis=1)
+            )
+        df_positive_negative_pin.to_csv(
+            folder_path + "/" + pin_kind + "/" + file_name[1], header=None, index=False,
+        )
 
 
 def check_pin_kind(pin_name):
@@ -217,7 +255,11 @@ class WaveData:
                     rows.insert(7, match.group(3).replace("00V", "V"))
                     rows.insert(8, "Rate")
                     rows.insert(
-                        9, match.group(4).replace("Rate0r", "").replace("ns", "ps")
+                        9,
+                        match.group(4)
+                        .replace("Rate0r", "")
+                        .replace("ns", "ps")
+                        .replace("Rate1r", "1"),
                     )
                     rows.insert(10, "Order")
                     rows.insert(11, str(pin_order))
@@ -253,6 +295,19 @@ class WaveData:
 
             # adjust unit of dataframe
             self.adjust_unit()
+            if "crosstalk" in self.data_df["Condition"][0]:
+                self.data_df["Vminimum-Base"] = (
+                    self.data_df["Vminimum"] - self.data_df["Base"]
+                )
+                self.data_df["Vmaximum-Base"] = (
+                    self.data_df["Vmaximum"] - self.data_df["Base"]
+                )
+                self.data_df["Vminimum-Top"] = (
+                    self.data_df["Vminimum"] - self.data_df["Top"]
+                )
+                self.data_df["Vmaximum-Top"] = (
+                    self.data_df["Vmaximum"] - self.data_df["Top"]
+                )
 
             if self.header:
                 self.data_df = self.data_df.set_axis(self.header, axis="columns")
@@ -422,7 +477,7 @@ class WaveData:
         y_ticks,
         figure_size=(10, 5.5),
         file_name="default",
-        font_size=14,
+        font_size=10,
         digit_format="%.1f",
         legend_loc="upper right",
         rotation=45,
@@ -577,7 +632,12 @@ class WaveData:
                 )
 
                 file_path = (
-                    self.folder_path + picture_number + name + "_" + file_name + ".png"
+                    self.folder_path
+                    + picture_number
+                    + name
+                    + "_"
+                    + self.file_name.replace("csv", "")
+                    + ".png"
                 )
                 plt.savefig(file_path)
                 plt.close("all")
@@ -586,8 +646,8 @@ class WaveData:
 
                 for key, value in RENAME_CONDITIONS.items():
                     name = name.replace(key, value)
+                    file_name = file_name.replace(key, value)
 
-                file_name = file_name.replace("_", " ")
                 print(file_name)
                 # self.add_slide_to_pptx(
                 #     title=picture_number + name + " " + file_name,
@@ -636,10 +696,12 @@ class WaveData:
         self,
         file,
         y_ticks,
+        y_label,
         figure_size=(10, 5.5),
         item_name="Overshoot",
         additional_information=False,
         info=None,
+        pe="",
     ):
         """make overshoot graph
 
@@ -658,6 +720,7 @@ class WaveData:
         Args:
             file (str): waveform text data to make graph
             y_ticks (list): y ticks value
+            y_label (str): y label
             figure_size (tuple): figure size
             item_name (str): item name. Overshoot or Undershoot
             additional_information (bool):  additional information flag
@@ -671,7 +734,7 @@ class WaveData:
             figure_size=figure_size, x_margin=0.01, digit_format="%.3f"
         )
 
-        match_pin_file = re.match(r".*((P.*?)_.*(Vih.*)_(Rate0r.*ns).*).txt", file)
+        match_pin_file = re.match(r".*((P.*?)_.*(Vih.*)_(Rate\dr.*ns).*).txt", file)
         condition_all = match_pin_file.group(1)
         print(self.data_df)
         print(
@@ -723,9 +786,6 @@ class WaveData:
         graph_x_middle = int(x.size / 2)
 
         sum_of_voltage = 0
-        x_start = 0
-        x_start_flag = 0
-        x_end = 0
         area_label_y_position = 0
         overshoot_label_y_position = 0
         if item_name == "Overshoot":
@@ -742,12 +802,7 @@ class WaveData:
             )
             for i in range(int(x.size / 2)):
                 if y[i] > reference_level:
-                    if x_start_flag == 0:
-                        x_start = x[i]
-                        x_start_flag += 1
-
-                    sum_of_voltage += y[i] - reference_level
-                    x_end = x[i]
+                    sum_of_voltage += abs(y[i]) - abs(reference_level)
 
         elif item_name == "Undershoot":
             y_label_position_offset = -0.075
@@ -763,37 +818,33 @@ class WaveData:
             )
             for i in range(int(x.size / 2)):
                 if y[i] < reference_level:
-                    if x_start_flag == 0:
-                        x_start = x[i]
-                        x_start_flag += 1
 
-                    sum_of_voltage += y[i] - reference_level
-                    x_end = x[i]
+                    sum_of_voltage += abs(y[i]) - abs(reference_level)
 
         ratio_of_area_per_1pt = (x[2047] - x[0] + (x[1] - x[0])) * 1e9 / x.size
-        area = abs(sum_of_voltage * ratio_of_area_per_1pt)
-        overshoot = abs(vmaximum - reference_level) * 1e3
+        area_v_ns = abs(sum_of_voltage * ratio_of_area_per_1pt)
+        overshoot_mv = abs(vmaximum - reference_level) * 1e3
         s = "area"
         self.add_ax_text(
-            x=(x_start + x_end) / 2,
+            x=x[int((x.size - 1) * 3 / 8)],
             y=area_label_y_position,
-            s=f"{s:10} = {area:.6f}[V-ns]",
+            s=f"{s:10} = {area_v_ns:.6f}[V-ns]",
             transform=self.ax.transData,
             z_order=11,
             horizontal_alignment="left",
         )
         self.add_ax_text(
-            x=(x_start + x_end) / 2,
+            x=x[int((x.size - 1) * 3 / 8)],
             y=overshoot_label_y_position,
-            s=f"{item_name:10} = {overshoot:.6f}[mV]",
+            s=f"{item_name:10} = {overshoot_mv:.1f}mV",
             transform=self.ax.transData,
             z_order=12,
             horizontal_alignment="left",
         )
         vns_data = {
             "Condition": condition_all,
-            "v-ns-" + item_name: area,
-            item_name + "_mV": overshoot,
+            "v-ns-" + item_name: area_v_ns,
+            item_name + "_mV": overshoot_mv,
         }
         self.data_vns.append(vns_data)
 
@@ -802,7 +853,7 @@ class WaveData:
         if additional_information:
             self.add_ax_text(
                 x=0.99,
-                y=0.05,
+                y=0.025,
                 s=info,
                 transform=self.ax.transAxes,
                 horizontal_alignment="right",
@@ -816,7 +867,7 @@ class WaveData:
         self.adjust_graph_params(
             rotation=0,
             x_label="",
-            y_label="mV",
+            y_label=y_label,
             ax_h_lines=[reference_level, vmaximum],
             y_ticks=y_ticks,
         )
@@ -834,7 +885,7 @@ class WaveData:
         )
         plt.savefig(file_path)
         plt.close("all")
-        title = item_name + "_ " + pin_kind[0] + "_" + vi + "_" + test_rate
+        title = pe + " " + item_name + "_" + pin_kind[0] + "_" + vi + "_" + test_rate
         for key, value in RENAME_CONDITIONS.items():
             title = title.replace(key, value)
 
@@ -850,7 +901,7 @@ class WaveData:
         positive_pin_file,
         description=False,
         font_size=14,
-        figure_size=(10, 5.5),
+        figure_size=(12, 5.5),
         reference_level=0,
         rotation=0,
         x_label=None,
@@ -876,7 +927,9 @@ class WaveData:
         """
         global picture_counter
 
-        self.setup_fig_and_ax(figure_size=figure_size, x_margin=0.01)
+        self.setup_fig_and_ax(
+            figure_size=figure_size, x_margin=0.01, digit_format="%.2f"
+        )
 
         match_positive_pin = re.match(
             r".*(P.*?)_.*(Vih.*)_Rate0r(.*ns).*", positive_pin_file
@@ -887,7 +940,7 @@ class WaveData:
 
         positive_pin_name = match_positive_pin.group(1)
         negative_pin_name = match_negative_pin.group(1)
-        test_rate = match_positive_pin.group(3)
+        test_rate = match_positive_pin.group(3).replace("ns", "ps")
         vi = match_positive_pin.group(2).replace("00V", "V")
 
         wf_txt_data_to_csv(positive_pin_file)
@@ -907,6 +960,11 @@ class WaveData:
         df_negative = df_negative.set_index("t")
 
         df_positive_negative = pd.concat([df_positive, df_negative], axis=1)
+        df_positive_negative_plot = pd.concat([df_positive, df_negative], axis=1)
+        df_positive_negative_plot = df_positive_negative_plot.rename(
+            columns={"wck_t": positive_pin_name, "wck_c": negative_pin_name},
+            inplace=False,
+        )
 
         # make diff column
         df_positive_negative["f(t)"] = (
@@ -930,7 +988,17 @@ class WaveData:
             val = get_nearest_value(df_tmp["f(t)"].values.tolist(), 0)
             min_row1 = df_tmp[df_tmp["f(t)"] == val]
             df_vix = pd.concat([df_vix, min_row1])
-            df_tmp = df_tmp.drop(min_row1.index)
+            index_value_close_to_0 = df_tmp.index.get_loc(min_row1.index.values[0])
+            # drop closest index and around
+            df_tmp = df_tmp.drop(
+                df_tmp.index[
+                    [
+                        index_value_close_to_0,
+                        index_value_close_to_0 - 1,
+                        index_value_close_to_0 + 1,
+                    ]
+                ]
+            )
 
         # get average in case there is no cross point in data
         df_vix["(wck_t+wck_c)/2"] = (df_vix["wck_t"] + df_vix["wck_c"]) / 2
@@ -945,34 +1013,37 @@ class WaveData:
         vix_wck_rf = 0
         vix_wck_fr = 0
         for df_vix_p in df_vix_list:
-            x_position = df_vix_p[0]
-            y_position = df_vix_p[1]
+            cross_point_x = df_vix_p[0]
+            cross_point_y = df_vix_p[1]
 
             if (
-                x_position
+                cross_point_x
                 < df_positive_negative.index[int(len(df_positive_negative) / 2)]
             ):
                 label = "Vix_WCK_FR"
-                vix_wck_fr = y_position - reference_level
+                vix_wck_fr = cross_point_y - reference_level
             else:
                 label = "Vix_WCK_RF"
-                vix_wck_rf = y_position - reference_level
+                vix_wck_rf = cross_point_y - reference_level
 
-            x_position_offset = 0.0005e-8
+            # x_position_offset = 0.0005e-8
+            x_position_offset = (
+                df_positive_negative.iloc[40].name - df_positive_negative.iloc[0].name
+            )
             y_position_offset = 0.05
 
             self.add_ax_text(
-                x=x_position + x_position_offset,
-                y=(y_position + reference_level) / 2,
-                s=f"{label}={y_position - reference_level:.2f}mV",
+                x=cross_point_x + x_position_offset,
+                y=(cross_point_y + reference_level) / 2,
+                s=f"{label}={cross_point_y - reference_level:.3f}V",
                 transform=self.ax.transData,
                 z_order=11,
                 horizontal_alignment="left",
             )
             self.add_ax_annotate(
                 text="",
-                xy=[x_position, y_position],
-                xy_text=[x_position, reference_level],
+                xy=[cross_point_x, cross_point_y],
+                xy_text=[cross_point_x, reference_level],
                 arrow_style="<->",
                 z_order=10,
             )
@@ -994,9 +1065,9 @@ class WaveData:
         max_ft = max_index_values["wck_t"] - max_index_values["wck_c"]
         self.add_ax_text(
             x=max_index_values.name + x_position_offset,  # includes offset
-            y=(max_index_values["wck_t"] + max_index_values["wck_c"]) / 2
+            y=(max_index_values["wck_t"] + max_index_values["wck_c"]) / 4
             + y_position_offset,
-            s=f"Max(f(t))={max_ft:.2f}mV",
+            s=f"Max(f(t))={max_ft:.3f}V",
             transform=self.ax.transData,
             horizontal_alignment="left",
         )
@@ -1012,29 +1083,29 @@ class WaveData:
         min_ft = min_index_values["wck_t"] - min_index_values["wck_c"]
         self.add_ax_text(
             x=min_index_values.name + x_position_offset,  # includes offset
-            y=(min_index_values["wck_t"] + min_index_values["wck_c"]) / 2
+            y=(min_index_values["wck_t"] + min_index_values["wck_c"]) / 4
             + y_position_offset,
-            s=f"Min(f(t))={min_ft:.2f}mV",
+            s=f"Min(f(t))={min_ft:.3f}V",
             transform=self.ax.transData,
             z_order=11,
             horizontal_alignment="left",
         )
 
         # Vix_WCK_Ratio Calculation result
-        x_position_vix_ratio_result = 0.25
-        vix_wck_ratio_fr_min_t = (vix_wck_rf / abs(max_ft)) * 100
-        vix_wck_ratio_rf_max_t = (vix_wck_fr / abs(min_ft)) * 100
+        x_position_vix_ratio_result = 0.35
+        vix_wck_ratio_fr_min_t = (vix_wck_fr / abs(min_ft)) * 100
+        vix_wck_ratio_rf_max_t = (vix_wck_rf / abs(max_ft)) * 100
         self.add_ax_text(
             x=x_position_vix_ratio_result,
             y=-0.2,
-            s=f"Vix_WCK_Ratio = Vix_WCK_FR/|Min(f(t))| = {vix_wck_fr:5.2f}/|{min_ft:5.2f}| = {vix_wck_ratio_rf_max_t:4.1f}%",
+            s=f"Vix_WCK_Ratio = Vix_WCK_FR/|Min(f(t))| = {vix_wck_fr:6.3f}/|{min_ft:6.3f}| = {vix_wck_ratio_fr_min_t:4.1f}%",
             transform=self.ax.transAxes,
             horizontal_alignment="left",
         )
         self.add_ax_text(
             x=x_position_vix_ratio_result,
             y=-0.25,
-            s=f"Vix_WCK_Ratio = Vix_WCK_Rf/ Max(f(t))  = {vix_wck_rf:.2f}/ {max_ft:5.2f}  = {vix_wck_ratio_fr_min_t:4.1f}%",
+            s=f"Vix_WCK_Ratio = Vix_WCK_Rf/ Max(f(t))  = {vix_wck_rf:6.3f}/ {max_ft:6.3f}  = {vix_wck_ratio_rf_max_t:4.1f}%",
             transform=self.ax.transAxes,
             horizontal_alignment="left",
         )
@@ -1054,8 +1125,8 @@ class WaveData:
         # reference level line
         self.ax.hlines(
             y=reference_level,
-            xmin=df_positive_negative.index[0],
-            xmax=df_positive_negative.index[len(df_positive_negative) - 1],
+            xmin=df_positive_negative_plot.index[0],
+            xmax=df_positive_negative_plot.index[len(df_positive_negative_plot) - 1],
             color="black",
             linestyle="dashed",
             zorder=10,
@@ -1067,14 +1138,14 @@ class WaveData:
             inplace=False,
         )
 
-        df_positive_negative.plot(ax=self.ax)
+        df_positive_negative_plot.plot(ax=self.ax)
 
         self.adjust_graph_params(
             rotation=rotation,
             x_label=x_label,
             y_label=y_label,
             font_size=font_size,
-            y_ticks=[],
+            y_ticks=[-0.35, 0.849, 0.15],
             ax_h_lines=[],
         )
         picture_number = f"{picture_counter:03}_"
@@ -1091,8 +1162,13 @@ class WaveData:
         )
         plt.savefig(file_path)
         plt.close("all")
+
+        title = item_name + "_" + pin_kind[0] + "_" + vi + "_" + test_rate
+        for key, value in RENAME_CONDITIONS.items():
+            title = title.replace(key, value)
+
         self.add_slide_to_pptx(
-            title=picture_number + pin_kind[0] + "_" + vi + "_" + item_name, layout=11,
+            title=title, layout=11,
         )
         self.add_picture_to_pptx(file_path=file_path)
 
@@ -1120,7 +1196,7 @@ class WaveData:
             text=text,
             xy=xy,
             xytext=xy_text,
-            arrowprops=dict(arrowstyle=arrow_style),
+            arrowprops=dict(arrowstyle=arrow_style, color="red"),
             zorder=z_order,
             size=5,
         )
@@ -1172,7 +1248,7 @@ class WaveData:
     def adjust_graph_params(
         self,
         y_ticks,
-        font_size=14,
+        font_size=10,
         legend_loc="upper right",
         rotation=0,
         group_name="",
@@ -1237,14 +1313,15 @@ class WaveData:
         ):
             ax_h_lines = ax_h_lines_per_condition[group_name]
 
-        for ax_h_line in ax_h_lines:
-            self.ax.axhline(
-                y=ax_h_line,
-                linestyle=line_style,
-                alpha=alpha,
-                color="gray",
-                linewidth=1,
-            )
+        if ax_h_lines is not None:
+            for ax_h_line in ax_h_lines:
+                self.ax.axhline(
+                    y=ax_h_line,
+                    linestyle=line_style,
+                    alpha=alpha,
+                    color="gray",
+                    linewidth=1,
+                )
 
     def add_vix_table_to_pptx(self, title, items, cell_width, cell_height=20):
         """add vix table to pptx
@@ -1366,6 +1443,9 @@ class WaveData:
         """
 
         picture_per_slide = len(file_list)
+        if len(file_list[0]) == 0:
+            print("file not found")
+            sys.exit()
 
         if self.pptx_lib == "win32com":
             picture_width = picture_width
@@ -1373,7 +1453,7 @@ class WaveData:
         elif self.pptx_lib == "python-pptx":
             picture_width = Pt(picture_width)
 
-        top = self.slide_height * 0.3
+        top = self.slide_height * 0.25
         left_1 = self.slide_width / 4 - picture_width / 2
         left_2 = self.slide_width * 3 / 4 - picture_width / 2
         text_box_height = 40
@@ -1394,16 +1474,19 @@ class WaveData:
 
         elif picture_per_slide == 2:
             for (file1, file2) in zip(file_list[0], file_list[1]):
-                title = (
-                    file1.replace("\\", "xyz")
-                    .replace(".png", "")
-                    .replace("8GPE_Frequency", "")  # TODO need to fix title
-                )
-                title = re.sub(".*xyz", "", title)
+                title = os.path.splitext(os.path.basename(file1))[0]
+                for key, value in RENAME_CONDITIONS.items():
+                    title = title.replace(key, value)
+
+                match_pin_name = re.match(r"(P.*?) ", title)
+                pin_kind = check_pin_kind(match_pin_name.group(1))
+                title = re.sub("P.*? ", "", title)
+                title = pin_kind[0] + " " + title
                 self.add_slide_to_pptx(title=title, layout=11)
 
-                title1 = file1.replace("\\", "xyz").replace(".png", "")
-                title1 = re.sub(".*xyz", "", title1)
+                title1 = os.path.splitext(os.path.basename(file1))[0]
+                for key, value in RENAME_CONDITIONS.items():
+                    title1 = title1.replace(key, value)
 
                 # 1st picture
                 self.add_picture_to_pptx(
@@ -1425,8 +1508,9 @@ class WaveData:
                     height=text_box_height,
                 )
 
-                title2 = file2.replace("\\", "xyz").replace(".png", "")
-                title2 = re.sub(".*xyz", "", title2)
+                title2 = os.path.splitext(os.path.basename(file2))[0]
+                for key, value in RENAME_CONDITIONS.items():
+                    title2 = title2.replace(key, value)
 
                 # 2nd picture
                 self.add_picture_to_pptx(
@@ -1648,14 +1732,59 @@ class WaveData:
                     if self.pptx_lib == "win32com":
                         if "v-ns" in data_list_to_table[0][j]:
                             text_range.Text = f"{data_list_to_table[i][j]:.6f}"
+                        elif "Freq" in data_list_to_table[0][j]:
+                            text_range.Text = f"{data_list_to_table[i][j]:.3f}"
                         else:
                             text_range.Text = f"{data_list_to_table[i][j]:.1f}"
+
+                        if (
+                            check_pin_kind(data_list_to_table[i][0])[0] == "WCK"
+                            or check_pin_kind(data_list_to_table[i][0])[0] == "CK"
+                        ):
+                            # positive pin. delete Vmin-Top, Vmax-Top
+                            if (
+                                "Vminimum-Top" in data_list_to_table[0][j]
+                                or "Vmaximum-Top" in data_list_to_table[0][j]
+                            ):
+                                text_range.Text = f"{data_list_to_table[i][j]:.3f}"
+                                if i % 2 != 0:
+                                    text_range.Text = "-"
+
+                            # negative pin. delete Vmin-Base, Vmax-Base
+                            elif (
+                                "Vminimum-Base" in data_list_to_table[0][j]
+                                or "Vmaximum-Base" in data_list_to_table[0][j]
+                            ):
+                                text_range.Text = f"{data_list_to_table[i][j]:.3f}"
+                                if i % 2 == 0:
+                                    text_range.Text = "-"
 
                     elif self.pptx_lib == "python-pptx":
                         if "v-ns" in data_list_to_table[0][j]:
                             text_range.text = f"{data_list_to_table[i][j]:.6f}"
+                        elif "Freq" in data_list_to_table[0][j]:
+                            text_range.text = f"{data_list_to_table[i][j]:.3f}"
                         else:
                             text_range.text = f"{data_list_to_table[i][j]:.1f}"
+
+                        if (
+                            check_pin_kind(data_list_to_table[i][0])[0] == "WCK"
+                            or check_pin_kind(data_list_to_table[i][0])[0] == "CK"
+                        ):
+                            if (
+                                "Vminimum-Top" in data_list_to_table[0][j]
+                                or "Vmaximum-Top" in data_list_to_table[0][j]
+                            ):
+                                text_range.text = f"{data_list_to_table[i][j]:.3f}"
+                                if i % 2 != 0:
+                                    text_range.text = "-"
+                            elif (
+                                "Vminimum-Base" in data_list_to_table[0][j]
+                                or "Vmaximum-Base" in data_list_to_table[0][j]
+                            ):
+                                text_range.text = f"{data_list_to_table[i][j]:.3f}"
+                                if i % 2 == 0:
+                                    text_range.text = "-"
 
                 except ValueError:
                     if rename is not None:
@@ -1681,7 +1810,7 @@ class WaveData:
 
                                 if data_list_to_table[0][j] == "Vi":
                                     for key, value in RENAME_CONDITIONS.items():
-                                        text_range.text = text_range.Text.replace(
+                                        text_range.text = text_range.text.replace(
                                             key, value
                                         )
 
@@ -1689,18 +1818,22 @@ class WaveData:
                         if self.pptx_lib == "win32com":
                             text_range.Text = data_list_to_table[i][j]
 
+                            print(data_list_to_table[0][j])
+
                             if data_list_to_table[0][j] == "Vi":
                                 for key, value in RENAME_CONDITIONS.items():
                                     text_range.Text = text_range.Text.replace(
                                         key, value
                                     )
+                            if "Vmin" in data_list_to_table[0][j]:
+                                text_range.Text = "-"
 
                         elif self.pptx_lib == "python-pptx":
                             text_range.text = data_list_to_table[i][j]
 
                             if data_list_to_table[0][j] == "Vi":
                                 for key, value in RENAME_CONDITIONS.items():
-                                    text_range.text = text_range.Text.replace(
+                                    text_range.text = text_range.text.replace(
                                         key, value
                                     )
 
@@ -1820,7 +1953,7 @@ class WaveData:
 if __name__ == "__main__":
     start = time.time()
     DATA_START_COLUMNS = 10
-    FOLDER_PATH = os.getcwd() + "/202106172016_debug/"
+    FOLDER_PATH = os.getcwd() + "/20210625_debug_crosstalk_merge/"
     PPTX_FILE_NAME = "8GPE_TEST.pptx"
     OSC_PICTURE_LIST_CROSSTALK = glob(FOLDER_PATH + "/*crosstalk/*.png")
 
@@ -1858,77 +1991,265 @@ if __name__ == "__main__":
     OSC_PICTURE_LIST_VIHL_AC = glob(
         FOLDER_PATH + pin_kind_for_pptx.lower() + "/*vihl_ac/*.png"
     )
-    # Overshoot/Undershoot
-    # wave_data_overshoot = WaveData(
-    #     active_presentation_object=active_presentation_object,
-    #     file_name=pin_kind_for_pptx.lower() + "_" + OVERSHOOT_FILE_NAME,
-    #     folder_path=FOLDER_PATH + pin_kind_for_pptx.lower() + "/",
-    #     group_by=DATA_GROUP,
-    #     index=DATA_INDEX,
-    #     pptx_lib=PPTX_LIB,
-    # )
-    # for i in range(len(OVERSHOOT_FILE_LIST)):
-    #     if i < 4:
-    #         y_ticks = OVERSHOOT_Y_TICKS_1V_0V
-    #     else:
-    #         y_ticks = OVERSHOOT_Y_TICKS_0r5V_0V
+    pkind = "WCK"
+    # vix
+    osc_vix_positive_pin_list = glob(FOLDER_PATH + pkind.lower() + "_posi/*vix/*.png")
+    osc_vix_negative_pin_list = glob(FOLDER_PATH + pkind.lower() + "_nega/*vix/*.png")
+    OSC_PICTURE_LIST_VIX = [None] * (
+        len(osc_vix_positive_pin_list) + len(osc_vix_negative_pin_list)
+    )
+    OSC_PICTURE_LIST_VIX[::2] = osc_vix_positive_pin_list
+    OSC_PICTURE_LIST_VIX[1::2] = osc_vix_negative_pin_list
+    vix_positive_pin_list = glob(FOLDER_PATH + pkind.lower() + "_posi/*_vix/*.txt")
+    vix_negative_pin_list = glob(FOLDER_PATH + pkind.lower() + "_nega/*_vix/*.txt")
+    VIX_FILE_LIST = [None] * (len(vix_positive_pin_list) + len(vix_negative_pin_list))
+    VIX_FILE_LIST[::2] = vix_positive_pin_list
+    VIX_FILE_LIST[1::2] = vix_negative_pin_list
 
-    #     if i % 2 == 0:
-    #         item_name = "Overshoot"
-    #     else:
-    #         item_name = "Undershoot"
-
-    #     wave_data_overshoot.make_overshoot_graph(
-    #         file=OVERSHOOT_FILE_LIST[i],
-    #         y_ticks=y_ticks,
-    #         item_name=item_name,
+    wave_data_crosstalk = WaveData(
+        active_presentation=active_presentation_object,
+        file_name=pkind.lower() + "_" + CROSSTALK_FILE_NAME,
+        folder_path=FOLDER_PATH + pkind.lower() + "/",
+        group_by=DATA_GROUP,
+        index=DATA_INDEX,
+        pptx_lib=PPTX_LIB,
+    )
+    # if pkind == "WCK" or pkind == "CK":
+    #     wave_data_crosstalk.make_graph(
+    #         df_columns_list=[
+    #             "Vminimum-Base",
+    #             "Vmaximum-Base",
+    #             "Vminimum-Top",
+    #             "Vmaximum-Top",
+    #         ],
+    #         file_name=PE + "_" + "Crosstalk",
+    #         digit_format="%.1f",
+    #         legends={
+    #             "Vminimum": "Vmin(mV)",
+    #             "Vmaximum": "Vmax(mV)",
+    #             "Top": "Top-FIXH(mV)",
+    #             "Base": "Base-FIXL(mV)",
+    #         },
+    #         y_ticks=CROSSTALK_YTICKS,
+    #         y_label="mV",
+    #         pin_kind=pkind,
+    #         # y_ticks_per_condition={
+    #         #     "WCK_Vih1r6V_Vil0r0V_Vt0r0V": [-300, 1000, 100],
+    #         #     "WCK_Vih1r3V_Vil-0r30V_Vt-0r30V": [-400, 900, 100],
+    #         #     "CK_Vih1r6V_Vil0r0V_Vt0r0V": [-300, 1000, 100],
+    #         #     "CK_Vih1r3V_Vil-0r30V_Vt-0r30V": [-400, 900, 100],
+    #         #     "CS_Vih1r6V_Vil0r0V_Vt0r0V": [-300, 900, 100],
+    #         #     "CS_Vih1r3V_Vil-0r30V_Vt-0r30V": [-300, 900, 100],
+    #         # },
+    #         legend_loc="center right",
     #         additional_information=True,
-    #         info="Target: under 300mV, under 0.1 V-ns",
+    #         info="Target: less than 5%(±45mV@IO Vamp=1.8V, ±40mV@ADM Vamp=1.6V)",
     #     )
-    # wave_data_overshoot.add_summary_table_to_pptx(
-    #     title="Overshoot/Undershoot",
-    #     cell_width=[
-    #         CELL_WIDTH_BASE * 0.9,  # pin
-    #         CELL_WIDTH_BASE * 2,  # vi
-    #         CELL_WIDTH_BASE * 0.9,  # rate
-    #         CELL_WIDTH_BASE * 1.2,  # overshoot
-    #         CELL_WIDTH_BASE * 1.54,  # v-ns-overshoot
-    #         CELL_WIDTH_BASE * 0.9,  # Vmaximum
-    #         CELL_WIDTH_BASE * 0.9,  # vtop
-    #         CELL_WIDTH_BASE * 1.2,  # undershoot
-    #         CELL_WIDTH_BASE * 1.56,  # v-ns-undershoot
-    #         CELL_WIDTH_BASE * 0.9,  # Vminimum
-    #         CELL_WIDTH_BASE * 0.95,  # base
-    #     ],
+    #     wave_data_crosstalk.add_summary_table_to_pptx(
+    #         title=PE + " " + "Crosstalk Summary" + " " + pkind + " Pin",
+    #         cell_width=[
+    #             CELL_WIDTH_BASE_PIN,  # pin
+    #             CELL_WIDTH_BASE_VI,  # vi
+    #             CELL_WIDTH_BASE_RATE,  # rate
+    #             CELL_WIDTH_BASE_VMAX,  # Vmaximum
+    #             CELL_WIDTH_BASE_VMIN,  # Vminimum
+    #             CELL_WIDTH_BASE_TOP,  # Vbase
+    #             CELL_WIDTH_BASE_BASE,  # Vbase
+    #         ],
+    #         items=[
+    #             "Pin",
+    #             "Vi",
+    #             "Rate",
+    #             "Vminimum",
+    #             "Vmaximum",
+    #             "Top",
+    #             "Base",
+    #             "Vminimum-Base",
+    #             "Vmaximum-Base",
+    #             "Vminimum-Top",
+    #             "Vmaximum-Top",
+    #         ],
+    #         rename={
+    #             "Vminimum": "Vmin(mV)",
+    #             "Vmaximum": "Vmax(mV)",
+    #             "Top": "Top-FIXH(mV)",
+    #             "Base": "Base-FIXL(mV)",
+    #             "Vminimum-Base": "Vmin-Base(mV)",
+    #             "Vmaximum-Base": "Vmax-Base(mV)",
+    #             "Vminimum-Top": "Vmin-Top(mV)",
+    #             "Vmaximum-Top": "Vmax-Top(mV)",
+    #             "nan": "-",
+    #         },
+    #         merge=False,
+    #     )
+    #     sys.exit()
+    # else:
+    #     wave_data_crosstalk.make_graph(
+    #         df_columns_list=["Vminimum-Base", "Vmaximum-Base"],
+    #         file_name=PE + "_" + "Crosstalk",
+    #         digit_format="%.1f",
+    #         legends={
+    #             "Vminimum": "Vmin(mV)",
+    #             "Vmaximum": "Vmax(mV)",
+    #             "Base": "Base-FIXL(mV)",
+    #         },
+    #         y_ticks=CROSSTALK_YTICKS,
+    #         y_label="mV",
+    #         pin_kind=pkind,
+    #         # y_ticks_per_condition={
+    #         #     "IO_Vih1r3V_Vil-0r50V_Vt-0r50V": [-500, 800, 100],
+    #         #     "IO_Vih2r0V_Vil0r2V_Vt0r2V": [-500, 800, 100],
+    #         #     "CA_Vih1r6V_Vil0r0V_Vt0r0V": [-300, 900, 100],
+    #         #     "CA_Vih1r3V_Vil-0r30V_Vt-0r30V": [-300, 850, 100],
+    #         # },
+    #         # legend_loc="upper right",
+    #         additional_information=True,
+    #         info="Target: less than 5%(±45mV@IO Vamp=1.8V, ±40mV@ADM Vamp=1.6V)",
+    #     )
+    #     wave_data_crosstalk.add_summary_table_to_pptx(
+    #         title=PE + " " + "Crosstalk Summary" + " " + pkind + " Pin",
+    #         cell_width=[
+    #             CELL_WIDTH_BASE_PIN,  # pin
+    #             CELL_WIDTH_BASE_VI,  # vi
+    #             CELL_WIDTH_BASE_RATE,  # rate
+    #             CELL_WIDTH_BASE_VMAX,  # Vmaximum
+    #             CELL_WIDTH_BASE_VMIN,  # Vminimum
+    #             CELL_WIDTH_BASE_BASE,  # Vbase
+    #         ],
+    #         items=[
+    #             "Pin",
+    #             "Vi",
+    #             "Rate",
+    #             "Vminimum",
+    #             "Vmaximum",
+    #             "Base",
+    #         ],
+    #         rename={
+    #             "Vminimum": "Vmin(mV)",
+    #             "Vmaximum": "Vmax(mV)",
+    #             "Base": "Base-FIXL(mV)",
+    #             "nan": "-",
+    #         },
+    #         merge=False,
+    #     )
+    #     sys.exit()
+
+    # if pkind == "WCK" or pkind == "CK":
+    #     wave_data_vix = WaveData(
+    #         active_presentation=active_presentation_object,
+    #         file_name=pkind.lower() + "_" + VIX_FILE_NAME,
+    #         folder_path=FOLDER_PATH + pkind.lower() + "/",
+    #         group_by=DATA_GROUP,
+    #         index=DATA_INDEX,
+    #         pptx_lib=PPTX_LIB,
+    #     )
+    #     for i in range(0, int(len(VIX_FILE_LIST) / 2) + 1, 2):
+    #         wave_data_vix.make_vix_graph(
+    #             item_name="vix",
+    #             positive_pin_file=VIX_FILE_LIST[i],
+    #             negative_pin_file=VIX_FILE_LIST[i + 1],
+    #             reference_level=0.16,
+    #             y_label="V",
+    #         )
+
+    # wave_data_vix.add_vix_table_to_pptx(
+    #     title="vix",
     #     items=[
-    #         "Pin",
+    #         "Positive Pin",
+    #         "Negative Pin",
     #         "Vi",
-    #         "Rate",
-    #         "Overshoot_mV",
-    #         "v-ns-Overshoot",
-    #         "Vmaximum",
-    #         "Vtop",
-    #         "Undershoot_mV",
-    #         "v-ns-Undershoot",
-    #         "Vminimum",
-    #         "Vbase",
+    #         "rate",
+    #         "Vix_WCK_FR/|Min(f(t))| (%)",
+    #         "Vix_WCK_Rf/Max(f(t)) (%)",
     #     ],
-    #     group_by_table="Vi",
-    #     rename={
-    #         "Overshoot_mV": "Overshoot(mV)",
-    #         "Vmaximum": "Vmax(mV)",
-    #         "Vtop": "Vtop(mv)",
-    #         "Undershoot_mV": "Undershoot(mV)",
-    #         "Vminimum": "Vmin(mV)",
-    #         "Vbase": "Vbase(mV)",
-    #         "v-ns-Overshoot": "v-ns-Overshoot\n(V-ns)",
-    #         "v-ns-Undershoot": "v-ns-Undershoot\n(V-ns)",
-    #         "nan": "-",
-    #     },
-    #     merge=True,
-    #     # sort="Order"
-    #     # pin_kind_for_pptx="IO"
+    #     cell_width=[
+    #         CELL_WIDTH_BASE_PIN * 1.2,  # pin
+    #         CELL_WIDTH_BASE_PIN * 1.2,  # vi
+    #         CELL_WIDTH_BASE_VI,  # vi
+    #         CELL_WIDTH_BASE_RATE,  # rate
+    #         CELL_WIDTH_BASE * 2.0,  # overshoot
+    #         CELL_WIDTH_BASE * 2.0,  # v-ns-overshoot
+    #     ],
     # )
+    # print(vix_positive_pin_list)
+    # wave_data_vix.add_pictures_to_pptx(
+    #     osc_vix_positive_pin_list,
+    #     osc_vix_negative_pin_list,
+    #     resize=True,
+    #     picture_width=400,
+    # )
+    # sys.exit()
+    # Overshoot/Undershoot
+    wave_data_overshoot = WaveData(
+        active_presentation_object=active_presentation_object,
+        file_name=pin_kind_for_pptx.lower() + "_" + OVERSHOOT_FILE_NAME,
+        folder_path=FOLDER_PATH + pin_kind_for_pptx.lower() + "/",
+        group_by=DATA_GROUP,
+        index=DATA_INDEX,
+        pptx_lib=PPTX_LIB,
+    )
+    for i in range(len(OVERSHOOT_FILE_LIST)):
+        if i < 4:
+            y_ticks = OVERSHOOT_Y_TICKS_1V_0V
+        else:
+            y_ticks = OVERSHOOT_Y_TICKS_0r5V_0V
+
+        if i % 2 == 0:
+            item_name = "Overshoot"
+        else:
+            item_name = "Undershoot"
+
+        wave_data_overshoot.make_overshoot_graph(
+            file=OVERSHOOT_FILE_LIST[i],
+            y_ticks=y_ticks,
+            item_name=item_name,
+            additional_information=True,
+            info="Target: under 300mV, under 0.1 V-ns",
+        )
+    wave_data_overshoot.add_summary_table_to_pptx(
+        title="Overshoot/Undershoot",
+        cell_width=[
+            CELL_WIDTH_BASE * 0.9,  # pin
+            CELL_WIDTH_BASE * 2,  # vi
+            CELL_WIDTH_BASE * 0.9,  # rate
+            CELL_WIDTH_BASE * 1.2,  # overshoot
+            CELL_WIDTH_BASE * 1.54,  # v-ns-overshoot
+            CELL_WIDTH_BASE * 0.9,  # Vmaximum
+            CELL_WIDTH_BASE * 0.9,  # vtop
+            CELL_WIDTH_BASE * 1.2,  # undershoot
+            CELL_WIDTH_BASE * 1.56,  # v-ns-undershoot
+            CELL_WIDTH_BASE * 0.9,  # Vminimum
+            CELL_WIDTH_BASE * 0.95,  # base
+        ],
+        items=[
+            "Pin",
+            "Vi",
+            "Rate",
+            "Overshoot_mV",
+            "v-ns-Overshoot",
+            "Vmaximum",
+            "Vtop",
+            "Undershoot_mV",
+            "v-ns-Undershoot",
+            "Vminimum",
+            "Vbase",
+        ],
+        group_by_table="Vi",
+        rename={
+            "Overshoot_mV": "Overshoot(mV)",
+            "Vmaximum": "Vmax(mV)",
+            "Vtop": "Vtop(mv)",
+            "Undershoot_mV": "Undershoot(mV)",
+            "Vminimum": "Vmin(mV)",
+            "Vbase": "Vbase(mV)",
+            "v-ns-Overshoot": "v-ns-Overshoot\n(V-ns)",
+            "v-ns-Undershoot": "v-ns-Undershoot\n(V-ns)",
+            "nan": "-",
+        },
+        merge=True,
+        # sort="Order"
+        # pin_kind_for_pptx="IO"
+    )
     # wave_data_overshoot.add_pictures_to_pptx(
     #     OSC_PICTURE_LIST_OVERSHOOT,
     #     resize=True,
@@ -1941,13 +2262,13 @@ if __name__ == "__main__":
         index=DATA_INDEX,
         pptx_lib=PPTX_LIB,
     )
-    wave_data_overview.make_vix_graph(
-        item_name="vix",
-        positive_pin_file=FOLDER_PATH
-        + "P1857A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
-        negative_pin_file=FOLDER_PATH
-        + "P1858A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
-    )
+    # wave_data_overview.make_vix_graph(
+    #     item_name="vix",
+    #     positive_pin_file=FOLDER_PATH
+    #     + "P1857A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
+    #     negative_pin_file=FOLDER_PATH
+    #     + "P1858A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
+    # )
     for pin_kind_for_pptx in PIN_KINDS:
         wave_data_overview.make_graph(
             df_columns_list=["Frequency"],
