@@ -76,7 +76,7 @@ def merge_diff_pin_result(
         )
 
 
-def check_pin_kind(pin_name):
+def get_pin_info(pin_name):
     """check pin kind and return pin kind and order for sort
 
     Args:
@@ -91,15 +91,21 @@ def check_pin_kind(pin_name):
     match_pin_name = re.match(r"P(\d*).*", pin_name)
     pin_num = int(match_pin_name.group(1))
 
+    positive_negative = "positive"
     if pin_num < 1857:
         pin_kind = "IO"
         pin_order = 1
     elif 1857 <= pin_num <= 1888:
         pin_kind = "WCK"
         pin_order = 2
+        if pin_num % 2 == 0:
+            positive_negative = "negative"
+
     elif 1889 <= pin_num <= 1890:
         pin_kind = "CK"
         pin_order = 3
+        if pin_num % 2 == 0:
+            positive_negative = "negative"
     elif 1921 <= pin_num <= 1933:
         pin_kind = "CA"
         pin_order = 4
@@ -110,7 +116,7 @@ def check_pin_kind(pin_name):
         print("Pin_kind Error")
         sys.exit()
 
-    return pin_kind, pin_order
+    return pin_kind, pin_order, positive_negative
 
 
 def mul3(x):
@@ -235,9 +241,9 @@ class WaveData:
                     rows.insert(3, match.group(1))
                     rows.insert(4, "Pin_kind")
 
-                    pin_kind, pin_order = check_pin_kind(match.group(1))
+                    pin_info = get_pin_info(match.group(1))
 
-                    rows.insert(5, pin_kind)
+                    rows.insert(5, pin_info[0])
                     rows.insert(6, "Vi")
                     rows.insert(7, match.group(3).replace("00V", "V"))
                     rows.insert(8, "Rate")
@@ -249,7 +255,7 @@ class WaveData:
                         .replace("Rate1r", "1"),
                     )
                     rows.insert(10, "Order")
-                    rows.insert(11, str(pin_order))
+                    rows.insert(11, str(pin_info[1]))
                     rows.insert(12, "Condition_all")
                     rows.insert(13, match.group(0))
 
@@ -282,6 +288,10 @@ class WaveData:
 
             # adjust unit of dataframe
             self.adjust_unit()
+
+            # TODO
+            # may be try this
+            # if df.query('crosstalk in ["Condition"]).values.size>0:
             if "crosstalk" in self.data_df["Condition"][0]:
                 self.data_df["Vminimum-Base"] = (
                     self.data_df["Vminimum"] - self.data_df["Base"]
@@ -859,11 +869,11 @@ class WaveData:
             y_ticks=y_ticks,
         )
         picture_number = f"{picture_counter:03}_"
-        pin_kind = check_pin_kind(pin_name)
+        pin_info = get_pin_info(pin_name)
         file_path = (
             self.folder_path
             + picture_number
-            + pin_kind[0]
+            + pin_info[0]
             + "_"
             + vi
             + "_"
@@ -872,7 +882,7 @@ class WaveData:
         )
         plt.savefig(file_path)
         plt.close("all")
-        title = pe + " " + item_name + "_" + pin_kind[0] + "_" + vi + "_" + test_rate
+        title = pe + " " + item_name + "_" + pin_info[0] + "_" + vi + "_" + test_rate
         for key, value in RENAME_CONDITIONS.items():
             title = title.replace(key, value)
 
@@ -1151,11 +1161,11 @@ class WaveData:
             ax_h_lines=[],
         )
         picture_number = f"{picture_counter:03}_"
-        pin_kind = check_pin_kind(positive_pin_name)
+        pin_info = get_pin_info(positive_pin_name)
         file_path = (
             self.folder_path
             + picture_number
-            + pin_kind[0]
+            + pin_info[0]
             + "_"
             + vi
             + "_"
@@ -1165,7 +1175,7 @@ class WaveData:
         plt.savefig(file_path)
         plt.close("all")
 
-        title = item_name + "_" + pin_kind[0] + "_" + vi + "_" + test_rate
+        title = item_name + "_" + pin_info[0] + "_" + vi + "_" + test_rate
         for key, value in RENAME_CONDITIONS.items():
             title = title.replace(key, value)
 
@@ -1482,9 +1492,9 @@ class WaveData:
                     title = title.replace(key, value)
 
                 match_pin_name = re.match(r"(P.*?) ", title)
-                pin_kind = check_pin_kind(match_pin_name.group(1))
+                pin_info = get_pin_info(match_pin_name.group(1))
                 title = re.sub("P.*? ", "", title)
-                title = pin_kind[0] + " " + title
+                title = pin_info[0] + " " + title
                 self.add_slide_to_pptx(title=title, layout=11)
 
                 title1 = os.path.splitext(os.path.basename(file1))[0]
@@ -1744,8 +1754,8 @@ class WaveData:
                             text_range.Text = f"{data_list_to_table[i][j]:.1f}"
 
                         if (
-                            check_pin_kind(data_list_to_table[i][0])[0] == "WCK"
-                            or check_pin_kind(data_list_to_table[i][0])[0] == "CK"
+                            get_pin_info(data_list_to_table[i][0])[0] == "WCK"
+                            or get_pin_info(data_list_to_table[i][0])[0] == "CK"
                         ):
                             # positive pin. delete Vmin-Top, Vmax-Top
                             # TODO check wck/ck is positive or negative
@@ -1775,8 +1785,8 @@ class WaveData:
                             text_range.text = f"{data_list_to_table[i][j]:.1f}"
 
                         if (
-                            check_pin_kind(data_list_to_table[i][0])[0] == "WCK"
-                            or check_pin_kind(data_list_to_table[i][0])[0] == "CK"
+                            get_pin_info(data_list_to_table[i][0])[0] == "WCK"
+                            or get_pin_info(data_list_to_table[i][0])[0] == "CK"
                         ):
                             if (
                                 "Vminimum-Top" in data_list_to_table[0][j]
@@ -1825,15 +1835,13 @@ class WaveData:
                         if self.pptx_lib == "win32com":
                             text_range.Text = data_list_to_table[i][j]
 
-                            print(data_list_to_table[0][j])
-
                             if data_list_to_table[0][j] == "Vi":
                                 for key, value in RENAME_CONDITIONS.items():
                                     text_range.Text = text_range.Text.replace(
                                         key, value
                                     )
-                            if "Vmin" in data_list_to_table[0][j]:
-                                text_range.Text = "-"
+                            # if "Vmin" in data_list_to_table[0][j]:
+                            #     text_range.Text = "-"
 
                         elif self.pptx_lib == "python-pptx":
                             text_range.text = data_list_to_table[i][j]
@@ -2133,8 +2141,6 @@ if __name__ == "__main__":
             CELL_WIDTH_BASE * 1.1,
         ],
         items=["Pin", "Vi", "Rate", "Frequency"],
-        rename={"Vih1r0V_Vil0r0V_Vt0r5V": "Vih=1.0V, Vil=0.0V"},
-        # rename={"Vih1r0V_": "Vih=1.0V,"},
         pin_kind=pin_kind_for_pptx,
     )
     wave_data_overview.make_vix_graph(

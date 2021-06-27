@@ -116,3 +116,10 @@ def append_print(item, list_=[]):
 
 x: int = 10
 y: int = 1
+
+
+def abc():
+    return 1, 2, 3
+
+
+a, b, c = abc()
