@@ -28,23 +28,15 @@ from tqdm import tqdm
 
 from variables import DATA_GROUP
 from variables import DATA_INDEX
-# from variables import HISTOGRAM_FILE_NAME
+
 from variables import OVERVIEW_FILE_NAME
-# from variables import OVERVIEW_FILE_NAME
+
 from variables import RENAME_CONDITIONS
 
-# from variables import VIX_FILE_NAME
-# from variables import CELL_WIDTH_BASE_VMAX
-# from variables import CELL_WIDTH_BASE_VMIN
-# from variables import CELL_WIDTH_BASE_TOP
-# from variables import CELL_WIDTH_BASE_BASE
-# from variables import OVERSHOOT_FILE_NAME
-# from variables import OVERSHOOT_Y_TICKS_1V_0V
-# from variables import OVERSHOOT_Y_TICKS_0r5V_0V
-# from variables import CROSSTALK_FILE_NAME
-# from variables import CROSSTALK_YTICKS
-
-# from openpyxl.drawing.line import LineProperties
+from variables import CELL_WIDTH_BASE
+from variables import CELL_WIDTH_BASE_PIN
+from variables import CELL_WIDTH_BASE_VI
+from variables import CELL_WIDTH_BASE_RATE
 
 picture_counter = 0
 
@@ -2020,250 +2012,75 @@ if __name__ == "__main__":
     VIX_FILE_LIST[::2] = vix_positive_pin_list
     VIX_FILE_LIST[1::2] = vix_negative_pin_list
 
-    wave_data_crosstalk = WaveData(
-        active_presentation=active_presentation_object,
-        file_name=pkind.lower() + "_" + CROSSTALK_FILE_NAME,
-        folder_path=FOLDER_PATH + pkind.lower() + "/",
-        group_by=DATA_GROUP,
-        index=DATA_INDEX,
-        pptx_lib=PPTX_LIB,
-    )
-    # if pkind == "WCK" or pkind == "CK":
-    #     wave_data_crosstalk.make_graph(
-    #         df_columns_list=[
-    #             "Vminimum-Base",
-    #             "Vmaximum-Base",
-    #             "Vminimum-Top",
-    #             "Vmaximum-Top",
-    #         ],
-    #         file_name=PE + "_" + "Crosstalk",
-    #         digit_format="%.1f",
-    #         legends={
-    #             "Vminimum": "Vmin(mV)",
-    #             "Vmaximum": "Vmax(mV)",
-    #             "Top": "Top-FIXH(mV)",
-    #             "Base": "Base-FIXL(mV)",
-    #         },
-    #         y_ticks=CROSSTALK_YTICKS,
-    #         y_label="mV",
-    #         pin_kind=pkind,
-    #         # y_ticks_per_condition={
-    #         #     "WCK_Vih1r6V_Vil0r0V_Vt0r0V": [-300, 1000, 100],
-    #         #     "WCK_Vih1r3V_Vil-0r30V_Vt-0r30V": [-400, 900, 100],
-    #         #     "CK_Vih1r6V_Vil0r0V_Vt0r0V": [-300, 1000, 100],
-    #         #     "CK_Vih1r3V_Vil-0r30V_Vt-0r30V": [-400, 900, 100],
-    #         #     "CS_Vih1r6V_Vil0r0V_Vt0r0V": [-300, 900, 100],
-    #         #     "CS_Vih1r3V_Vil-0r30V_Vt-0r30V": [-300, 900, 100],
-    #         # },
-    #         legend_loc="center right",
-    #         additional_information=True,
-    #         info="Target: less than 5%(±45mV@IO Vamp=1.8V, ±40mV@ADM Vamp=1.6V)",
-    #     )
-    #     wave_data_crosstalk.add_summary_table_to_pptx(
-    #         title=PE + " " + "Crosstalk Summary" + " " + pkind + " Pin",
-    #         cell_width=[
-    #             CELL_WIDTH_BASE_PIN,  # pin
-    #             CELL_WIDTH_BASE_VI,  # vi
-    #             CELL_WIDTH_BASE_RATE,  # rate
-    #             CELL_WIDTH_BASE_VMAX,  # Vmaximum
-    #             CELL_WIDTH_BASE_VMIN,  # Vminimum
-    #             CELL_WIDTH_BASE_TOP,  # Vbase
-    #             CELL_WIDTH_BASE_BASE,  # Vbase
-    #         ],
-    #         items=[
-    #             "Pin",
-    #             "Vi",
-    #             "Rate",
-    #             "Vminimum",
-    #             "Vmaximum",
-    #             "Top",
-    #             "Base",
-    #             "Vminimum-Base",
-    #             "Vmaximum-Base",
-    #             "Vminimum-Top",
-    #             "Vmaximum-Top",
-    #         ],
-    #         rename={
-    #             "Vminimum": "Vmin(mV)",
-    #             "Vmaximum": "Vmax(mV)",
-    #             "Top": "Top-FIXH(mV)",
-    #             "Base": "Base-FIXL(mV)",
-    #             "Vminimum-Base": "Vmin-Base(mV)",
-    #             "Vmaximum-Base": "Vmax-Base(mV)",
-    #             "Vminimum-Top": "Vmin-Top(mV)",
-    #             "Vmaximum-Top": "Vmax-Top(mV)",
-    #             "nan": "-",
-    #         },
-    #         merge=False,
-    #     )
-    #     sys.exit()
-    # else:
-    #     wave_data_crosstalk.make_graph(
-    #         df_columns_list=["Vminimum-Base", "Vmaximum-Base"],
-    #         file_name=PE + "_" + "Crosstalk",
-    #         digit_format="%.1f",
-    #         legends={
-    #             "Vminimum": "Vmin(mV)",
-    #             "Vmaximum": "Vmax(mV)",
-    #             "Base": "Base-FIXL(mV)",
-    #         },
-    #         y_ticks=CROSSTALK_YTICKS,
-    #         y_label="mV",
-    #         pin_kind=pkind,
-    #         # y_ticks_per_condition={
-    #         #     "IO_Vih1r3V_Vil-0r50V_Vt-0r50V": [-500, 800, 100],
-    #         #     "IO_Vih2r0V_Vil0r2V_Vt0r2V": [-500, 800, 100],
-    #         #     "CA_Vih1r6V_Vil0r0V_Vt0r0V": [-300, 900, 100],
-    #         #     "CA_Vih1r3V_Vil-0r30V_Vt-0r30V": [-300, 850, 100],
-    #         # },
-    #         # legend_loc="upper right",
-    #         additional_information=True,
-    #         info="Target: less than 5%(±45mV@IO Vamp=1.8V, ±40mV@ADM Vamp=1.6V)",
-    #     )
-    #     wave_data_crosstalk.add_summary_table_to_pptx(
-    #         title=PE + " " + "Crosstalk Summary" + " " + pkind + " Pin",
-    #         cell_width=[
-    #             CELL_WIDTH_BASE_PIN,  # pin
-    #             CELL_WIDTH_BASE_VI,  # vi
-    #             CELL_WIDTH_BASE_RATE,  # rate
-    #             CELL_WIDTH_BASE_VMAX,  # Vmaximum
-    #             CELL_WIDTH_BASE_VMIN,  # Vminimum
-    #             CELL_WIDTH_BASE_BASE,  # Vbase
-    #         ],
-    #         items=[
-    #             "Pin",
-    #             "Vi",
-    #             "Rate",
-    #             "Vminimum",
-    #             "Vmaximum",
-    #             "Base",
-    #         ],
-    #         rename={
-    #             "Vminimum": "Vmin(mV)",
-    #             "Vmaximum": "Vmax(mV)",
-    #             "Base": "Base-FIXL(mV)",
-    #             "nan": "-",
-    #         },
-    #         merge=False,
-    #     )
-    #     sys.exit()
+    # wave_data_overshoot = WaveData(
+    #     active_presentation_object=active_presentation_object,
+    #     file_name=pin_kind_for_pptx.lower() + "_" + OVERSHOOT_FILE_NAME,
+    #     folder_path=FOLDER_PATH + pin_kind_for_pptx.lower() + "/",
+    #     group_by=DATA_GROUP,
+    #     index=DATA_INDEX,
+    #     pptx_lib=PPTX_LIB,
+    # )
 
-    # if pkind == "WCK" or pkind == "CK":
-    #     wave_data_vix = WaveData(
-    #         active_presentation=active_presentation_object,
-    #         file_name=pkind.lower() + "_" + VIX_FILE_NAME,
-    #         folder_path=FOLDER_PATH + pkind.lower() + "/",
-    #         group_by=DATA_GROUP,
-    #         index=DATA_INDEX,
-    #         pptx_lib=PPTX_LIB,
-    #     )
-    #     for i in range(0, int(len(VIX_FILE_LIST) / 2) + 1, 2):
-    #         wave_data_vix.make_vix_graph(
-    #             item_name="vix",
-    #             positive_pin_file=VIX_FILE_LIST[i],
-    #             negative_pin_file=VIX_FILE_LIST[i + 1],
-    #             reference_level=0.16,
-    #             y_label="V",
-    #         )
+    # for i in range(len(OVERSHOOT_FILE_LIST)):
+    #     if i < 4:
+    #         y_ticks = [-0.35, 0.8499, 0.15]
+    #     else:
+    #         y_ticks = [-0.485, 0.72499, 0.15]
 
-    # wave_data_vix.add_vix_table_to_pptx(
-    #     title="vix",
-    #     items=[
-    #         "Positive Pin",
-    #         "Negative Pin",
-    #         "Vi",
-    #         "rate",
-    #         "Vix_WCK_FR/|Min(f(t))| (%)",
-    #         "Vix_WCK_Rf/Max(f(t)) (%)",
-    #     ],
+    #     if i % 2 == 0:
+    #         item_name = "Overshoot"
+    #     else:
+    #         item_name = "Undershoot"
+
+    #     wave_data_overshoot.make_overshoot_graph(
+    #         file=OVERSHOOT_FILE_LIST[i],
+    #         y_ticks=y_ticks,
+    #         item_name=item_name,
+    #         additional_information=True,
+    #         info="Target: under 300mV, under 0.1 V-ns",
+    #     )
+    # wave_data_overshoot.add_summary_table_to_pptx(
+    #     title="Overshoot/Undershoot",
     #     cell_width=[
-    #         CELL_WIDTH_BASE_PIN * 1.2,  # pin
-    #         CELL_WIDTH_BASE_PIN * 1.2,  # vi
-    #         CELL_WIDTH_BASE_VI,  # vi
-    #         CELL_WIDTH_BASE_RATE,  # rate
-    #         CELL_WIDTH_BASE * 2.0,  # overshoot
-    #         CELL_WIDTH_BASE * 2.0,  # v-ns-overshoot
+    #         CELL_WIDTH_BASE * 0.9,  # pin
+    #         CELL_WIDTH_BASE * 2,  # vi
+    #         CELL_WIDTH_BASE * 0.9,  # rate
+    #         CELL_WIDTH_BASE * 1.2,  # overshoot
+    #         CELL_WIDTH_BASE * 1.54,  # v-ns-overshoot
+    #         CELL_WIDTH_BASE * 0.9,  # Vmaximum
+    #         CELL_WIDTH_BASE * 0.9,  # vtop
+    #         CELL_WIDTH_BASE * 1.2,  # undershoot
+    #         CELL_WIDTH_BASE * 1.56,  # v-ns-undershoot
+    #         CELL_WIDTH_BASE * 0.9,  # Vminimum
+    #         CELL_WIDTH_BASE * 0.95,  # base
     #     ],
+    #     items=[
+    #         "Pin",
+    #         "Vi",
+    #         "Rate",
+    #         "Overshoot_mV",
+    #         "v-ns-Overshoot",
+    #         "Vmaximum",
+    #         "Vtop",
+    #         "Undershoot_mV",
+    #         "v-ns-Undershoot",
+    #         "Vminimum",
+    #         "Vbase",
+    #     ],
+    #     group_by_table="Vi",
+    #     rename={
+    #         "Overshoot_mV": "Overshoot(mV)",
+    #         "Vmaximum": "Vmax(mV)",
+    #         "Vtop": "Vtop(mv)",
+    #         "Undershoot_mV": "Undershoot(mV)",
+    #         "Vminimum": "Vmin(mV)",
+    #         "Vbase": "Vbase(mV)",
+    #         "v-ns-Overshoot": "v-ns-Overshoot\n(V-ns)",
+    #         "v-ns-Undershoot": "v-ns-Undershoot\n(V-ns)",
+    #         "nan": "-",
+    #     },
+    #     merge=True,
     # )
-    # print(vix_positive_pin_list)
-    # wave_data_vix.add_pictures_to_pptx(
-    #     osc_vix_positive_pin_list,
-    #     osc_vix_negative_pin_list,
-    #     resize=True,
-    #     picture_width=400,
-    # )
-    # sys.exit()
-    # Overshoot/Undershoot
-    wave_data_overshoot = WaveData(
-        active_presentation_object=active_presentation_object,
-        file_name=pin_kind_for_pptx.lower() + "_" + OVERSHOOT_FILE_NAME,
-        folder_path=FOLDER_PATH + pin_kind_for_pptx.lower() + "/",
-        group_by=DATA_GROUP,
-        index=DATA_INDEX,
-        pptx_lib=PPTX_LIB,
-    )
-    for i in range(len(OVERSHOOT_FILE_LIST)):
-        if i < 4:
-            y_ticks = OVERSHOOT_Y_TICKS_1V_0V
-        else:
-            y_ticks = OVERSHOOT_Y_TICKS_0r5V_0V
-
-        if i % 2 == 0:
-            item_name = "Overshoot"
-        else:
-            item_name = "Undershoot"
-
-        wave_data_overshoot.make_overshoot_graph(
-            file=OVERSHOOT_FILE_LIST[i],
-            y_ticks=y_ticks,
-            item_name=item_name,
-            additional_information=True,
-            info="Target: under 300mV, under 0.1 V-ns",
-        )
-    wave_data_overshoot.add_summary_table_to_pptx(
-        title="Overshoot/Undershoot",
-        cell_width=[
-            CELL_WIDTH_BASE * 0.9,  # pin
-            CELL_WIDTH_BASE * 2,  # vi
-            CELL_WIDTH_BASE * 0.9,  # rate
-            CELL_WIDTH_BASE * 1.2,  # overshoot
-            CELL_WIDTH_BASE * 1.54,  # v-ns-overshoot
-            CELL_WIDTH_BASE * 0.9,  # Vmaximum
-            CELL_WIDTH_BASE * 0.9,  # vtop
-            CELL_WIDTH_BASE * 1.2,  # undershoot
-            CELL_WIDTH_BASE * 1.56,  # v-ns-undershoot
-            CELL_WIDTH_BASE * 0.9,  # Vminimum
-            CELL_WIDTH_BASE * 0.95,  # base
-        ],
-        items=[
-            "Pin",
-            "Vi",
-            "Rate",
-            "Overshoot_mV",
-            "v-ns-Overshoot",
-            "Vmaximum",
-            "Vtop",
-            "Undershoot_mV",
-            "v-ns-Undershoot",
-            "Vminimum",
-            "Vbase",
-        ],
-        group_by_table="Vi",
-        rename={
-            "Overshoot_mV": "Overshoot(mV)",
-            "Vmaximum": "Vmax(mV)",
-            "Vtop": "Vtop(mv)",
-            "Undershoot_mV": "Undershoot(mV)",
-            "Vminimum": "Vmin(mV)",
-            "Vbase": "Vbase(mV)",
-            "v-ns-Overshoot": "v-ns-Overshoot\n(V-ns)",
-            "v-ns-Undershoot": "v-ns-Undershoot\n(V-ns)",
-            "nan": "-",
-        },
-        merge=True,
-        # sort="Order"
-        # pin_kind_for_pptx="IO"
-    )
     # wave_data_overshoot.add_pictures_to_pptx(
     #     OSC_PICTURE_LIST_OVERSHOOT,
     #     resize=True,
@@ -2276,175 +2093,42 @@ if __name__ == "__main__":
         index=DATA_INDEX,
         pptx_lib=PPTX_LIB,
     )
-    # wave_data_overview.make_graph(
-    #     df_columns_list=["Frequency"],
-    #     file_name=PE + "Frequency",
-    #     digit_format="%.2f",
-    #     legends={"Frequency": "Freq(GHz)"},
-    #     ax_h_lines=[4.0],
-    #     y_ticks=FREQ_YTICKS,
-    #     y_label="GHz",
-    #     pin_kind=pin_kind_for_pptx,
-    #     ax_h_lines_per_condition={"IO_Vih1r3V_Vil-0r50V_Vt-0r50V": [2.0, 3.0]},
-    #     y_ticks_per_condition={"CS_Vih1r0V_Vil0r0V_Vt0r5V": [0, 2, 0.2]},
-    #     spec=True,
-    #     additional_information=True,
-    #     info="Spec: less than 60ps (@1.0Vp-p/20% to 80%)",
-    # )
-    # wave_data_overview.add_summary_table_to_pptx(
-    #     title="overview_" + pin_kind_for_pptx,
-    #     cell_width=[
-    #         CELL_WIDTH_BASE_PIN * 1.1,
-    #         CELL_WIDTH_BASE_VI * 2.0,
-    #         CELL_WIDTH_BASE_RATE * 1.1,
-    #         CELL_WIDTH_BASE * 1.1,
-    #     ],
-    #     items=["Pin", "Vi", "Rate", "Frequency"],
-    #     rename={"Vih1r0V_Vil0r0V_Vt0r5V": "Vih=1.0V, Vil=0.0V"},
-    #     # rename={"Vih1r0V_": "Vih=1.0V,"},
-    #     pin_kind=pin_kind_for_pptx,
-    # )
-    # wave_data_overview.make_vix_graph(
-    #     item_name="vix",
-    #     positive_pin_file=FOLDER_PATH
-    #     + "P1857A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
-    #     negative_pin_file=FOLDER_PATH
-    #     + "P1858A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
-    # )
-    # sys.exit()
-    for pin_kind_for_pptx in PIN_KINDS:
-        wave_data_overview.make_graph(
-            df_columns_list=["Frequency"],
-            file_name=PE + "Frequency",
-            digit_format="%.2f",
-            legends={"Frequency": "Freq(GHz)"},
-            ax_h_lines=[4.0],
-            y_ticks=FREQ_YTICKS,
-            y_label="GHz",
-            pin_kind=pin_kind_for_pptx,
-            ax_h_lines_per_condition={"IO_Vih1r3V_Vil-0r50V_Vt-0r50V": [2.0, 3.0]},
-            y_ticks_per_condition={"CS_Vih1r0V_Vil0r0V_Vt0r5V": [0, 2, 0.2]},
-            additional_information=True,
-            info="Spec: less than 60ps (@1.0Vp-p/20% to 80%)",
-        )
-        wave_data_overview.add_summary_table_to_pptx(
-            title="overview_" + pin_kind_for_pptx,
-            cell_width=[
-                CELL_WIDTH_BASE_PIN * 1.1,
-                CELL_WIDTH_BASE_VI * 2.0,
-                CELL_WIDTH_BASE_RATE * 1.1,
-                CELL_WIDTH_BASE * 1.1,
-            ],
-            items=["Pin", "Vi", "Rate", "Frequency"],
-            rename={"Vih1r0V_Vil0r0V_Vt0r5V": "Vih=1.0V, Vil=0.0V"},
-            # rename={"Vih1r0V_": "Vih=1.0V,"},
-            pin_kind=pin_kind_for_pptx,
-        )
-    # wave_data_vih = WaveData(
-    #     active_presentation_object=active_presentation_object,
-    #     file_name=pin_kind_for_pptx.lower() + "_" + VIH_DC_FILE_NAME,
-    #     folder_path=FOLDER_PATH + pin_kind_for_pptx.lower() + "/",
-    #     group_by=DATA_GROUP,
-    #     index=DATA_INDEX,
-    #     pptx_lib=PPTX_LIB,
-    # )
-    # wave_data_vih.make_graph(
-    #     df_columns_list=["Vmaximum", "Vminimum"],
-    #     file_name=PE + "Vih_Dc",
-    #     digit_format="%.1f",
-    #     legends=["Vmax(mV)", "Vmin(mV)"],
-    #     # ax_h_lines=[4.0],
-    #     y_ticks=[100, 1100, 100],
-    #     y_label="mV",
-    #     pin_kind_for_pptx=pin_kind_for_pptx,
-    # )
-    # wave_data_vih.add_summary_table_to_pptx(
-    #     title="Vih Dc summary",
-    #     cell_width=[
-    #         CELL_WIDTH_BASE_PIN,
-    #         CELL_WIDTH_BASE_VI,
-    #         CELL_WIDTH_BASE_RATE,
-    #         CELL_WIDTH_BASE * 2,
-    #         CELL_WIDTH_BASE * 2,
-    #     ],
-    #     items=["Pin", "Vi", "Rate", "Vmaximum", "Vminimum"],
-    #     rename={"Vmaximum": "Vmax(mV)", "Vminimum": "Vmin(mV)"},
-    #     # rename={"Vih1r0V_": "Vih=1.0V,"},
-    #     pin_kind_for_pptx=pin_kind_for_pptx,
-    # )
-    # wave_data_vih.add_pictures_to_pptx(
-    #     OSC_PICTURE_LIST_VIH_DC, resize=True,
-    # )
-    # wave_data_vil = WaveData(
-    #     active_presentation_object=active_presentation_object,
-    #     file_name=pin_kind_for_pptx.lower() + "_" + VIL_DC_FILE_NAME,
-    #     folder_path=FOLDER_PATH + pin_kind_for_pptx.lower() + "/",
-    #     group_by=DATA_GROUP,
-    #     index=DATA_INDEX,
-    #     pptx_lib=PPTX_LIB,
-    # )
-    # wave_data_vil.make_graph(
-    #     df_columns_list=["Vmaximum", "Vminimum"],
-    #     file_name=PE + "vil_dc",
-    #     digit_format="%.1f",
-    #     legends=["Vmax(mV)", "Vmin(mV)"],
-    #     # ax_h_lines=[4.0],
-    #     y_ticks=[-300, 700, 100],
-    #     y_label="mV",
-    #     pin_kind_for_pptx=pin_kind_for_pptx,
-    # )
-    # wave_data_vil.add_summary_table_to_pptx(
-    #     title="VIL_DC summary",
-    #     cell_width=[
-    #         CELL_WIDTH_BASE_PIN,
-    #         CELL_WIDTH_BASE_VI,
-    #         CELL_WIDTH_BASE_RATE,
-    #         CELL_WIDTH_BASE * 2,
-    #         CELL_WIDTH_BASE * 2,
-    #     ],
-    #     items=["Pin", "Vi", "Rate", "Vmaximum", "Vminimum"],
-    #     rename={"Vmaximum": "Vmax(mV)", "Vminimum": "Vmin(mV)"},
-    #     # rename={"Vih1r0V_": "Vih=1.0V,"},
-    #     pin_kind_for_pptx=pin_kind_for_pptx,
-    # )
-    # wave_data_vil.add_pictures_to_pptx(
-    #     OSC_PICTURE_LIST_VIL_DC, resize=True,
-    # )
-    # wave_data_vihl_ac = WaveData(
-    #     active_presentation_object=active_presentation_object,
-    #     file_name=pin_kind_for_pptx.lower() + "_" + VIHL_AC_FILE_NAME,
-    #     folder_path=FOLDER_PATH + pin_kind_for_pptx.lower() + "/",
-    #     group_by=DATA_GROUP,
-    #     index=DATA_INDEX,
-    #     pptx_lib=PPTX_LIB,
-    # )
-    # wave_data_vihl_ac.make_graph(
-    #     df_columns_list=["Vmaximum", "Vminimum"],
-    #     file_name=PE + "vihl_ac",
-    #     digit_format="%.1f",
-    #     legends=["Vmax(mV)", "Vmin(mV)"],
-    #     # ax_h_lines=[4.0],
-    #     y_ticks=[-300, 1100, 100],
-    #     y_label="mV",
-    #     pin_kind_for_pptx=pin_kind_for_pptx,
-    # )
-    # wave_data_vihl_ac.add_summary_table_to_pptx(
-    #     title="VIHL_AC summary",
-    #     cell_width=[
-    #         CELL_WIDTH_BASE_PIN,
-    #         CELL_WIDTH_BASE_VI,
-    #         CELL_WIDTH_BASE_RATE,
-    #         CELL_WIDTH_BASE * 2,
-    #         CELL_WIDTH_BASE * 2,
-    #     ],
-    #     items=["Pin", "Vi", "Rate", "Vmaximum", "Vminimum"],
-    #     rename={"Vmaximum": "Vmax(mV)", "Vminimum": "Vmin(mV)"},
-    #     # rename={"Vih1r0V_": "Vih=1.0V,"},
-    #     pin_kind_for_pptx=pin_kind_for_pptx,
-    # )
-    # wave_data_vihl_ac.add_pictures_to_pptx(
-    #     OSC_PICTURE_LIST_VIHL_AC, resize=True,
-    # )
+    wave_data_overview.make_graph(
+        df_columns_list=["Frequency"],
+        file_name=PE + "Frequency",
+        digit_format="%.2f",
+        legends={"Frequency": "Freq(GHz)"},
+        ax_h_lines=[4.0],
+        y_ticks=[0, 6, 1],
+        y_label="GHz",
+        pin_kind=pin_kind_for_pptx,
+        ax_h_lines_per_condition={"IO_Vih1r3V_Vil-0r50V_Vt-0r50V": [2.0, 3.0]},
+        y_ticks_per_condition={"CS_Vih1r0V_Vil0r0V_Vt0r5V": [0, 2, 0.2]},
+        spec=True,
+        additional_information=True,
+        info="Spec: less than 60ps (@1.0Vp-p/20% to 80%)",
+    )
+    wave_data_overview.add_summary_table_to_pptx(
+        title="overview_" + pin_kind_for_pptx,
+        cell_width=[
+            CELL_WIDTH_BASE_PIN * 1.1,
+            CELL_WIDTH_BASE_VI * 2.0,
+            CELL_WIDTH_BASE_RATE * 1.1,
+            CELL_WIDTH_BASE * 1.1,
+        ],
+        items=["Pin", "Vi", "Rate", "Frequency"],
+        rename={"Vih1r0V_Vil0r0V_Vt0r5V": "Vih=1.0V, Vil=0.0V"},
+        # rename={"Vih1r0V_": "Vih=1.0V,"},
+        pin_kind=pin_kind_for_pptx,
+    )
+    wave_data_overview.make_vix_graph(
+        item_name="vix",
+        positive_pin_file=FOLDER_PATH
+        + "P1857A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
+        negative_pin_file=FOLDER_PATH
+        + "P1858A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
+    )
+    sys.exit()
     wave_data_overview.save_pptx(file_name=PPTX_FILE_NAME, folder_name=FOLDER_PATH)
     elapsed_time = time.time() - start
     print(f"exec time:{elapsed_time:.1f}[sec]")
