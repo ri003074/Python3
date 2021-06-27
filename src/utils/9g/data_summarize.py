@@ -70,7 +70,9 @@ def merge_diff_pin_result(
                 .drop("i", axis=1)
             )
         df_positive_negative_pin.to_csv(
-            folder_path + "/" + pin_kind + "/" + file_name[1], header=None, index=False,
+            folder_path + "/" + pin_kind + "/" + file_name[1],
+            header=False,
+            index=False,
         )
 
 
@@ -308,7 +310,7 @@ class WaveData:
 
     def make_excel_graph(
         self,
-        file_name,
+        file_path,
         chart_yaxis_scaling,
         chart_height=9,
         chart_width=16,
@@ -318,7 +320,7 @@ class WaveData:
         """make specified excel graph using xlsx data
 
         Args:
-            file_name (str): input excel file name
+            file_path (str): input excel file name
             chart_yaxis_scaling (list): values for yaxis scale.
             chart_height (float): chart height.
             chart_width (float): chart width.
@@ -330,7 +332,7 @@ class WaveData:
 
         """
 
-        wb = load_workbook(file_name)
+        wb = load_workbook(file_path)
         for i in range(len(wb.worksheets)):
             ws = wb.worksheets[i]
 
@@ -353,7 +355,7 @@ class WaveData:
             )
 
             ws.add_chart(self.chart, chart_position)
-        wb.save(file_name)
+        wb.save(file_path)
 
     def make_excel_graphs(
         self,
@@ -517,6 +519,9 @@ class WaveData:
         else:
             df = self.data_df.copy()
 
+        if styles is None:
+            styles = ["o", "o", "o", "o"]
+
         y_ticks_tmp = y_ticks  # save original y_ticks setting
         if self.group_by:
             for condition_name, group in df.groupby(self.group_by, sort=False):
@@ -525,7 +530,7 @@ class WaveData:
 
                 df_plot = group[df_columns_list]
 
-                # skip if dataframe has missing value
+                # drop if dataframe has missing value
                 if df_plot.isnull().values.sum() != 0:
                     df_plot = group[df_columns_list].dropna(how="all")
 
@@ -556,9 +561,6 @@ class WaveData:
 
                 if legends is not None:
                     df_plot = df_plot.rename(columns=legends, inplace=False)
-
-                if styles is None:
-                    styles = ["o", "o", "o", "o"]
 
                 df_plot.plot(
                     ax=self.ax,
@@ -594,7 +596,7 @@ class WaveData:
                 picture_number = f"{picture_counter:03}_"
 
                 # for excel graph
-                excel_file_name = (
+                excel_file_path = (
                     self.folder_path
                     + "/excel_graph_data/"
                     + picture_number
@@ -606,10 +608,10 @@ class WaveData:
                     + ".xlsx"
                 )
 
-                df_to_excel = df_plot.set_axis(legends, axis=1)
-                df_to_excel.to_excel(excel_file_name)
+                df_plot.to_excel(excel_file_path)
+
                 self.make_excel_graph(
-                    file_name=excel_file_name,
+                    file_path=excel_file_path,
                     chart_yaxis_scaling=y_ticks,
                     chart_yaxis_title=y_label,
                 )
@@ -636,12 +638,21 @@ class WaveData:
                 self.add_picture_to_pptx(file_path=file_path)
 
         else:
-            self.setup_fig_and_ax(figure_size, bottom=0.3)
+            self.setup_fig_and_ax(figure_size, bottom=0.3, x_margin=0.1)
+
+            df_plot = self.data_df[df_columns_list]
+
+            # drop if dataframe has missing value
+            if df_plot.isnull().values.sum() != 0:
+                df_plot = df_plot[df_columns_list].dropna(how="all")
+
+                if df_plot.empty:
+                    return
 
             # set number of label
-            self.ax.set_xticks([i for i in range(self.data_df.shape[0])])
+            self.ax.set_xticks([i for i in range(df_plot.shape[0])])
 
-            self.data_df[df_columns_list].plot(
+            df_plot.plot(
                 ax=self.ax,
                 ylim=y_ticks[:2],
                 style=styles,
@@ -943,7 +954,7 @@ class WaveData:
             inplace=False,
         )
 
-        # make diff column
+        # make diff column to get 2 cross points
         df_positive_negative["f(t)"] = (
             df_positive_negative["wck_t"] - df_positive_negative["wck_c"]
         )
@@ -956,15 +967,20 @@ class WaveData:
             :,
         ]
 
-        # make dataframe df_vix. df_vix has 2 data which wck_t - wck_c is close to 0
+        # make dataframe df_positive_negative_pin_cross_point. df_positive_negative_pin_cross_point has
+        # 2 data which wck_t - wck_c is close to 0
         # close to 0 or 0 means cross point
         df_tmp = df_positive_negative.copy()
-        df_vix = pd.DataFrame()
+        df_positive_negative_pin_cross_point = pd.DataFrame()
         cross_point_count = 2
         for _ in range(cross_point_count):
-            val = get_nearest_value(df_tmp["f(t)"].values.tolist(), 0)
+            val = get_nearest_value(
+                df_tmp["f(t)"].values.tolist(), 0
+            )  # f(t) is positive pin - negative pin
             min_row1 = df_tmp[df_tmp["f(t)"] == val]
-            df_vix = pd.concat([df_vix, min_row1])
+            df_positive_negative_pin_cross_point = pd.concat(
+                [df_positive_negative_pin_cross_point, min_row1]
+            )
             index_value_close_to_0 = df_tmp.index.get_loc(min_row1.index.values[0])
             # drop closest index and around
             df_tmp = df_tmp.drop(
@@ -978,22 +994,33 @@ class WaveData:
             )
 
         # get average in case there is no cross point in data
-        df_vix["(wck_t+wck_c)/2"] = (df_vix["wck_t"] + df_vix["wck_c"]) / 2
+        df_positive_negative_pin_cross_point["(wck_t+wck_c)/2"] = (
+            df_positive_negative_pin_cross_point["wck_t"]
+            + df_positive_negative_pin_cross_point["wck_c"]
+        ) / 2
 
-        df_vix = df_vix["(wck_t+wck_c)/2"]
-        df_vix = df_vix.reset_index()
-        list_vix_values = df_vix.values.tolist()
-        ic(df_vix)
-        ic(list_vix_values)
+        df_positive_negative_pin_cross_point = df_positive_negative_pin_cross_point[
+            "(wck_t+wck_c)/2"
+        ]
+        df_positive_negative_pin_cross_point = (
+            df_positive_negative_pin_cross_point.reset_index()
+        )
+        list_positive_negative_pin_cross_points = (
+            df_positive_negative_pin_cross_point.values.tolist()
+        )
+        ic(df_positive_negative_pin_cross_point)
+        ic(list_positive_negative_pin_cross_points)
 
         # add x, y coordinates of differential input cross point voltage to graph
         x_position_offset = 0
         y_position_offset = 0
         vix_wck_rf = 0
         vix_wck_fr = 0
-        for list_vix_value in list_vix_values:
-            cross_point_x = list_vix_value[0]
-            cross_point_y = list_vix_value[1]
+        for (
+            list_positive_negative_pin_cross_point
+        ) in list_positive_negative_pin_cross_points:
+            cross_point_x = list_positive_negative_pin_cross_point[0]
+            cross_point_y = list_positive_negative_pin_cross_point[1]
 
             if (
                 cross_point_x
@@ -1005,7 +1032,7 @@ class WaveData:
                 label = "Vix_WCK_RF"
                 vix_wck_rf = cross_point_y - reference_level
 
-            # x_position_offset = 0.0005e-8
+            # x_position_offset and y_position_offset are just for display
             x_position_offset = (
                 df_positive_negative.iloc[40].name - df_positive_negative.iloc[0].name
             )
@@ -1048,8 +1075,7 @@ class WaveData:
         max_ft = max_ft_values["wck_t"] - max_ft_values["wck_c"]
         self.add_ax_text(
             x=max_ft_values.name + x_position_offset,  # includes offset
-            y=(max_ft_values["wck_t"] + max_ft_values["wck_c"]) / 4
-            + y_position_offset,
+            y=(max_ft_values["wck_t"] + max_ft_values["wck_c"]) / 4 + y_position_offset,
             s=f"Max(f(t))={max_ft:.3f}V",
             transform=self.ax.transData,
             horizontal_alignment="left",
@@ -1066,8 +1092,7 @@ class WaveData:
         min_ft = min_ft_values["wck_t"] - min_ft_values["wck_c"]
         self.add_ax_text(
             x=min_ft_values.name + x_position_offset,  # includes offset
-            y=(min_ft_values["wck_t"] + min_ft_values["wck_c"]) / 4
-            + y_position_offset,
+            y=(min_ft_values["wck_t"] + min_ft_values["wck_c"]) / 4 + y_position_offset,
             s=f"Min(f(t))={min_ft:.3f}V",
             transform=self.ax.transData,
             z_order=11,
@@ -1077,7 +1102,7 @@ class WaveData:
         # Vix_WCK_Ratio Calculation result
         x_position_vix_ratio_result = 0.35
         vix_wck_ratio_fr_min_t = (vix_wck_fr / abs(min_ft)) * 100
-        vix_wck_ratio_rf_max_t = (vix_wck_rf / abs(max_ft)) * 100
+        vix_wck_ratio_rf_max_t = (vix_wck_rf / max_ft) * 100
         self.add_ax_text(
             x=x_position_vix_ratio_result,
             y=-0.2,
@@ -1113,12 +1138,6 @@ class WaveData:
             color="black",
             linestyle="dashed",
             zorder=10,
-        )
-
-        df_positive_negative = df_positive_negative.drop("f(t)", axis=1)
-        df_positive_negative = df_positive_negative.rename(
-            columns={"wck_t": positive_pin_name, "wck_c": negative_pin_name},
-            inplace=False,
         )
 
         df_positive_negative_plot.plot(ax=self.ax)
@@ -2011,7 +2030,7 @@ if __name__ == "__main__":
 
     # wave_data_overshoot = WaveData(
     #     active_presentation_object=active_presentation_object,
-    #     file_name=pin_kind_for_pptx.lower() + "_" + OVERSHOOT_FILE_NAME,
+    #     file_path=pin_kind_for_pptx.lower() + "_" + OVERSHOOT_FILE_NAME,
     #     folder_path=FOLDER_PATH + pin_kind_for_pptx.lower() + "/",
     #     group_by=DATA_GROUP,
     #     index=DATA_INDEX,
@@ -2125,7 +2144,6 @@ if __name__ == "__main__":
         negative_pin_file=FOLDER_PATH
         + "P1858A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
     )
-    sys.exit()
     wave_data_overview.save_pptx(file_name=PPTX_FILE_NAME, folder_name=FOLDER_PATH)
     elapsed_time = time.time() - start
     print(f"exec time:{elapsed_time:.1f}[sec]")
