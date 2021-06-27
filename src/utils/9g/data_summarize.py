@@ -26,17 +26,14 @@ from pptx.enum.text import PP_ALIGN
 from pptx.util import Pt
 from tqdm import tqdm
 
-from variables import DATA_GROUP
-from variables import DATA_INDEX
-
-from variables import OVERVIEW_FILE_NAME
-
-from variables import RENAME_CONDITIONS
-
 from variables import CELL_WIDTH_BASE
 from variables import CELL_WIDTH_BASE_PIN
-from variables import CELL_WIDTH_BASE_VI
 from variables import CELL_WIDTH_BASE_RATE
+from variables import CELL_WIDTH_BASE_VI
+from variables import DATA_GROUP
+from variables import DATA_INDEX
+from variables import OVERVIEW_FILE_NAME
+from variables import RENAME_CONDITIONS
 
 picture_counter = 0
 
@@ -985,18 +982,18 @@ class WaveData:
 
         df_vix = df_vix["(wck_t+wck_c)/2"]
         df_vix = df_vix.reset_index()
-        df_vix_list = df_vix.values.tolist()
+        list_vix_values = df_vix.values.tolist()
         ic(df_vix)
-        ic(df_vix_list)
+        ic(list_vix_values)
 
         # add x, y coordinates of differential input cross point voltage to graph
         x_position_offset = 0
         y_position_offset = 0
         vix_wck_rf = 0
         vix_wck_fr = 0
-        for df_vix_p in df_vix_list:
-            cross_point_x = df_vix_p[0]
-            cross_point_y = df_vix_p[1]
+        for list_vix_value in list_vix_values:
+            cross_point_x = list_vix_value[0]
+            cross_point_y = list_vix_value[1]
 
             if (
                 cross_point_x
@@ -1035,23 +1032,23 @@ class WaveData:
         # Max(f(t)) is maximum difference between wck_t-wck_c
         max_index = df_positive_negative["f(t)"].idxmax()
         min_index = df_positive_negative["f(t)"].idxmin()
-        max_index_values = df_positive_negative.loc[max_index]
-        min_index_values = df_positive_negative.loc[min_index]
-        ic(max_index_values)
-        ic(min_index_values)
+        max_ft_values = df_positive_negative.loc[max_index]
+        min_ft_values = df_positive_negative.loc[min_index]
+        ic(max_ft_values)
+        ic(min_ft_values)
 
         # Max(f(t))
         self.add_ax_annotate(
             text="",
-            xy=[max_index_values.name, max_index_values["wck_t"]],
-            xy_text=[max_index_values.name, max_index_values["wck_c"]],
+            xy=[max_ft_values.name, max_ft_values["wck_t"]],
+            xy_text=[max_ft_values.name, max_ft_values["wck_c"]],
             arrow_style="->",
         )
 
-        max_ft = max_index_values["wck_t"] - max_index_values["wck_c"]
+        max_ft = max_ft_values["wck_t"] - max_ft_values["wck_c"]
         self.add_ax_text(
-            x=max_index_values.name + x_position_offset,  # includes offset
-            y=(max_index_values["wck_t"] + max_index_values["wck_c"]) / 4
+            x=max_ft_values.name + x_position_offset,  # includes offset
+            y=(max_ft_values["wck_t"] + max_ft_values["wck_c"]) / 4
             + y_position_offset,
             s=f"Max(f(t))={max_ft:.3f}V",
             transform=self.ax.transData,
@@ -1061,15 +1058,15 @@ class WaveData:
         # Min(f(t))
         self.add_ax_annotate(
             text="",
-            xy=[min_index_values.name, min_index_values["wck_t"]],
-            xy_text=[min_index_values.name, min_index_values["wck_c"]],
+            xy=[min_ft_values.name, min_ft_values["wck_t"]],
+            xy_text=[min_ft_values.name, min_ft_values["wck_c"]],
             arrow_style="->",
         )
 
-        min_ft = min_index_values["wck_t"] - min_index_values["wck_c"]
+        min_ft = min_ft_values["wck_t"] - min_ft_values["wck_c"]
         self.add_ax_text(
-            x=min_index_values.name + x_position_offset,  # includes offset
-            y=(min_index_values["wck_t"] + min_index_values["wck_c"]) / 4
+            x=min_ft_values.name + x_position_offset,  # includes offset
+            y=(min_ft_values["wck_t"] + min_ft_values["wck_c"]) / 4
             + y_position_offset,
             s=f"Min(f(t))={min_ft:.3f}V",
             transform=self.ax.transData,
