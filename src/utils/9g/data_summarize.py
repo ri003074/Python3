@@ -6,11 +6,16 @@ import sys
 import time
 from collections import OrderedDict
 from glob import glob
+from logging import Formatter
+from logging import INFO
+from logging import StreamHandler
+from logging import getLogger
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import win32com.client
+from icecream import ic
 from openpyxl import load_workbook
 from openpyxl.chart import LineChart, Reference
 from openpyxl.chart.layout import Layout, ManualLayout
@@ -21,33 +26,23 @@ from pptx.enum.text import PP_ALIGN
 from pptx.util import Pt
 from tqdm import tqdm
 
-from variables import CELL_WIDTH_BASE
-from variables import CELL_WIDTH_BASE_PIN
-from variables import CELL_WIDTH_BASE_RATE
-from variables import CELL_WIDTH_BASE_VI
 from variables import DATA_GROUP
 from variables import DATA_INDEX
-from variables import FREQ_YTICKS
+# from variables import HISTOGRAM_FILE_NAME
+from variables import OVERVIEW_FILE_NAME
+# from variables import OVERVIEW_FILE_NAME
+from variables import RENAME_CONDITIONS
 
 # from variables import VIX_FILE_NAME
 # from variables import CELL_WIDTH_BASE_VMAX
 # from variables import CELL_WIDTH_BASE_VMIN
 # from variables import CELL_WIDTH_BASE_TOP
 # from variables import CELL_WIDTH_BASE_BASE
-from variables import OVERSHOOT_FILE_NAME
-
-from variables import OVERSHOOT_Y_TICKS_1V_0V
-from variables import OVERSHOOT_Y_TICKS_0r5V_0V
-
-from variables import CROSSTALK_FILE_NAME
-
+# from variables import OVERSHOOT_FILE_NAME
+# from variables import OVERSHOOT_Y_TICKS_1V_0V
+# from variables import OVERSHOOT_Y_TICKS_0r5V_0V
+# from variables import CROSSTALK_FILE_NAME
 # from variables import CROSSTALK_YTICKS
-
-# from variables import HISTOGRAM_FILE_NAME
-from variables import OVERVIEW_FILE_NAME
-
-# from variables import OVERVIEW_FILE_NAME
-from variables import RENAME_CONDITIONS
 
 # from openpyxl.drawing.line import LineProperties
 
@@ -164,7 +159,8 @@ def wf_txt_data_to_csv(file):
         None
 
     """
-    print(file)
+    logger.info("")
+    logger.info(f"{file = }")
     with open(file.replace(".txt", ".csv"), "w", encoding="utf-8") as fw:
         flg = 0
         with open(file, encoding="utf-8") as fr:
@@ -520,6 +516,7 @@ class WaveData:
             None
 
         """
+        logger.info("")
         global picture_counter
 
         # for excel graph
@@ -533,16 +530,15 @@ class WaveData:
 
         y_ticks_tmp = y_ticks  # save original y_ticks setting
         if self.group_by:
-            for name, group in df.groupby(self.group_by, sort=False):
-                print(f"\ncondition_name = {name}")
-                print(group)
+            for condition_name, group in df.groupby(self.group_by, sort=False):
+                logger.info(f"{condition_name = }")
+                ic(group)
+
                 df_plot = group[df_columns_list]
-                print(df_plot)
 
                 # skip if dataframe has missing value
                 if df_plot.isnull().values.sum() != 0:
                     df_plot = group[df_columns_list].dropna(how="all")
-                    print(df_plot)
 
                     if df_plot.empty:
                         continue
@@ -566,10 +562,8 @@ class WaveData:
                 self.ax.set_xticks([i for i in range(group.shape[0])])
 
                 y_ticks = y_ticks_tmp
-                if y_ticks_per_condition and (name in y_ticks_per_condition):
-                    y_ticks = y_ticks_per_condition[name]
-
-                print(df_plot)
+                if y_ticks_per_condition and (condition_name in y_ticks_per_condition):
+                    y_ticks = y_ticks_per_condition[condition_name]
 
                 if legends is not None:
                     df_plot = df_plot.rename(columns=legends, inplace=False)
@@ -595,7 +589,7 @@ class WaveData:
                     )
 
                 self.adjust_graph_params(
-                    group_name=str(name),
+                    group_name=str(condition_name),
                     rotation=rotation,
                     x_label=x_label,
                     y_label=y_label,
@@ -617,7 +611,7 @@ class WaveData:
                     + picture_number
                     + self.file_name.replace(".csv", "")
                     + "_"
-                    + name
+                    + condition_name
                     + "_"
                     + "_".join(df_columns_list)
                     + ".xlsx"
@@ -634,7 +628,7 @@ class WaveData:
                 file_path = (
                     self.folder_path
                     + picture_number
-                    + name
+                    + condition_name
                     + "_"
                     + self.file_name.replace("csv", "")
                     + ".png"
@@ -642,19 +636,12 @@ class WaveData:
                 plt.savefig(file_path)
                 plt.close("all")
 
-                print(name)
-
                 for key, value in RENAME_CONDITIONS.items():
-                    name = name.replace(key, value)
+                    condition_name = condition_name.replace(key, value)
                     file_name = file_name.replace(key, value)
 
-                print(file_name)
-                # self.add_slide_to_pptx(
-                #     title=picture_number + name + " " + file_name,
-                #     layout=11,
-                # )
                 self.add_slide_to_pptx(
-                    title=file_name + " " + name, layout=11,
+                    title=file_name + " " + condition_name, layout=11,
                 )
 
                 self.add_picture_to_pptx(file_path=file_path)
@@ -925,6 +912,7 @@ class WaveData:
             None
 
         """
+        logger.info("")
         global picture_counter
 
         self.setup_fig_and_ax(
@@ -1006,6 +994,8 @@ class WaveData:
         df_vix = df_vix["(wck_t+wck_c)/2"]
         df_vix = df_vix.reset_index()
         df_vix_list = df_vix.values.tolist()
+        ic(df_vix)
+        ic(df_vix_list)
 
         # add x, y coordinates of differential input cross point voltage to graph
         x_position_offset = 0
@@ -1049,10 +1039,14 @@ class WaveData:
             )
 
         # for Min(f(t)), Max(f(t))
+        # Min(f(t)) is minimum difference between wck_t-wck_c
+        # Max(f(t)) is maximum difference between wck_t-wck_c
         max_index = df_positive_negative["f(t)"].idxmax()
         min_index = df_positive_negative["f(t)"].idxmin()
         max_index_values = df_positive_negative.loc[max_index]
         min_index_values = df_positive_negative.loc[min_index]
+        ic(max_index_values)
+        ic(min_index_values)
 
         # Max(f(t))
         self.add_ax_annotate(
@@ -1379,6 +1373,7 @@ class WaveData:
                 None
 
         """
+        logger.info("")
 
         # this code works only for overshoot/undershoot
         if merge:
@@ -1685,8 +1680,11 @@ class WaveData:
             None
 
         """
+        logger.info("")
+
         df = df.loc[:, items]
-        print(df)
+        ic(df)
+
         df = df.dropna(how="all", axis=1)  # drop all nan column
         data_list_to_table = df.values.tolist()
         data_list_to_table.insert(0, df.columns.tolist())
@@ -1742,6 +1740,7 @@ class WaveData:
                             or check_pin_kind(data_list_to_table[i][0])[0] == "CK"
                         ):
                             # positive pin. delete Vmin-Top, Vmax-Top
+                            # TODO check wck/ck is positive or negative
                             if (
                                 "Vminimum-Top" in data_list_to_table[0][j]
                                 or "Vmaximum-Top" in data_list_to_table[0][j]
@@ -1952,8 +1951,23 @@ class WaveData:
 
 if __name__ == "__main__":
     start = time.time()
+
+    # logging setup
+    handler = StreamHandler()
+    handler_format = Formatter(
+        "%(asctime)s - %(name)s - %(funcName)s - %(lineno)s - %(levelname)s - %(message)s"
+    )
+    handler.setFormatter(handler_format)
+    handler.setLevel(INFO)
+    logger = getLogger("main_9g_sk").getChild("data_summarize")
+    logger.setLevel(INFO)
+    logger.addHandler(handler)
+    logger.propagate = False
+    ic.configureOutput(includeContext=True)
+    # ic.disable()
+
     DATA_START_COLUMNS = 10
-    FOLDER_PATH = os.getcwd() + "/20210625_debug_crosstalk_merge/"
+    FOLDER_PATH = os.getcwd() + "/20210625_debug/"
     PPTX_FILE_NAME = "8GPE_TEST.pptx"
     OSC_PICTURE_LIST_CROSSTALK = glob(FOLDER_PATH + "/*crosstalk/*.png")
 
@@ -2262,6 +2276,34 @@ if __name__ == "__main__":
         index=DATA_INDEX,
         pptx_lib=PPTX_LIB,
     )
+    # wave_data_overview.make_graph(
+    #     df_columns_list=["Frequency"],
+    #     file_name=PE + "Frequency",
+    #     digit_format="%.2f",
+    #     legends={"Frequency": "Freq(GHz)"},
+    #     ax_h_lines=[4.0],
+    #     y_ticks=FREQ_YTICKS,
+    #     y_label="GHz",
+    #     pin_kind=pin_kind_for_pptx,
+    #     ax_h_lines_per_condition={"IO_Vih1r3V_Vil-0r50V_Vt-0r50V": [2.0, 3.0]},
+    #     y_ticks_per_condition={"CS_Vih1r0V_Vil0r0V_Vt0r5V": [0, 2, 0.2]},
+    #     spec=True,
+    #     additional_information=True,
+    #     info="Spec: less than 60ps (@1.0Vp-p/20% to 80%)",
+    # )
+    # wave_data_overview.add_summary_table_to_pptx(
+    #     title="overview_" + pin_kind_for_pptx,
+    #     cell_width=[
+    #         CELL_WIDTH_BASE_PIN * 1.1,
+    #         CELL_WIDTH_BASE_VI * 2.0,
+    #         CELL_WIDTH_BASE_RATE * 1.1,
+    #         CELL_WIDTH_BASE * 1.1,
+    #     ],
+    #     items=["Pin", "Vi", "Rate", "Frequency"],
+    #     rename={"Vih1r0V_Vil0r0V_Vt0r5V": "Vih=1.0V, Vil=0.0V"},
+    #     # rename={"Vih1r0V_": "Vih=1.0V,"},
+    #     pin_kind=pin_kind_for_pptx,
+    # )
     # wave_data_overview.make_vix_graph(
     #     item_name="vix",
     #     positive_pin_file=FOLDER_PATH
@@ -2269,6 +2311,7 @@ if __name__ == "__main__":
     #     negative_pin_file=FOLDER_PATH
     #     + "P1858A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
     # )
+    # sys.exit()
     for pin_kind_for_pptx in PIN_KINDS:
         wave_data_overview.make_graph(
             df_columns_list=["Frequency"],
