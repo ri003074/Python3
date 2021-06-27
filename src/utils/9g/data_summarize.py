@@ -46,6 +46,23 @@ TODO
 """
 
 
+def replace_unnecessary_cells(df):
+    diff_positive_pin_rows = (
+        'Positive_negative == "positive" and (Pin_kind == "WCK" or Pin_kind == "CK")'
+    )
+    diff_negative_pin_rows = (
+        'Positive_negative == "negative" and (Pin_kind == "WCK" or Pin_kind == "CK")'
+    )
+    df_diff_positive_pin = df.query(diff_positive_pin_rows)
+    df_diff_negative_pin = df.query(diff_negative_pin_rows)
+    df.loc[df_diff_positive_pin.index, "Vminimum-Top"] = "-"
+    df.loc[df_diff_positive_pin.index, "Vmaximum-Top"] = "-"
+    df.loc[df_diff_negative_pin.index, "Vminimum-Base"] = "-"
+    df.loc[df_diff_negative_pin.index, "Vmaximum-Base"] = "-"
+
+    return df
+
+
 def merge_diff_pin_result(
     folder_path, folder_path_positive, folder_path_negative, pin_kind
 ):
@@ -258,6 +275,8 @@ class WaveData:
                     rows.insert(11, str(pin_info[1]))
                     rows.insert(12, "Condition_all")
                     rows.insert(13, match.group(0))
+                    rows.insert(14, "Positive_Negative")
+                    rows.insert(15, pin_info[2])
 
                 dic = OrderedDict()
                 for i in range(0, len(rows) - 1, 2):
@@ -722,6 +741,7 @@ class WaveData:
             item_name (str): item name. Overshoot or Undershoot
             additional_information (bool):  additional information flag
             info (str): additional information
+            pe (str): pe name
 
         Returns:
             None
@@ -1699,11 +1719,15 @@ class WaveData:
 
         """
         logger.info("")
-
+        df = replace_unnecessary_cells(df)
         df = df.loc[:, items]
         ic(df)
 
         df = df.dropna(how="all", axis=1)  # drop all nan column
+        for key, value in RENAME_CONDITIONS.items():
+            df.replace(key, value, inplace=True)
+        df.fillna("-", inplace=True)
+
         data_list_to_table = df.values.tolist()
         data_list_to_table.insert(0, df.columns.tolist())
 
@@ -1742,8 +1766,8 @@ class WaveData:
                     ):
                         data_list_to_table[i][j] = "acquisition failure"
 
-                    elif str(data_list_to_table[i][j]) == "nan":
-                        data_list_to_table[i][j] = "-"
+                    # elif str(data_list_to_table[i][j]) == "nan":
+                    #     data_list_to_table[i][j] = "-"
 
                     if self.pptx_lib == "win32com":
                         if "v-ns" in data_list_to_table[0][j]:
@@ -1753,28 +1777,28 @@ class WaveData:
                         else:
                             text_range.Text = f"{data_list_to_table[i][j]:.1f}"
 
-                        if (
-                            get_pin_info(data_list_to_table[i][0])[0] == "WCK"
-                            or get_pin_info(data_list_to_table[i][0])[0] == "CK"
-                        ):
-                            # positive pin. delete Vmin-Top, Vmax-Top
-                            # TODO check wck/ck is positive or negative
-                            if (
-                                "Vminimum-Top" in data_list_to_table[0][j]
-                                or "Vmaximum-Top" in data_list_to_table[0][j]
-                            ):
-                                text_range.Text = f"{data_list_to_table[i][j]:.3f}"
-                                if i % 2 != 0:
-                                    text_range.Text = "-"
+                        # if (
+                        #     get_pin_info(data_list_to_table[i][0])[0] == "WCK"
+                        #     or get_pin_info(data_list_to_table[i][0])[0] == "CK"
+                        # ):
+                        #     # positive pin. delete Vmin-Top, Vmax-Top
+                        #     # TODO check wck/ck is positive or negative
+                        #     if (
+                        #         "Vminimum-Top" in data_list_to_table[0][j]
+                        #         or "Vmaximum-Top" in data_list_to_table[0][j]
+                        #     ):
+                        #         text_range.Text = f"{data_list_to_table[i][j]:.3f}"
+                        #         if i % 2 != 0:
+                        #             text_range.Text = "-"
 
-                            # negative pin. delete Vmin-Base, Vmax-Base
-                            elif (
-                                "Vminimum-Base" in data_list_to_table[0][j]
-                                or "Vmaximum-Base" in data_list_to_table[0][j]
-                            ):
-                                text_range.Text = f"{data_list_to_table[i][j]:.3f}"
-                                if i % 2 == 0:
-                                    text_range.Text = "-"
+                        #     # negative pin. delete Vmin-Base, Vmax-Base
+                        #     elif (
+                        #         "Vminimum-Base" in data_list_to_table[0][j]
+                        #         or "Vmaximum-Base" in data_list_to_table[0][j]
+                        #     ):
+                        #         text_range.Text = f"{data_list_to_table[i][j]:.3f}"
+                        #         if i % 2 == 0:
+                        #             text_range.Text = "-"
 
                     elif self.pptx_lib == "python-pptx":
                         if "v-ns" in data_list_to_table[0][j]:
@@ -1784,24 +1808,24 @@ class WaveData:
                         else:
                             text_range.text = f"{data_list_to_table[i][j]:.1f}"
 
-                        if (
-                            get_pin_info(data_list_to_table[i][0])[0] == "WCK"
-                            or get_pin_info(data_list_to_table[i][0])[0] == "CK"
-                        ):
-                            if (
-                                "Vminimum-Top" in data_list_to_table[0][j]
-                                or "Vmaximum-Top" in data_list_to_table[0][j]
-                            ):
-                                text_range.text = f"{data_list_to_table[i][j]:.3f}"
-                                if i % 2 != 0:
-                                    text_range.text = "-"
-                            elif (
-                                "Vminimum-Base" in data_list_to_table[0][j]
-                                or "Vmaximum-Base" in data_list_to_table[0][j]
-                            ):
-                                text_range.text = f"{data_list_to_table[i][j]:.3f}"
-                                if i % 2 == 0:
-                                    text_range.text = "-"
+                        # if (
+                        #     get_pin_info(data_list_to_table[i][0])[0] == "WCK"
+                        #     or get_pin_info(data_list_to_table[i][0])[0] == "CK"
+                        # ):
+                        #     if (
+                        #         "Vminimum-Top" in data_list_to_table[0][j]
+                        #         or "Vmaximum-Top" in data_list_to_table[0][j]
+                        #     ):
+                        #         text_range.text = f"{data_list_to_table[i][j]:.3f}"
+                        #         if i % 2 != 0:
+                        #             text_range.text = "-"
+                        #     elif (
+                        #         "Vminimum-Base" in data_list_to_table[0][j]
+                        #         or "Vmaximum-Base" in data_list_to_table[0][j]
+                        #     ):
+                        #         text_range.text = f"{data_list_to_table[i][j]:.3f}"
+                        #         if i % 2 == 0:
+                        #             text_range.text = "-"
 
                 except ValueError:
                     if rename is not None:
@@ -1816,41 +1840,15 @@ class WaveData:
                             if self.pptx_lib == "win32com":
                                 text_range.Text = data_list_to_table[i][j]
 
-                                if data_list_to_table[0][j] == "Vi":
-                                    for key, value in RENAME_CONDITIONS.items():
-                                        text_range.Text = text_range.Text.replace(
-                                            key, value
-                                        )
-
                             elif self.pptx_lib == "python-pptx":
                                 text_range.text = data_list_to_table[i][j]
-
-                                if data_list_to_table[0][j] == "Vi":
-                                    for key, value in RENAME_CONDITIONS.items():
-                                        text_range.text = text_range.text.replace(
-                                            key, value
-                                        )
 
                     else:
                         if self.pptx_lib == "win32com":
                             text_range.Text = data_list_to_table[i][j]
 
-                            if data_list_to_table[0][j] == "Vi":
-                                for key, value in RENAME_CONDITIONS.items():
-                                    text_range.Text = text_range.Text.replace(
-                                        key, value
-                                    )
-                            # if "Vmin" in data_list_to_table[0][j]:
-                            #     text_range.Text = "-"
-
                         elif self.pptx_lib == "python-pptx":
                             text_range.text = data_list_to_table[i][j]
-
-                            if data_list_to_table[0][j] == "Vi":
-                                for key, value in RENAME_CONDITIONS.items():
-                                    text_range.text = text_range.text.replace(
-                                        key, value
-                                    )
 
                 if self.pptx_lib == "win32com":
                     text_range.Font.Size = 10
