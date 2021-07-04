@@ -15,8 +15,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import win32com.client
-import coloredlogs
-
 from icecream import ic
 from openpyxl import load_workbook
 from openpyxl.chart import LineChart, Reference
@@ -28,86 +26,21 @@ from pptx.enum.text import PP_ALIGN
 from pptx.util import Pt
 from tqdm import tqdm
 
-from variables import RENAME_CONDITIONS
-from variables import DROP_CONDITIONS
-from variables import FREQ_DUTY_FILE_NAME
+from variables import CELL_WIDTH_BASE
 from variables import DATA_GROUP
 from variables import DATA_INDEX
-from variables import CELL_WIDTH_BASE
-from variables import DUTY_YTICKS
+from variables import RENAME_CONDITIONS
 
-logger = getLogger("main_9g_sk").getChild("data_summarize")
-coloredlogs.install(level="INFO")
 picture_counter = 0
 
 now = datetime.datetime.now()
 date_now = now.strftime("%Y%m%d%H%M")
+logger = getLogger("main_9g_sk").getChild("data_summarize")
 
 """
 TODO
 
 """
-
-
-def get_differential_crosspoint_from_dataframe(df_diff_waveform, cross_point_count):
-    differential_waveform_values = df_diff_waveform["diff waveform"].values.tolist()
-    df_positive_negative_pin_cross_point = pd.DataFrame()
-    skip_flag = False
-    skip_counter = 0
-    cross_point_counter = 0
-    for i in range(1, len(differential_waveform_values)):
-        # if find first cross point, skip some index not to find
-        # very close cross point
-        if skip_counter == 10:
-            skip_counter = 0
-            skip_flag = False
-
-        if skip_flag:
-            skip_counter += 1
-            continue
-
-        # find cross point
-        if (
-            differential_waveform_values[i] >= 0
-            and differential_waveform_values[i - 1] < 0
-        ) or (
-            differential_waveform_values[i] <= 0
-            and differential_waveform_values[i - 1] > 0
-        ):
-            cross_point_counter += 1
-            skip_flag = True
-            cross_point_index = 0
-
-            # select index value close to 0
-            if abs(differential_waveform_values[i]) == abs(
-                differential_waveform_values[i + 1]
-            ):
-                cross_point_index = i
-            else:
-                value_close_to_0 = get_nearest_value(
-                    [
-                        differential_waveform_values[i],
-                        differential_waveform_values[i - 1],
-                    ],
-                    0,
-                )
-                if value_close_to_0 == differential_waveform_values[i]:
-                    cross_point_index = i
-                else:
-                    cross_point_index = i - 1
-
-            min_row1 = df_diff_waveform.loc[cross_point_index]
-            df_min_row1 = pd.DataFrame([min_row1])
-            df_min_row1.set_index("t", inplace=True)
-            df_positive_negative_pin_cross_point = pd.concat(
-                [df_positive_negative_pin_cross_point, df_min_row1]
-            )
-        if cross_point_counter == cross_point_count:
-            break
-
-    logger.info(f"find {cross_point_counter} cross point")
-
-    return df_positive_negative_pin_cross_point
 
 
 def replace_unnecessary_cells(df):
@@ -138,7 +71,7 @@ def merge_diff_pin_result(
         positive_pin_file_list, negative_pin_file_list
     ):
         file_name = os.path.split(positive_pin_file)
-        ic(file_name[1])
+        print(file_name[1])
         df_positive_pin = pd.read_csv(positive_pin_file, header=None)
         df_negative_pin = pd.read_csv(negative_pin_file, header=None)
         df_positive_pin["i"] = list(range(0, len(df_positive_pin.index) * 2, 2))
@@ -176,7 +109,6 @@ def get_pin_info(pin_name):
     if pin_num < 1857:
         pin_kind = "IO"
         pin_order = 1
-
     elif 1857 <= pin_num <= 1888:
         pin_kind = "WCK"
         pin_order = 2
@@ -188,17 +120,14 @@ def get_pin_info(pin_name):
         pin_order = 3
         if pin_num % 2 == 0:
             positive_negative = "negative"
-
     elif 1921 <= pin_num <= 1933:
         pin_kind = "CA"
         pin_order = 4
-
     elif 1953 <= pin_num <= 1959:
         pin_kind = "CS"
         pin_order = 5
-
     else:
-        logger.info("Pin_kind Error")
+        print("Pin_kind Error")
         sys.exit()
 
     return pin_kind, pin_order, positive_negative
@@ -255,6 +184,7 @@ def wf_txt_data_to_csv(file):
                         fw.write("\n")
 
                     if match_data:
+                        ic()
                         flg = 1
 
 
@@ -268,12 +198,10 @@ class WaveData:
         index="Pin_Rate",
         group_by=None,
         header=None,
-        drop_condition=False,
     ):
         self.data_df = pd.DataFrame()
         self.data_vns = []
         self.data_vix = []
-        self.data_diff_duty = []
         self.data_overshoot = []
         self.file_name = file_name
         self.folder_path = folder_path
@@ -298,7 +226,7 @@ class WaveData:
             self.slide_height = self.active_presentation.slide_height
             self.slide_count = 0
 
-        self.make_df_and_xlsx(drop_condition=drop_condition)
+        self.make_df_and_xlsx()
 
     def update_slide_count(self):
         if self.pptx_lib == "win32com":
@@ -307,7 +235,7 @@ class WaveData:
         elif self.pptx_lib == "python-pptx":
             self.slide_count = 0
 
-    def make_df_and_xlsx(self, drop_condition):
+    def make_df_and_xlsx(self):
         """Make pandas dataframe and xlsx data from csv file
 
         Args:
@@ -394,11 +322,6 @@ class WaveData:
                 self.data_df["Vmaximum-Top"] = (
                     self.data_df["Vmaximum"] - self.data_df["Top"]
                 )
-
-            # drop if data has unnecessary conditons like vt=0.5
-            if drop_condition:
-                for drop_cond in DROP_CONDITIONS:
-                    self.data_df = self.data_df[self.data_df.Vi != drop_cond]
 
             if self.header:
                 self.data_df = self.data_df.set_axis(self.header, axis="columns")
@@ -681,7 +604,6 @@ class WaveData:
                         s=info,
                         transform=self.ax.transAxes,
                         horizontal_alignment="right",
-                        color="purple",
                     )
 
                 self.adjust_graph_params(
@@ -696,7 +618,6 @@ class WaveData:
                     spec=spec,
                     grid=True,
                     ax_h_lines_per_condition=ax_h_lines_per_condition,
-                    line_color="purple",
                 )
 
                 picture_number = f"{picture_counter:03}_"
@@ -788,8 +709,10 @@ class WaveData:
     def make_overshoot_graph(
         self,
         file,
+        y_ticks,
         y_label,
         figure_size=(10, 5.5),
+        item_name="Overshoot",
         additional_information=False,
         info=None,
         pe="",
@@ -810,8 +733,10 @@ class WaveData:
 
         Args:
             file (str): waveform text data to make graph
+            y_ticks (list): y ticks value
             y_label (str): y label
             figure_size (tuple): figure size
+            item_name (str): item name. Overshoot or Undershoot
             additional_information (bool):  additional information flag
             info (str): additional information
             pe (str): pe name
@@ -824,61 +749,41 @@ class WaveData:
             figure_size=figure_size, x_margin=0.01, digit_format="%.3f"
         )
 
-        # item_name = ""
         match_pin_file = re.match(r".*((P.*?)_.*(Vih.*)_(Rate\dr.*ns).*).txt", file)
-        if "overshoot_high" in file:
-            item_name = "Overshoot_high"
-        elif "overshoot_low" in file:
-            item_name = "Overshoot_low"
-        else:
-            logger.info("overshoot file error")
-            sys.exit()
-
-        vihl_condition = match_pin_file.group(3)
-        ic(vihl_condition)
-        # y_ticks = []
-        if (
-            vihl_condition == "Vih1r000V_Vil0r000V_Vt0r000V"
-            or vihl_condition == "Vih1r000V_Vil0r000V_Vt0r500V"
-        ):
-            y_ticks = [-0.35, 0.8499, 0.15]
-        elif vihl_condition == "Vih0r500V_Vil0r000V_Vt0r000V":
-            y_ticks = [-0.475, 0.72499, 0.15]
-        else:
-            logger.info("overshoot y_ticks error")
-            sys.exit()
-
         condition_all = match_pin_file.group(1)
-        condition_all = condition_all.replace("_high", "").replace("_low", "")
-        ic(condition_all)
-        ic(item_name)
+        print(self.data_df)
+        print(
+            self.data_df[
+                (self.data_df["Condition_all"] == condition_all)
+                & self.data_df[item_name].notna()
+            ]
+        )
         df_tmp = self.data_df[
             (self.data_df["Condition_all"] == condition_all)
             & self.data_df[item_name].notna()
         ]
-        ic(df_tmp)
         if (
-            item_name == "Overshoot_high"
+            item_name == "Overshoot"
             and df_tmp["Top"].size == 1
             and df_tmp["Vmaximum"].size == 1
         ):
             reference_level = df_tmp["Top"][0] * 1e-3
             vmaximum = df_tmp["Vmaximum"][0] * 1e-3
         elif (
-            item_name == "Overshoot_low"
+            item_name == "Undershoot"
             and df_tmp["Base"].size == 1
             and df_tmp["Vminimum"].size == 1
         ):
             reference_level = df_tmp["Base"][0] * 1e-3
             vmaximum = df_tmp["Vminimum"][0] * 1e-3
         else:
-            logger.info(
+            print(
                 "Over 2 results/No result in result file for overshoot/undershoot graph"
             )
             sys.exit()
 
-        ic(reference_level)
-        ic(vmaximum)
+        print(reference_level)
+        print(vmaximum)
 
         pin_name = match_pin_file.group(2)
         test_rate = match_pin_file.group(4)
@@ -895,16 +800,10 @@ class WaveData:
 
         graph_x_middle = int(x.size / 2)
 
-        # sum_of_voltage = 0
+        sum_of_voltage = 0
         area_label_y_position = 0
         overshoot_label_y_position = 0
-        x_start_flag = True
-        area_x_start = 0
-        area_x_end = 0
-        area_name = ""
-        area_v_ns = 0
-        if item_name == "Overshoot_high":
-            area_name = "Area_high"
+        if item_name == "Overshoot":
             y_label_position_offset = 0.075
             area_label_y_position = vmaximum + y_label_position_offset
             overshoot_label_y_position = vmaximum + y_label_position_offset * 2
@@ -917,17 +816,10 @@ class WaveData:
                 alpha=0.2,
             )
             for i in range(int(x.size / 2)):
-                if y[i] >= reference_level:
-                    if x_start_flag is True:
-                        area_x_start = x[i]
-                        x_start_flag = False
+                if y[i] > reference_level:
+                    sum_of_voltage += abs(y[i]) - abs(reference_level)
 
-                    area_x_end = x[i]
-                    area_v_ns += abs(y[i] - reference_level) * (x[1] - x[0]) * 1e9
-                    # sum_of_voltage += abs(y[i] - reference_level)
-
-        elif item_name == "Overshoot_low":
-            area_name = "Area_low"
+        elif item_name == "Undershoot":
             y_label_position_offset = -0.075
             area_label_y_position = vmaximum + y_label_position_offset * 2
             overshoot_label_y_position = vmaximum + y_label_position_offset
@@ -940,74 +832,33 @@ class WaveData:
                 alpha=0.2,
             )
             for i in range(int(x.size / 2)):
-                if y[i] <= reference_level:
-                    if x_start_flag is True:
-                        area_x_start = x[i]
-                        x_start_flag = False
+                if y[i] < reference_level:
 
-                    area_x_end = x[i]
-                    area_v_ns += abs(y[i] - reference_level) * (x[1] - x[0]) * 1e9
-                    # sum_of_voltage += abs(y[i] - reference_level)
+                    sum_of_voltage += abs(y[i]) - abs(reference_level)
 
-        area_reference_info_x_axis = 0.0
-        self.add_ax_text(
-            x=area_reference_info_x_axis,
-            y=-0.1,
-            s="Reference Information",
-            transform=self.ax.transAxes,
-            horizontal_alignment="left",
-            font_weight="bold",
-        )
-        self.add_ax_text(
-            x=area_reference_info_x_axis,
-            y=-0.15,
-            s=f"area_x_start = {area_x_start}",
-            transform=self.ax.transAxes,
-            horizontal_alignment="left",
-        )
-        self.add_ax_text(
-            x=area_reference_info_x_axis,
-            y=-0.2,
-            s=f"area_x_end = {area_x_end}",
-            transform=self.ax.transAxes,
-            horizontal_alignment="left",
-        )
-        self.add_ax_text(
-            x=area_reference_info_x_axis,
-            y=-0.25,
-            s=f"area_x_end-area_x_start = {area_x_end-area_x_start}",
-            transform=self.ax.transAxes,
-            horizontal_alignment="left",
-        )
-        # ratio_of_area_per_1pt = (x[2047] - x[0] + (x[1] - x[0])) * 1e9 / x.size
-        # area_v_ns = abs(sum_of_voltage * ratio_of_area_per_1pt)
+        ratio_of_area_per_1pt = (x[2047] - x[0] + (x[1] - x[0])) * 1e9 / x.size
+        area_v_ns = abs(sum_of_voltage * ratio_of_area_per_1pt)
         overshoot_mv = abs(vmaximum - reference_level) * 1e3
-        if item_name == "Overshoot_high" and vmaximum < reference_level:
-            overshoot_mv = 0
-        elif item_name == "Overshoot_low" and vmaximum > reference_level:
-            overshoot_mv = 0
-
+        s = "area"
         self.add_ax_text(
             x=x[int((x.size - 1) * 3 / 8)],
             y=area_label_y_position,
-            s=f"{area_name:13} = {area_v_ns:.6f}[V-ns]",
+            s=f"{s:10} = {area_v_ns:.6f}[V-ns]",
             transform=self.ax.transData,
             z_order=11,
             horizontal_alignment="left",
-            color="purple",
         )
         self.add_ax_text(
             x=x[int((x.size - 1) * 3 / 8)],
             y=overshoot_label_y_position,
-            s=f"{item_name:13} = {overshoot_mv:.1f}mV",
+            s=f"{item_name:10} = {overshoot_mv:.1f}mV",
             transform=self.ax.transData,
             z_order=12,
             horizontal_alignment="left",
-            color="purple",
         )
         vns_data = {
             "Condition": condition_all,
-            "Area_" + item_name: area_v_ns,
+            "v-ns-" + item_name: area_v_ns,
             item_name + "_mV": overshoot_mv,
         }
         self.data_vns.append(vns_data)
@@ -1021,7 +872,6 @@ class WaveData:
                 s=info,
                 transform=self.ax.transAxes,
                 horizontal_alignment="right",
-                color="purple",
             )
 
         # make data for table output
@@ -1059,204 +909,6 @@ class WaveData:
         )
         self.add_picture_to_pptx(file_path=file_path)
 
-    def make_differential_waveform(
-        self,
-        item_name,
-        negative_pin_file,
-        positive_pin_file,
-        font_size=14,
-        figure_size=(12, 5.5),
-        y_ticks=[-1.2, 1.2, 0.2],
-        reference_level=0,
-        rotation=0,
-        x_label=None,
-        y_label=None,
-        additional_information=False,
-        info=None,
-    ):
-        logger.info("")
-        global picture_counter
-
-        self.setup_fig_and_ax(
-            figure_size=figure_size, x_margin=0.01, digit_format="%.2f"
-        )
-
-        match_positive_pin = re.match(
-            r".*(P.*?)_.*(Vih.*)_Rate0r(.*ns).*", positive_pin_file
-        )
-        match_negative_pin = re.match(
-            r".*(P.*?)_.*(Vih.*)_Rate0r(.*ns).*", negative_pin_file
-        )
-
-        positive_pin_name = match_positive_pin.group(1)
-        negative_pin_name = match_negative_pin.group(1)
-        pin_info = get_pin_info(positive_pin_name)
-        test_rate = match_positive_pin.group(3).replace("ns", "ps")
-        vi = match_positive_pin.group(2).replace("00V", "V")
-
-        wf_txt_data_to_csv(positive_pin_file)
-        wf_txt_data_to_csv(negative_pin_file)
-
-        df_positive = pd.read_csv(
-            positive_pin_file.replace(".txt", ".csv"), header=None
-        )
-        df_negative = pd.read_csv(
-            negative_pin_file.replace(".txt", ".csv"), header=None
-        )
-
-        df_positive = df_positive.set_axis(["t", "wck_t"], axis=1)
-        df_negative = df_negative.set_axis(["t", "wck_c"], axis=1)
-
-        df_positive = df_positive.set_index("t")
-        df_negative = df_negative.set_index("t")
-
-        df_positive_negative = pd.concat([df_positive, df_negative], axis=1)
-
-        # make diff column for differential waveform output
-        df_positive_negative["diff waveform"] = (
-            df_positive_negative["wck_t"] - df_positive_negative["wck_c"]
-        )
-
-        df_positive_negative = df_positive_negative.rename(
-            columns={"wck_t": positive_pin_name, "wck_c": negative_pin_name},
-            inplace=False,
-        )
-        df_positive_negative_plot = df_positive_negative.copy()
-
-        # get 1 cycle waveform
-        df_positive_negative = df_positive_negative.iloc[
-            int(len(df_positive_negative) * 0.1) : int(len(df_positive_negative) * 0.9),
-            :,
-        ]
-
-        df_tmp = df_positive_negative.copy()
-        df_tmp.reset_index(inplace=True)
-        ic(df_tmp)
-
-        df_positive_negative_pin_cross_point = get_differential_crosspoint_from_dataframe(
-            df_diff_waveform=df_tmp, cross_point_count=3
-        )
-
-        ic(df_positive_negative_pin_cross_point)
-
-        # reference level line
-        self.ax.hlines(
-            y=reference_level,
-            xmin=df_positive_negative_plot.index[0],
-            xmax=df_positive_negative_plot.index[len(df_positive_negative_plot) - 1],
-            color="black",
-            linestyle="dashed",
-            zorder=10,
-        )
-
-        # plot differential waveform
-        df_positive_negative_plot.plot(ax=self.ax, style=[":", ":"])
-
-        df_positive_negative_pin_cross_point = df_positive_negative_pin_cross_point.rename(
-            columns={"diff waveform": "0 cross point"}, inplace=False
-        )
-        df_positive_negative_pin_cross_point = df_positive_negative_pin_cross_point[
-            "0 cross point"
-        ]
-        # plot cross point
-        df_positive_negative_pin_cross_point.plot(ax=self.ax, style="ro")
-
-        # sort cross point values to calculate diff duty
-        df_positive_negative_pin_cross_point.sort_index(inplace=True)
-
-        diff_duty = (
-            (
-                df_positive_negative_pin_cross_point.index[1]
-                - df_positive_negative_pin_cross_point.index[0]
-            )
-            / (
-                df_positive_negative_pin_cross_point.index[2]
-                - df_positive_negative_pin_cross_point.index[0]
-            )
-        ) * 100
-        ic(diff_duty)
-
-        # make data for table output
-        self.data_diff_duty.append(
-            {
-                "Vi": vi,
-                "Positive Pin": positive_pin_name,
-                "Negative Pin": negative_pin_name,
-                "Rate": test_rate,
-                "Differential Duty(%)": diff_duty,
-                "Pin_kind": pin_info[0],
-                "Pin_Rate": positive_pin_name
-                + "_"
-                + negative_pin_name
-                + "_"
-                + test_rate,
-                "Pin_Vi": positive_pin_name + "_" + negative_pin_name + "_" + vi,
-                "Pin_kind_Vi": pin_info[0] + "_" + vi,
-            }
-        )
-
-        # add coordinate of cross point
-        for index, value in df_positive_negative_pin_cross_point.iteritems():
-            self.ax.annotate(
-                f"{index*1e9:.3f}ns",
-                (index, -0.35),
-                backgroundcolor="white",
-                zorder=15,
-            )
-
-        # add additional information like target or spec
-        if additional_information:
-            self.add_ax_text(
-                x=0.99,
-                y=0.05,
-                s=info,
-                transform=self.ax.transAxes,
-                horizontal_alignment="right",
-                color="purple",
-            )
-
-        self.adjust_graph_params(
-            rotation=rotation,
-            x_label=x_label,
-            y_label=y_label,
-            font_size=font_size,
-            y_ticks=y_ticks,
-            ax_h_lines=[],
-        )
-
-        x_position_diff_duty_result = 0.75
-        self.add_ax_text(
-            x=x_position_diff_duty_result,
-            y=-0.2,
-            s=f"Differential Duty = {diff_duty:.1f}%",
-            transform=self.ax.transAxes,
-            horizontal_alignment="left",
-            color="purple",
-        )
-
-        picture_number = f"{picture_counter:03}_"
-        file_path = (
-            self.folder_path
-            + picture_number
-            + pin_info[0]
-            + "_"
-            + vi
-            + "_"
-            + item_name
-            + ".png"
-        )
-        plt.savefig(file_path)
-        plt.close("all")
-
-        title = item_name + "_" + pin_info[0] + "_" + vi + "_" + test_rate
-        for key, value in RENAME_CONDITIONS.items():
-            title = title.replace(key, value)
-
-        self.add_slide_to_pptx(
-            title=title, layout=11,
-        )
-        self.add_picture_to_pptx(file_path=file_path)
-
     def make_vix_graph(
         self,
         item_name,
@@ -1265,13 +917,10 @@ class WaveData:
         description=False,
         font_size=14,
         figure_size=(12, 5.5),
-        reference_level=0,
+        reference_level=1.1,
         rotation=0,
-        y_ticks=[-0.35, 0.849, 0.15],
         x_label=None,
         y_label=None,
-        additional_information=False,
-        info=None,
     ):
         """make vix graph from positive/negative wave data file using matplotlib
 
@@ -1286,8 +935,6 @@ class WaveData:
             rotation (int): x_label rotation value
             x_label (str): x_label
             y_label (str): y_label
-            additional_information (bool): if add additional information like spec
-            info (str): additional information
 
         Returns:
             None
@@ -1309,7 +956,6 @@ class WaveData:
 
         positive_pin_name = match_positive_pin.group(1)
         negative_pin_name = match_negative_pin.group(1)
-        pin_info = get_pin_info(positive_pin_name)
         test_rate = match_positive_pin.group(3).replace("ns", "ps")
         vi = match_positive_pin.group(2).replace("00V", "V")
 
@@ -1337,7 +983,7 @@ class WaveData:
         )
 
         # make diff column to get 2 cross points
-        df_positive_negative["diff waveform"] = (
+        df_positive_negative["f(t)"] = (
             df_positive_negative["wck_t"] - df_positive_negative["wck_c"]
         )
 
@@ -1353,14 +999,27 @@ class WaveData:
         # 2 data which wck_t - wck_c is close to 0
         # close to 0 or 0 means cross point
         df_tmp = df_positive_negative.copy()
-        df_tmp.reset_index(inplace=True)
-        ic(df_tmp)
-
-        df_positive_negative_pin_cross_point = get_differential_crosspoint_from_dataframe(
-            df_diff_waveform=df_tmp, cross_point_count=2
-        )
-
-        ic(df_positive_negative_pin_cross_point)
+        df_positive_negative_pin_cross_point = pd.DataFrame()
+        cross_point_count = 2
+        for _ in range(cross_point_count):
+            val = get_nearest_value(
+                df_tmp["f(t)"].values.tolist(), 0
+            )  # f(t) is positive pin - negative pin
+            min_row1 = df_tmp[df_tmp["f(t)"] == val]
+            df_positive_negative_pin_cross_point = pd.concat(
+                [df_positive_negative_pin_cross_point, min_row1]
+            )
+            index_value_close_to_0 = df_tmp.index.get_loc(min_row1.index.values[0])
+            # drop closest index and around
+            df_tmp = df_tmp.drop(
+                df_tmp.index[
+                    [
+                        index_value_close_to_0,
+                        index_value_close_to_0 - 1,
+                        index_value_close_to_0 + 1,
+                    ]
+                ]
+            )
 
         # get average in case there is no cross point in data
         df_positive_negative_pin_cross_point["(wck_t+wck_c)/2"] = (
@@ -1395,11 +1054,11 @@ class WaveData:
                 cross_point_x
                 < df_positive_negative.index[int(len(df_positive_negative) / 2)]
             ):
-                label = "Vix_" + pin_info[0] + "_FR"
-                vix_wck_fr = abs(cross_point_y - reference_level)
+                label = "Vix_WCK_FR"
+                vix_wck_fr = cross_point_y - reference_level
             else:
-                label = "Vix_" + pin_info[0] + "_RF"
-                vix_wck_rf = abs(cross_point_y - reference_level)
+                label = "Vix_WCK_RF"
+                vix_wck_rf = cross_point_y - reference_level
 
             # x_position_offset and y_position_offset are just for display
             x_position_offset = (
@@ -1410,7 +1069,7 @@ class WaveData:
             self.add_ax_text(
                 x=cross_point_x + x_position_offset,
                 y=(cross_point_y + reference_level) / 2,
-                s=f"{label}={abs(cross_point_y - reference_level):.3f}V",
+                s=f"{label}={cross_point_y - reference_level:.3f}V",
                 transform=self.ax.transData,
                 z_order=11,
                 horizontal_alignment="left",
@@ -1424,11 +1083,10 @@ class WaveData:
             )
 
         # for Min(f(t)), Max(f(t))
-        # f(t) = "diff waveform"
         # Min(f(t)) is minimum difference between wck_t-wck_c
         # Max(f(t)) is maximum difference between wck_t-wck_c
-        max_index = df_positive_negative["diff waveform"].idxmax()
-        min_index = df_positive_negative["diff waveform"].idxmin()
+        max_index = df_positive_negative["f(t)"].idxmax()
+        min_index = df_positive_negative["f(t)"].idxmin()
         max_ft_values = df_positive_negative.loc[max_index]
         min_ft_values = df_positive_negative.loc[min_index]
         ic(max_ft_values)
@@ -1476,18 +1134,16 @@ class WaveData:
         self.add_ax_text(
             x=x_position_vix_ratio_result,
             y=-0.2,
-            s=f"Vix_{pin_info[0]}_Ratio = Vix_{pin_info[0]}_FR/|Min(f(t))| = {vix_wck_fr:6.3f}/|{min_ft:6.3f}| = {vix_wck_ratio_fr_min_t:4.1f}%",
+            s=f"Vix_WCK_Ratio = Vix_WCK_FR/|Min(f(t))| = {vix_wck_fr:6.3f}/|{min_ft:6.3f}| = {vix_wck_ratio_fr_min_t:4.1f}%",
             transform=self.ax.transAxes,
             horizontal_alignment="left",
-            color="purple",
         )
         self.add_ax_text(
             x=x_position_vix_ratio_result,
             y=-0.25,
-            s=f"Vix_{pin_info[0]}_Ratio = Vix_{pin_info[0]}_Rf/ Max(f(t))  = {vix_wck_rf:6.3f}/ {max_ft:6.3f}  = {vix_wck_ratio_rf_max_t:4.1f}%",
+            s=f"Vix_WCK_Ratio = Vix_WCK_Rf/ Max(f(t))  = {vix_wck_rf:6.3f}/ {max_ft:6.3f}  = {vix_wck_ratio_rf_max_t:4.1f}%",
             transform=self.ax.transAxes,
             horizontal_alignment="left",
-            color="purple",
         )
 
         # make data for table output
@@ -1497,8 +1153,8 @@ class WaveData:
                 "Positive Pin": positive_pin_name,
                 "Negative Pin": negative_pin_name,
                 "rate": test_rate,
-                "Vix_" + pin_info[0] + "_FR/|Min(f(t))| (%)": vix_wck_ratio_fr_min_t,
-                "Vix_" + pin_info[0] + "_Rf/Max(f(t)) (%)": vix_wck_ratio_rf_max_t,
+                "Vix_WCK_FR/|Min(f(t))| (%)": vix_wck_ratio_fr_min_t,
+                "Vix_WCK_Rf/Max(f(t)) (%)": vix_wck_ratio_rf_max_t,
             }
         )
 
@@ -1514,25 +1170,16 @@ class WaveData:
 
         df_positive_negative_plot.plot(ax=self.ax)
 
-        if additional_information:
-            self.add_ax_text(
-                x=0.99,
-                y=0.05,
-                s=info,
-                transform=self.ax.transAxes,
-                horizontal_alignment="right",
-                color="purple",
-            )
-
         self.adjust_graph_params(
             rotation=rotation,
             x_label=x_label,
             y_label=y_label,
             font_size=font_size,
-            y_ticks=y_ticks,
+            y_ticks=[0, 2, 0.1],
             ax_h_lines=[],
         )
         picture_number = f"{picture_counter:03}_"
+        pin_info = get_pin_info(positive_pin_name)
         file_path = (
             self.folder_path
             + picture_number
@@ -1585,15 +1232,7 @@ class WaveData:
         )
 
     def add_ax_text(
-        self,
-        x,
-        y,
-        s,
-        transform,
-        z_order=10,
-        horizontal_alignment="center",
-        font_weight=None,
-        color="black",
+        self, x, y, s, transform, z_order=10, horizontal_alignment="center"
     ):
         self.ax.text(
             x=x,
@@ -1604,8 +1243,6 @@ class WaveData:
             fontfamily="monospace",
             zorder=z_order,
             horizontalalignment=horizontal_alignment,
-            fontweight=font_weight,
-            color=color,
         )
 
     def setup_fig_and_ax(
@@ -1651,7 +1288,6 @@ class WaveData:
         spec=False,
         grid=False,
         ax_h_lines_per_condition=None,
-        line_color="gray",
     ):
         """adjust graph parameters
 
@@ -1713,43 +1349,9 @@ class WaveData:
                     y=ax_h_line,
                     linestyle=line_style,
                     alpha=alpha,
-                    color=line_color,
+                    color="gray",
                     linewidth=1,
                 )
-
-    def set_differential_duty_data_to_data_df(self):
-        # TODO there is another good way to copy differential differential_duty_data_list_to_table_df to self.data_df and rm this function
-        self.data_df = pd.DataFrame(self.data_diff_duty)
-        ic(self.data_df)
-        self.data_df.set_index(self.index, inplace=True)
-
-    def add_differential_duty_table_to_pptx(
-        self, title, items, cell_width, cell_height=20
-    ):
-        """add vix table to pptx
-
-        Args:
-            title (str): slide title
-            items (list): items for table
-            cell_width (list): cell width
-            cell_height (int): cell height
-
-        Returns:
-            None
-
-        """
-        differential_duty_data_list_to_table_df = pd.DataFrame(self.data_diff_duty)
-        ic(differential_duty_data_list_to_table_df)
-        self.add_slide_to_pptx(title=title, layout=4)
-        self.add_table(
-            df=differential_duty_data_list_to_table_df,
-            items=items,
-            cell_width=cell_width,
-            cell_height=cell_height,
-            slide_width=self.slide_width,
-            slide_height=self.slide_height,
-            replace_cells=False,
-        )
 
     def add_vix_table_to_pptx(self, title, items, cell_width, cell_height=20):
         """add vix table to pptx
@@ -1765,7 +1367,7 @@ class WaveData:
 
         """
         vix_data_list_to_table_df = pd.DataFrame(self.data_vix)
-        ic(vix_data_list_to_table_df)
+        print(vix_data_list_to_table_df)
         self.add_slide_to_pptx(title=title, layout=4)
         self.add_table(
             df=vix_data_list_to_table_df,
@@ -1774,7 +1376,7 @@ class WaveData:
             cell_height=cell_height,
             slide_width=self.slide_width,
             slide_height=self.slide_height,
-            replace_cells=False,
+            replace_unnecessary_cell=False,
         )
 
     def add_summary_table_to_pptx(
@@ -1874,7 +1476,7 @@ class WaveData:
 
         picture_per_slide = len(file_list)
         if len(file_list[0]) == 0:
-            logger.info("file not found")
+            print("file not found")
             sys.exit()
 
         if self.pptx_lib == "win32com":
@@ -1884,10 +1486,8 @@ class WaveData:
             picture_width = Pt(picture_width)
 
         top = self.slide_height * 0.25
-        top_1pic = self.slide_height * 0.20
         left_1 = self.slide_width / 4 - picture_width / 2
         left_2 = self.slide_width * 3 / 4 - picture_width / 2
-        left_1pic = self.slide_width / 2 - picture_width / 2
         text_box_height = 40
 
         if picture_per_slide == 1:
@@ -1896,28 +1496,12 @@ class WaveData:
                 for key, value in RENAME_CONDITIONS.items():
                     title = title.replace(key, value)
 
-                title_pin = title
-                match_pin_name = re.match(r"(P.*?) ", title)
-                pin_info = get_pin_info(match_pin_name.group(1))
-                title = re.sub("P.*? ", "", title)
-                title = pin_info[0] + " " + title
                 self.add_slide_to_pptx(title=title, layout=11)
                 self.add_picture_to_pptx(
                     file_path=file,
                     resize=resize,
                     picture_width=picture_width,
                     count_picture=False,
-                    top=top_1pic,
-                    reposition=True,
-                    left=left_1pic,
-                )
-                self.add_textbox(
-                    title=title_pin,
-                    slide_num=self.slide_count,
-                    left=left_1pic,
-                    top=top_1pic,
-                    width=picture_width,
-                    height=text_box_height,
                 )
 
         elif picture_per_slide == 2:
@@ -2117,7 +1701,7 @@ class WaveData:
         slide_width,
         slide_height,
         rename=None,
-        replace_cells=True,
+        replace_unnecessary_cell=True,
     ):
         """add table to slide.
 
@@ -2129,14 +1713,13 @@ class WaveData:
             slide_width (int): slide width
             slide_height (int): slide height
             rename (dict): specify before/after name as dict like {"Frequency":"Freq(GHz)"} if rename table header.
-            replace_cells (bool): if replace unnecessary cells
 
         Returns:
             None
 
         """
         logger.info("")
-        if replace_cells:
+        if replace_unnecessary_cell:
             df = replace_unnecessary_cells(df)
         df = df.loc[:, items]
         ic(df)
@@ -2188,20 +1771,62 @@ class WaveData:
                     #     data_list_to_table[i][j] = "-"
 
                     if self.pptx_lib == "win32com":
-                        if "Area" in data_list_to_table[0][j]:
+                        if "v-ns" in data_list_to_table[0][j]:
                             text_range.Text = f"{data_list_to_table[i][j]:.6f}"
                         elif "Freq" in data_list_to_table[0][j]:
                             text_range.Text = f"{data_list_to_table[i][j]:.3f}"
                         else:
                             text_range.Text = f"{data_list_to_table[i][j]:.1f}"
 
+                        # if (
+                        #     get_pin_info(data_list_to_table[i][0])[0] == "WCK"
+                        #     or get_pin_info(data_list_to_table[i][0])[0] == "CK"
+                        # ):
+                        #     # positive pin. delete Vmin-Top, Vmax-Top
+                        #     # TODO check wck/ck is positive or negative
+                        #     if (
+                        #         "Vminimum-Top" in data_list_to_table[0][j]
+                        #         or "Vmaximum-Top" in data_list_to_table[0][j]
+                        #     ):
+                        #         text_range.Text = f"{data_list_to_table[i][j]:.3f}"
+                        #         if i % 2 != 0:
+                        #             text_range.Text = "-"
+
+                        #     # negative pin. delete Vmin-Base, Vmax-Base
+                        #     elif (
+                        #         "Vminimum-Base" in data_list_to_table[0][j]
+                        #         or "Vmaximum-Base" in data_list_to_table[0][j]
+                        #     ):
+                        #         text_range.Text = f"{data_list_to_table[i][j]:.3f}"
+                        #         if i % 2 == 0:
+                        #             text_range.Text = "-"
+
                     elif self.pptx_lib == "python-pptx":
-                        if "Area" in data_list_to_table[0][j]:
+                        if "v-ns" in data_list_to_table[0][j]:
                             text_range.text = f"{data_list_to_table[i][j]:.6f}"
                         elif "Freq" in data_list_to_table[0][j]:
                             text_range.text = f"{data_list_to_table[i][j]:.3f}"
                         else:
                             text_range.text = f"{data_list_to_table[i][j]:.1f}"
+
+                        # if (
+                        #     get_pin_info(data_list_to_table[i][0])[0] == "WCK"
+                        #     or get_pin_info(data_list_to_table[i][0])[0] == "CK"
+                        # ):
+                        #     if (
+                        #         "Vminimum-Top" in data_list_to_table[0][j]
+                        #         or "Vmaximum-Top" in data_list_to_table[0][j]
+                        #     ):
+                        #         text_range.text = f"{data_list_to_table[i][j]:.3f}"
+                        #         if i % 2 != 0:
+                        #             text_range.text = "-"
+                        #     elif (
+                        #         "Vminimum-Base" in data_list_to_table[0][j]
+                        #         or "Vmaximum-Base" in data_list_to_table[0][j]
+                        #     ):
+                        #         text_range.text = f"{data_list_to_table[i][j]:.3f}"
+                        #         if i % 2 == 0:
+                        #             text_range.text = "-"
 
                 except ValueError:
                     if rename is not None:
@@ -2349,6 +1974,7 @@ if __name__ == "__main__":
     )
     handler.setFormatter(handler_format)
     handler.setLevel(INFO)
+    logger = getLogger("main_9g_sk").getChild("data_summarize")
     logger.setLevel(INFO)
     logger.addHandler(handler)
     logger.propagate = False
@@ -2356,106 +1982,91 @@ if __name__ == "__main__":
     # ic.disable()
 
     DATA_START_COLUMNS = 10
-    FOLDER_PATH = os.getcwd() + "/20210624_8gpe_ref_data/"
-    FOLDER_PATH_ROOT = os.getcwd() + "/20210624_8gpe_ref_data/"
+    FOLDER_PATH = os.getcwd() + "/test_data/"
     PPTX_FILE_NAME = "8GPE_TEST.pptx"
     OSC_PICTURE_LIST_CROSSTALK = glob(FOLDER_PATH + "/*crosstalk/*.png")
 
-    PE = "8GPE"
+    PE = "8GPE_"
     # PIN_KINDS = ["IO", "WCK", "CK", "CA", "CS"]
     PIN_KINDS = ["IO"]
-    pkind = "WCK"
+    pin_kind_for_pptx = "IO"
     PPTX_LIB = "win32com"
     # PPTX_LIB = "python-pptx"
 
     if PPTX_LIB == "win32com":
         pptx = win32com.client.Dispatch("PowerPoint.Application")
         pptx.Visible = True
-        active_presentation = pptx.Presentations.Open(
+        active_presentation_object = pptx.Presentations.Open(
             os.getcwd() + "/advtemplate_mini.pptx"
         )
 
     else:
-        active_presentation = Presentation(os.getcwd() + "/advtemplate_mini.pptx")
+        active_presentation_object = Presentation(
+            os.getcwd() + "/advtemplate_mini.pptx"
+        )
 
-    # OVERSHOOT_FILE_LIST = glob(
-    #     FOLDER_PATH + pin_kind_for_pptx.lower() + "/*_overshoot/*.txt"
-    # )
+    pkind = "WCK"
 
-    # overshoot text
-    FOLDER_PATH_EACH_PIN = {
-        "IO": "202106241159_reference_data_io/",
-        "WCK_POSI": "202106241654_reference_data_wck_posi/",
-        "WCK_NEGA": "202106241716_reference_data_wck_nega/",
-        "CK_POSI": "202106241427_reference_data_ck_posi/",
-        "CK_NEGA": "202106241540_reference_data_ck_nega/",
-        "CS": "202106241626_reference_data_cs/",
-    }
-    FOLDER_PATH = FOLDER_PATH_ROOT
-    FOLDER_PATH_POSITIVE = FOLDER_PATH_ROOT + FOLDER_PATH_EACH_PIN[pkind + "_POSI"]
-    FOLDER_PATH_NEGATIVE = FOLDER_PATH_ROOT + FOLDER_PATH_EACH_PIN[pkind + "_NEGA"]
-
-    # freq duty
-    OSC_TXT_FREQ_DUTY_POSITIVE_PIN_LIST = glob(
-        FOLDER_PATH_POSITIVE + pkind.lower() + "_posi/*_freq_duty/*.txt"
-    )
-    OSC_TXT_FREQ_DUTY_NEGATIVE_PIN_LIST = glob(
-        FOLDER_PATH_NEGATIVE + pkind.lower() + "_nega/*_freq_duty/*.txt"
-    )
-
-    OSC_TXT_FREQ_DUTY_FILE_LIST = [None] * (
-        len(OSC_TXT_FREQ_DUTY_POSITIVE_PIN_LIST)
-        + len(OSC_TXT_FREQ_DUTY_NEGATIVE_PIN_LIST)
-    )
-    OSC_TXT_FREQ_DUTY_FILE_LIST[::2] = OSC_TXT_FREQ_DUTY_POSITIVE_PIN_LIST
-    OSC_TXT_FREQ_DUTY_FILE_LIST[1::2] = OSC_TXT_FREQ_DUTY_NEGATIVE_PIN_LIST
-    ic(OSC_TXT_FREQ_DUTY_FILE_LIST)
-
-    wave_data_freq_duty = WaveData(
-        active_presentation=active_presentation,
-        file_name=pkind.lower() + "_" + FREQ_DUTY_FILE_NAME,
-        folder_path=FOLDER_PATH + pkind.lower() + "/",
+    wave_data_overview = WaveData(
+        active_presentation=active_presentation_object,
+        file_name="io_result_overview.csv",
+        folder_path=FOLDER_PATH,
         group_by=DATA_GROUP,
         index=DATA_INDEX,
         pptx_lib=PPTX_LIB,
     )
-    for i in range(0, len(OSC_TXT_FREQ_DUTY_FILE_LIST) - 1, 2):
-        wave_data_freq_duty.make_differential_waveform(
-            item_name=PE + "_" + "differential waveform",
-            positive_pin_file=OSC_TXT_FREQ_DUTY_FILE_LIST[i],
-            negative_pin_file=OSC_TXT_FREQ_DUTY_FILE_LIST[i + 1],
-            reference_level=0,
-            y_label="V",
-            additional_information=True,
-            info="Target: less than ±2%, Need double check diff duty value!!!",
-        )
-
-    wave_data_freq_duty.set_differential_duty_data_to_data_df()
-    # Duty
-    wave_data_freq_duty.make_graph(
-        ax_h_lines=[47, 53],  # reference line
-        df_columns_list=["Differential Duty(%)"],
-        file_name=PE + "_" + "Differential_Duty",
-        # legends={"Dutycycle": "Duty(%)"},
-        y_ticks=DUTY_YTICKS,
-        y_label="%",
-        pin_kind=pkind,
+    wave_data_overview.make_graph(
+        df_columns_list=["Frequency"],
+        file_name=PE + "Frequency",
+        digit_format="%.2f",
+        legends={"Frequency": "Freq(GHz)"},
+        ax_h_lines=[4.0],
+        y_ticks=[0, 6, 1],
+        y_label="GHz",
+        pin_kind=pin_kind_for_pptx,
+        ax_h_lines_per_condition={"IO_Vih1r3V_Vil-0r50V_Vt-0r50V": [2.0, 3.0]},
+        y_ticks_per_condition={"CS_Vih1r0V_Vil0r0V_Vt0r5V": [0, 2, 0.2]},
+        spec=True,
         additional_information=True,
-        info="Target: Max 53% / Min 47%",
+        info="Spec: less than 60ps (@1.0Vp-p/20% to 80%)",
+    )
+    # wave_data_overview.add_summary_table_to_pptx(
+    #     title="overview_" + pin_kind_for_pptx,
+    #     cell_width=[
+    #         CELL_WIDTH_BASE_PIN * 1.1,
+    #         CELL_WIDTH_BASE_VI * 2.0,
+    #         CELL_WIDTH_BASE_RATE * 1.1,
+    #         CELL_WIDTH_BASE * 1.1,
+    #     ],
+    #     items=["Pin", "Vi", "Rate", "Frequency"],
+    #     pin_kind=pin_kind_for_pptx,
+    # )
+    wave_data_overview.make_vix_graph(
+        item_name="vix",
+        positive_pin_file=FOLDER_PATH
+        + "data1/"
+        + "P1857A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
+        negative_pin_file=FOLDER_PATH
+        + "data1/"
+        + "P1858A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
+    )
+    wave_data_overview.make_vix_graph(
+        item_name="vix",
+        reference_level=1,
+        positive_pin_file=FOLDER_PATH
+        + "data2/"
+        + "P1857A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
+        negative_pin_file=FOLDER_PATH
+        + "data2/"
+        + "P1858A1_overview_Vih1r000V_Vil0r000V_Vt0r500V_Rate0r286ns_Duty0r500.txt",
     )
 
-    wave_data_freq_duty.add_differential_duty_table_to_pptx(
-        title=PE + " " + "Differential Duty Summary" + " " + pkind + " Pin",
-        items=["Positive Pin", "Negative Pin", "Vi", "Rate", "Differential Duty(%)"],
-        cell_width=[
-            CELL_WIDTH_BASE,  # pin
-            CELL_WIDTH_BASE,  # vi
-            CELL_WIDTH_BASE,  # vi
-            CELL_WIDTH_BASE,  # rate
-            CELL_WIDTH_BASE * 2.0,
-        ],
+    wave_data_overview.add_vix_table_to_pptx(
+        title="vix",
+        items=["Positive Pin"],
+        cell_width=[CELL_WIDTH_BASE],
+        cell_height=20,
     )
-
-    wave_data_freq_duty.save_pptx(file_name=PPTX_FILE_NAME, folder_name=FOLDER_PATH)
+    wave_data_overview.save_pptx(file_name=PPTX_FILE_NAME, folder_name=FOLDER_PATH)
     elapsed_time = time.time() - start
-    logger.info(f"exec time:{elapsed_time:.1f}[sec]")
+    print(f"exec time:{elapsed_time:.1f}[sec]")

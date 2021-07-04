@@ -88,38 +88,47 @@
 #     print(b)
 
 
-class A:
-    def __init__(self, moji):
-        self.str = moji
+# class A:
+#     def __init__(self, moji):
+#         self.str = moji
 
-    def add(self, moji):
-        self.str = self.str + moji
+#     def add(self, moji):
+#         self.str = self.str + moji
 
-    def show(self):
-        print(self.str)
-
-
-a = A("abc")
-a.add("def")
-a.show()
-
-print(a)
-
-lst = [1, 2, 3]
-print(sum(lst))
+#     def show(self):
+#         print(self.str)
 
 
-def append_print(item, list_=[]):
-    list_.append(item)
-    print(list_)
+# a = A("abc")
+# a.add("def")
+# a.show()
+
+# print(a)
+
+# lst = [1, 2, 3]
+# print(sum(lst))
 
 
-x: int = 10
-y: int = 1
+# def append_print(item, list_=[]):
+#     list_.append(item)
+#     print(list_)
 
 
-def abc():
-    return 1, 2, 3
+# x: int = 10
+# y: int = 1
 
 
-a, b, c = abc()
+# def abc():
+#     return 1, 2, 3
+
+
+# a, b, c = abc()
+
+
+data = [-0.2, -0.1, 1, 2, 3, 2, 1, 0, -1, -2, -1, 1, 2]
+
+for i in range(1, len(data)):
+    # print(index)
+    # print(val)
+    if (data[i] >= 0 and data[i - 1] < 0) or (data[i] <= 0 and data[i - 1] > 0):
+        print(data[i])

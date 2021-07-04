@@ -67,3 +67,5 @@ RENAME_CONDITIONS = {
     "height": "Height",
     "_": " ",
 }
+
+DROP_CONDITIONS = {}
