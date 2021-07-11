@@ -75,7 +75,7 @@ if __name__ == "__main__":
     image_file_path = easygui.diropenbox("input picture path")
     output_file_path = easygui.diropenbox("output file path")
     output_file_name = easygui.enterbox("input output file name")
-    FILE_NAMES = glob.glob(image_file_path + "/**/*.PNG", recursive=True)
+    FILE_NAMES = glob.glob(image_file_path + "**/*.PNG", recursive=True)
     pp = PicturePaste(
         file_names=FILE_NAMES,
         image_display_height_cm=10,
