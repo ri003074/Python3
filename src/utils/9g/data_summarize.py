@@ -360,6 +360,7 @@ class WaveData:
                         ].replace(" ", "")
                     except AttributeError:
                         dic[rows[i].replace(" ", "").capitalize()] = rows[i + 1]
+                ic(dic)
 
                 data.append(dic)
 
@@ -2357,14 +2358,14 @@ if __name__ == "__main__":
 
     DATA_START_COLUMNS = 10
     FOLDER_PATH = os.getcwd() + "/20210624_8gpe_ref_data/"
-    FOLDER_PATH_ROOT = os.getcwd() + "/20210624_8gpe_ref_data/"
+    FOLDER_PATH_ROOT = os.getcwd() + "/20210625_debug/"
     PPTX_FILE_NAME = "8GPE_TEST.pptx"
     OSC_PICTURE_LIST_CROSSTALK = glob(FOLDER_PATH + "/*crosstalk/*.png")
 
     PE = "8GPE"
     # PIN_KINDS = ["IO", "WCK", "CK", "CA", "CS"]
     PIN_KINDS = ["IO"]
-    pkind = "WCK"
+    pkind = "IO"
     PPTX_LIB = "win32com"
     # PPTX_LIB = "python-pptx"
 
@@ -2392,29 +2393,29 @@ if __name__ == "__main__":
         "CS": "202106241626_reference_data_cs/",
     }
     FOLDER_PATH = FOLDER_PATH_ROOT
-    FOLDER_PATH_POSITIVE = FOLDER_PATH_ROOT + FOLDER_PATH_EACH_PIN[pkind + "_POSI"]
-    FOLDER_PATH_NEGATIVE = FOLDER_PATH_ROOT + FOLDER_PATH_EACH_PIN[pkind + "_NEGA"]
+    # FOLDER_PATH_POSITIVE = FOLDER_PATH_ROOT + FOLDER_PATH_EACH_PIN[pkind + "_POSI"]
+    # FOLDER_PATH_NEGATIVE = FOLDER_PATH_ROOT + FOLDER_PATH_EACH_PIN[pkind + "_NEGA"]
 
     # freq duty
-    OSC_TXT_FREQ_DUTY_POSITIVE_PIN_LIST = glob(
-        FOLDER_PATH_POSITIVE + pkind.lower() + "_posi/*_freq_duty/*.txt"
-    )
-    OSC_TXT_FREQ_DUTY_NEGATIVE_PIN_LIST = glob(
-        FOLDER_PATH_NEGATIVE + pkind.lower() + "_nega/*_freq_duty/*.txt"
-    )
+    # OSC_TXT_FREQ_DUTY_POSITIVE_PIN_LIST = glob(
+    #     FOLDER_PATH_POSITIVE + pkind.lower() + "_posi/*_freq_duty/*.txt"
+    # )
+    # OSC_TXT_FREQ_DUTY_NEGATIVE_PIN_LIST = glob(
+    #     FOLDER_PATH_NEGATIVE + pkind.lower() + "_nega/*_freq_duty/*.txt"
+    # )
 
-    OSC_TXT_FREQ_DUTY_FILE_LIST = [None] * (
-        len(OSC_TXT_FREQ_DUTY_POSITIVE_PIN_LIST)
-        + len(OSC_TXT_FREQ_DUTY_NEGATIVE_PIN_LIST)
-    )
-    OSC_TXT_FREQ_DUTY_FILE_LIST[::2] = OSC_TXT_FREQ_DUTY_POSITIVE_PIN_LIST
-    OSC_TXT_FREQ_DUTY_FILE_LIST[1::2] = OSC_TXT_FREQ_DUTY_NEGATIVE_PIN_LIST
-    ic(OSC_TXT_FREQ_DUTY_FILE_LIST)
+    # OSC_TXT_FREQ_DUTY_FILE_LIST = [None] * (
+    #     len(OSC_TXT_FREQ_DUTY_POSITIVE_PIN_LIST)
+    #     + len(OSC_TXT_FREQ_DUTY_NEGATIVE_PIN_LIST)
+    # )
+    # OSC_TXT_FREQ_DUTY_FILE_LIST[::2] = OSC_TXT_FREQ_DUTY_POSITIVE_PIN_LIST
+    # OSC_TXT_FREQ_DUTY_FILE_LIST[1::2] = OSC_TXT_FREQ_DUTY_NEGATIVE_PIN_LIST
+    # ic(OSC_TXT_FREQ_DUTY_FILE_LIST)
 
     wave_data_freq_duty = WaveData(
         active_presentation=active_presentation,
-        file_name=pkind.lower() + "_" + FREQ_DUTY_FILE_NAME,
-        folder_path=FOLDER_PATH + pkind.lower() + "/",
+        file_name="result_overview2.csv",
+        folder_path=FOLDER_PATH,
         group_by=DATA_GROUP,
         index=DATA_INDEX,
         pptx_lib=PPTX_LIB,
